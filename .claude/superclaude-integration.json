@@ -1,0 +1,496 @@
+{
+  "version": "1.0.0",
+  "description": "SuperClaude 系统与工作流集成 - 扩展配置",
+  "extends": "workflow.json",
+  "lastUpdate": "2025-11-21",
+
+  "集成说明": {
+    "目的": "将 SuperClaude 的 Persona 角色系统和斜杠命令集成到现有工作流中",
+    "原则": "不破坏现有工作流，作为思维模式和工具增强",
+    "配置文件": "core/persona-mapping.json",
+    "使用方式": "在每个工作流阶段自动激活对应的 Persona 和可用命令"
+  },
+
+  "工作流阶段增强": {
+    "P0.项目初始化与整体规划": {
+      "persona": "architect",
+      "commands": ["/design --api --ddd --plan"],
+      "flags": ["-plan", "-think-hard", "-c7", "-seq"],
+      "提示词增强": "以系统架构师(architect)的视角进行项目规划。关注：系统设计、可扩展性、技术选型、架构决策。可使用 /design --api --ddd --plan 进行架构设计。",
+      "思维模式": {
+        "关注点": ["系统整体架构", "模块划分", "技术栈选择", "扩展性设计"],
+        "问自己": [
+          "这个架构能否支撑未来3年的业务增长？",
+          "技术选型是否过于激进或保守？",
+          "模块间的边界是否清晰？",
+          "是否有单点故障？"
+        ]
+      }
+    },
+    "0.需求接收与解析": {
+      "persona": "analyzer",
+      "commands": ["/analyze", "/analyze --architecture"],
+      "flags": ["-think", "-seq"],
+      "提示词增强": "以分析专家(analyzer)的视角解析需求。关注：根因分析、需求理解、问题诊断。可使用 /analyze 进行需求分析。",
+      "思维模式": {
+        "关注点": ["需求的真实意图", "潜在的陷阱", "边界条件", "非功能需求"],
+        "问自己": [
+          "用户真正想要解决的问题是什么？",
+          "是否有隐藏的假设？",
+          "哪些边界条件可能被忽略？",
+          "性能、安全需求是什么？"
+        ]
+      }
+    },
+    "1.架构与方案设计": {
+      "persona": "architect",
+      "secondary": ["security"],
+      "commands": [
+        "/design --api --ddd",
+        "/design --api --openapi",
+        "/analyze --architecture --seq"
+      ],
+      "flags": ["-plan", "-think-hard", "-c7", "-seq"],
+      "提示词增强": "以系统架构师(architect)主导，安全专家(security)辅助的视角进行方案设计。架构师关注设计和可扩展性，安全专家关注威胁建模。可使用 /design --api --ddd 进行领域驱动设计，或 /design --api --openapi 定义API规范。",
+      "思维模式": {
+        "architect": {
+          "关注点": ["系统设计", "模块职责", "接口定义", "数据流"],
+          "问自己": [
+            "这个设计是否足够简单？",
+            "是否有过度设计的部分？",
+            "能否用更少的组件实现？",
+            "是否易于测试和维护？"
+          ]
+        },
+        "security": {
+          "关注点": ["认证授权", "数据加密", "输入验证", "API安全"],
+          "问自己": [
+            "哪里可能被攻击？",
+            "敏感数据是否安全？",
+            "是否有注入漏洞风险？",
+            "权限控制是否完善？"
+          ]
+        }
+      }
+    },
+    "2.任务拆解与规划": {
+      "persona": "architect",
+      "secondary": ["qa"],
+      "commands": [],
+      "flags": ["-plan"],
+      "提示词增强": "以架构师(architect)主导，QA专家(qa)辅助的视角进行任务拆解。架构师负责技术拆解，QA定义质量标准和测试策略。",
+      "思维模式": {
+        "architect": {
+          "关注点": ["任务粒度", "依赖关系", "并行可能", "风险点"],
+          "问自己": [
+            "任务是否足够小（10-15分钟）？",
+            "依赖关系是否清晰？",
+            "哪些任务可以并行？",
+            "哪些任务风险最高？"
+          ]
+        },
+        "qa": {
+          "关注点": ["验收标准", "测试策略", "覆盖率目标", "质量检查点"],
+          "问自己": [
+            "每个任务如何验证？",
+            "测试覆盖率目标是多少？",
+            "哪些场景最容易出错？",
+            "如何保证质量？"
+          ]
+        }
+      }
+    },
+    "3.上下文准备与交接": {
+      "persona": "dynamic",
+      "personaSelection": {
+        "frontend": "如果是前端/UI相关任务",
+        "backend": "如果是后端/API相关任务",
+        "analyzer": "如果需要分析现有代码"
+      },
+      "commands": ["/analyze --code"],
+      "flags": ["-c7"],
+      "提示词增强": "根据任务类型动态选择 Persona：前端任务使用 frontend，后端任务使用 backend，代码分析使用 analyzer。可使用 /analyze --code 分析现有代码结构。如需查找技术文档，使用 -c7 启用 Context7。",
+      "思维模式": {
+        "关注点": ["现有代码规范", "项目约定", "技术限制", "上下文完整性"],
+        "问自己": [
+          "Codex需要哪些上下文信息？",
+          "是否有现有的类似实现可参考？",
+          "项目有哪些必须遵守的规范？",
+          "交接卡片是否足够清晰？"
+        ]
+      }
+    },
+    "4.代码实现": {
+      "persona": "dynamic",
+      "personaSelection": {
+        "frontend": "前端代码（React/Vue/HTML/CSS/TypeScript UI部分）",
+        "backend": "后端代码（API/数据库/业务逻辑/服务端）"
+      },
+      "commands": [
+        "/build --react --magic --tdd",
+        "/build --api --tdd --coverage",
+        "/build --feature --tdd"
+      ],
+      "flags": ["-tdd", "-magic", "-c7", "-coverage"],
+      "提示词增强": "根据代码类型选择 Persona：\n- 前端开发：使用 frontend persona，执行 /build --react --magic --tdd\n- 后端开发：使用 backend persona，执行 /build --api --tdd --coverage\n- 启用 -magic 使用 Magic UI 构建器（前端），启用 -tdd 进行测试驱动开发，启用 -c7 查找库文档。",
+      "思维模式": {
+        "frontend": {
+          "关注点": ["用户体验", "组件复用", "性能优化", "响应式设计"],
+          "问自己": [
+            "UI是否直观易用？",
+            "组件是否可复用？",
+            "性能是否流畅？",
+            "是否适配移动端？"
+          ]
+        },
+        "backend": {
+          "关注点": ["API设计", "数据处理", "性能优化", "错误处理"],
+          "问自己": [
+            "API是否符合RESTful规范？",
+            "数据处理是否高效？",
+            "并发情况如何处理？",
+            "错误信息是否清晰？"
+          ]
+        }
+      },
+      "Codex调用增强": {
+        "在交接卡片中添加": {
+          "Persona": "指定当前使用的 Persona（frontend/backend）",
+          "Commands": "建议使用的斜杠命令",
+          "Flags": "推荐的标志（如 -tdd, -magic, -c7）"
+        }
+      }
+    },
+    "5.代码审查": {
+      "persona": "refactorer",
+      "secondary": ["security", "qa"],
+      "commands": [
+        "/review --quality --evidence",
+        "/scan --security --owasp",
+        "/review --security"
+      ],
+      "flags": ["-think-hard", "-seq"],
+      "提示词增强": "以重构专家(refactorer)主导，安全专家(security)和QA专家(qa)辅助的视角进行代码审查。\n- refactorer 关注：代码质量、简化、可读性、维护性\n- security 关注：安全漏洞、威胁点、加密、权限\n- qa 关注：测试覆盖、边界条件、错误处理\n\n执行流程：\n1. /review --quality --evidence（refactorer）- 质量审查\n2. /scan --security --owasp（security）- 安全扫描\n3. 综合评估并给出修改建议",
+      "思维模式": {
+        "refactorer": {
+          "关注点": ["代码简洁性", "命名规范", "重复代码", "复杂度"],
+          "问自己": [
+            "这段代码6个月后还能看懂吗？",
+            "是否有不必要的抽象？",
+            "能否用更少的代码实现？",
+            "是否违反了莱纳斯三问？"
+          ],
+          "林纳斯视角": "严格执行林纳斯·托瓦兹的代码哲学：简洁性高于一切，拒绝过度设计"
+        },
+        "security": {
+          "关注点": ["OWASP Top 10", "输入验证", "认证授权", "数据保护"],
+          "问自己": [
+            "是否有SQL注入风险？",
+            "是否有XSS漏洞？",
+            "敏感数据是否加密？",
+            "权限检查是否完善？"
+          ]
+        },
+        "qa": {
+          "关注点": ["测试覆盖", "边界条件", "异常处理", "日志记录"],
+          "问自己": [
+            "测试是否覆盖所有分支？",
+            "边界条件是否测试？",
+            "异常是否正确处理？",
+            "日志是否足够诊断问题？"
+          ]
+        }
+      }
+    },
+    "6.代码修正": {
+      "persona": "继承阶段4",
+      "commands": [
+        "/improve --quality --threshold 95%",
+        "/improve --performance"
+      ],
+      "flags": ["-think"],
+      "提示词增强": "继承阶段4的 Persona（frontend 或 backend），使用 /improve --quality 进行代码改进。关注审查中发现的问题，逐条修复。",
+      "思维模式": {
+        "关注点": ["问题理解", "根因分析", "最小改动", "回归测试"],
+        "问自己": [
+          "我是否理解了问题的根本原因？",
+          "这个修复是否会引入新问题？",
+          "是否有更简单的修复方式？",
+          "修复后如何验证？"
+        ]
+      }
+    },
+    "7.测试验证": {
+      "persona": "qa",
+      "secondary": ["performance"],
+      "commands": [
+        "/test --unit --integration --e2e",
+        "/test --coverage",
+        "/analyze --profile --perf --seq"
+      ],
+      "flags": ["-coverage", "-e2e", "-pup", "-seq"],
+      "提示词增强": "以QA专家(qa)主导，性能专家(performance)辅助的视角进行测试验证。\n- qa 关注：功能测试、覆盖率、质量保证\n- performance 关注：性能测试、瓶颈分析、优化建议\n\n执行流程：\n1. /test --unit --integration --e2e --coverage（qa）- 运行所有测试\n2. 如果是Web项目，使用 -pup 启用 Puppeteer 进行浏览器测试\n3. /analyze --profile --perf --seq（performance）- 性能分析\n4. 生成测试报告",
+      "思维模式": {
+        "qa": {
+          "关注点": ["测试完整性", "用例设计", "缺陷预防", "质量度量"],
+          "问自己": [
+            "所有用户场景是否测试？",
+            "边界条件是否覆盖？",
+            "错误路径是否测试？",
+            "测试是否可重复？"
+          ]
+        },
+        "performance": {
+          "关注点": ["响应时间", "资源使用", "并发能力", "瓶颈点"],
+          "问自己": [
+            "响应时间是否满足要求？",
+            "是否有性能瓶颈？",
+            "内存使用是否合理？",
+            "能否支撑预期负载？"
+          ]
+        }
+      },
+      "浏览器测试增强": {
+        "启用条件": "项目类型包含前端或Web",
+        "使用工具": "Puppeteer MCP（通过 -pup 标志启用）",
+        "测试内容": [
+          "页面加载和渲染",
+          "控制台错误检查",
+          "网络请求验证",
+          "功能交互测试",
+          "截图对比验证"
+        ]
+      }
+    },
+    "8.Git提交": {
+      "persona": "无需 Persona",
+      "commands": [],
+      "flags": [],
+      "说明": "Git提交是机械性操作，无需使用 Persona 系统"
+    },
+    "9.模块交付": {
+      "persona": "dynamic",
+      "personaSelection": {
+        "frontend": "前端模块交付",
+        "backend": "后端模块交付",
+        "architect": "跨模块或架构级交付"
+      },
+      "commands": [],
+      "flags": ["-verbose"],
+      "提示词增强": "根据模块类型选择 Persona 进行交付总结。使用 -verbose 生成详细的交付文档。",
+      "思维模式": {
+        "关注点": ["交付物完整性", "文档齐全性", "使用说明", "已知问题"],
+        "问自己": [
+          "所有交付物是否就绪？",
+          "文档是否完整可用？",
+          "是否有已知问题需要说明？",
+          "是否有后续优化建议？"
+        ]
+      }
+    },
+    "P10.项目完成度检查": {
+      "persona": "architect",
+      "commands": ["/analyze --architecture"],
+      "flags": ["-think"],
+      "提示词增强": "以架构师(architect)的视角检查项目整体完成度。关注系统完整性、模块集成、整体架构。",
+      "思维模式": {
+        "关注点": ["功能完整性", "模块集成", "系统稳定性", "文档完备性"],
+        "问自己": [
+          "所有核心功能是否完成？",
+          "模块间集成是否顺畅？",
+          "系统是否稳定可用？",
+          "是否可以交付生产？"
+        ]
+      }
+    },
+    "P99.项目最终交付": {
+      "persona": "architect",
+      "commands": [],
+      "flags": ["-verbose"],
+      "提示词增强": "以架构师(architect)的视角生成项目最终交付文档。全面总结项目成果、技术架构、使用指南。",
+      "思维模式": {
+        "关注点": ["项目总结", "技术文档", "部署指南", "维护指南"],
+        "问自己": [
+          "文档是否足够详细？",
+          "是否包含部署步骤？",
+          "是否有维护指南？",
+          "是否记录了架构决策？"
+        ]
+      }
+    }
+  },
+
+  "斜杠命令使用指南": {
+    "说明": "斜杠命令是工作流的增强工具，不是必须的，根据需要使用",
+    "命令分类": {
+      "设计类": {
+        "/design --api --ddd": "领域驱动设计，适用于阶段1",
+        "/design --api --openapi": "定义OpenAPI规范，适用于阶段1",
+        "/design --prd": "生成产品需求文档，适用于阶段P0或阶段0"
+      },
+      "构建类": {
+        "/build --react --magic --tdd": "React前端开发，适用于阶段4",
+        "/build --api --tdd --coverage": "API后端开发，适用于阶段4",
+        "/build --init --c7 --plan": "项目初始化，适用于阶段P0",
+        "/build --feature --tdd": "功能开发，适用于阶段4"
+      },
+      "分析类": {
+        "/analyze": "需求分析，适用于阶段0",
+        "/analyze --architecture --seq": "架构分析，适用于阶段1或P10",
+        "/analyze --code": "代码分析，适用于阶段3或5",
+        "/analyze --profile --perf --seq": "性能分析，适用于阶段7"
+      },
+      "审查类": {
+        "/review --quality --evidence": "质量审查，适用于阶段5",
+        "/review --security": "安全审查，适用于阶段5",
+        "/scan --security --owasp": "安全扫描，适用于阶段5或7"
+      },
+      "改进类": {
+        "/improve --quality --threshold 95%": "质量改进，适用于阶段6",
+        "/improve --performance --iterate": "性能优化，适用于阶段6"
+      },
+      "测试类": {
+        "/test --unit --integration --e2e": "运行测试，适用于阶段7",
+        "/test --coverage": "测试覆盖率，适用于阶段7"
+      },
+      "故障排查类": {
+        "/troubleshoot --investigate --prod": "问题调查，适用于任意阶段",
+        "/troubleshoot --prod --five-whys --seq": "根因分析，适用于任意阶段"
+      },
+      "部署类": {
+        "/deploy --env staging --plan": "部署准备，适用于阶段P99"
+      }
+    }
+  },
+
+  "标志系统说明": {
+    "规划与思考类": {
+      "-plan": "显示执行计划（在执行前预览），推荐在所有阶段开始时使用",
+      "-think": "标准分析模式，适用于常规分析",
+      "-think-hard": "深度分析模式，适用于复杂决策（阶段1、5）",
+      "-ultrathink": "关键分析模式，适用于重大决策（阶段P0）"
+    },
+    "MCP服务器控制": {
+      "-c7": "启用Context7文档查找，在需要查找库/框架文档时使用（阶段1、3、4）",
+      "-seq": "启用Sequential深度思维，在需要复杂推理时使用（阶段0、1、5、7）",
+      "-magic": "启用Magic UI构建器，在前端UI开发时使用（阶段4）",
+      "-pup": "启用Puppeteer浏览器测试，在Web项目测试时使用（阶段7）"
+    },
+    "输出控制": {
+      "-uc": "UltraCompressed模式（约70%令牌减少），在上下文紧张时使用",
+      "-verbose": "详细输出模式，在需要详细文档时使用（阶段9、P99）"
+    },
+    "开发标志": {
+      "-init": "项目初始化，适用于阶段P0",
+      "-feature": "功能开发，适用于阶段4",
+      "-tdd": "测试驱动开发，推荐在阶段4始终使用",
+      "-coverage": "代码覆盖率，适用于阶段4、7",
+      "-e2e": "端到端测试，适用于阶段7",
+      "-dry-run": "预演模式，在高风险操作前使用",
+      "-rollback": "回滚准备，在可能需要回滚时使用"
+    }
+  },
+
+  "自动化集成规则": {
+    "Persona自动激活": {
+      "触发": "每个工作流阶段开始时",
+      "行为": "自动加载该阶段的主 Persona 和辅助 Persona",
+      "提示词注入": "在阶段提示词中自动注入 Persona 的关注点和思维模式",
+      "实现方式": "主控 Claude 在执行阶段前读取 persona-mapping.json，将 Persona 信息添加到 Task 工具的 prompt 中"
+    },
+    "命令推荐": {
+      "触发": "每个工作流阶段开始时",
+      "行为": "显示该阶段可用的斜杠命令",
+      "格式": "💡 推荐命令：/design --api --ddd --plan",
+      "说明": "这是建议，不是强制要求"
+    },
+    "标志提示": {
+      "触发": "执行关键操作前",
+      "行为": "提示可用的有用标志",
+      "示例": [
+        "阶段1开始：建议使用 -plan 查看执行计划",
+        "调用Codex前：建议使用 -c7 查找库文档",
+        "复杂分析时：建议使用 -seq 启用深度思维",
+        "前端开发时：建议使用 -magic 启用UI构建器"
+      ]
+    }
+  },
+
+  "使用示例": {
+    "完整开发流程（React应用）": {
+      "P0": "使用 architect persona，执行 /design --api --ddd --plan -think-hard -c7",
+      "0": "使用 analyzer persona，执行 /analyze -think",
+      "1": "使用 architect persona + security，执行 /design --api --openapi -plan -c7",
+      "2": "使用 architect persona + qa，规划任务和测试策略",
+      "3": "使用 frontend persona，执行 /analyze --code -c7",
+      "4": "使用 frontend persona，执行 /build --react --magic --tdd -c7",
+      "5": "使用 refactorer + security + qa，执行：\n  - /review --quality --evidence -think-hard\n  - /scan --security --owasp",
+      "6": "使用 frontend persona，执行 /improve --quality --threshold 95% -think",
+      "7": "使用 qa + performance，执行：\n  - /test --unit --integration --e2e --coverage -pup\n  - /analyze --profile --perf --seq",
+      "8": "Git提交（无需 Persona）",
+      "9": "使用 frontend persona，生成交付文档 -verbose",
+      "P10": "使用 architect persona，执行 /analyze --architecture -think",
+      "P99": "使用 architect persona，生成最终交付文档 -verbose"
+    },
+    "问题排查流程": {
+      "发现问题": "使用 analyzer persona，执行 /troubleshoot --investigate --prod -seq",
+      "根因分析": "使用 analyzer persona，执行 /troubleshoot --prod --five-whys --seq",
+      "性能问题": "使用 performance persona，执行 /analyze --profile --perf --seq",
+      "安全问题": "使用 security persona，执行 /scan --security --owasp"
+    }
+  },
+
+  "最佳实践": {
+    "Persona使用": [
+      "不要手动覆盖Persona，除非有充分理由",
+      "理解每个Persona的关注点和思维模式",
+      "在复杂阶段充分利用多Persona协作（如阶段5）",
+      "阅读Persona的'问自己'清单，确保全面思考"
+    ],
+    "命令使用": [
+      "命令是可选的，不是必须的",
+      "在熟悉命令前，可以用自然语言描述意图",
+      "组合使用多个标志以实现复杂功能",
+      "查看命令示例学习最佳用法"
+    ],
+    "标志使用": [
+      "关键阶段始终使用 -plan 预览执行计划",
+      "复杂分析使用 -seq 启用深度思维",
+      "前端开发使用 -magic + -c7 获得最佳体验",
+      "测试阶段使用 -coverage + -e2e + -pup 确保完整测试"
+    ],
+    "集成工作流": [
+      "Persona和命令不改变工作流核心流程",
+      "它们只是思维模式和工具的增强",
+      "保持工作流的简洁性和可追溯性",
+      "不要过度依赖命令，理解背后的原理更重要"
+    ]
+  },
+
+  "常见问题": {
+    "Q1": "是否必须使用斜杠命令？",
+    "A1": "不是必须的。斜杠命令是简化操作的快捷方式，你可以用自然语言描述相同的意图。",
+
+    "Q2": "Persona会自动切换吗？",
+    "A2": "是的。主控Claude会在每个阶段开始时自动激活对应的Persona，并将Persona的思维模式注入到Task工具的prompt中。",
+
+    "Q3": "如何手动覆盖Persona？",
+    "A3": "在自然语言提示中使用 --persona-xxx 标志，如'以 performance persona 的视角分析这段代码'。",
+
+    "Q4": "标志太多，如何记忆？",
+    "A4": "不需要记忆所有标志。工作流会在合适的时机自动提示推荐使用的标志。你只需要知道最常用的几个：-plan, -tdd, -c7, -seq, -magic。",
+
+    "Q5": "SuperClaude会影响现有工作流吗？",
+    "A5": "不会。SuperClaude是增强层，不改变工作流核心流程。如果你不使用斜杠命令和标志，工作流仍然完全正常工作。",
+
+    "Q6": "如何学习使用这些功能？",
+    "A6": "阅读 guides/SUPERCLAUDE-GUIDE.md（即将创建），查看完整的使用指南和示例。"
+  },
+
+  "下一步": [
+    "创建 guides/SUPERCLAUDE-GUIDE.md 详细使用指南",
+    "更新 IMPLEMENTATION_GUIDE.md 添加 SuperClaude 使用说明",
+    "在 quick-setup.bat 中添加 SuperClaude 配置检查",
+    "创建示例项目演示完整流程"
+  ]
+}

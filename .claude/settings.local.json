@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "Task(*)",
+      "TodoWrite(*)",
+      "NotebookEdit(*)",
+      "AskUserQuestion(*)",
+      "SlashCommand(*)",
+      "Skill(*)",
+      "BashOutput(*)",
+      "KillShell(*)",
+      "mcp__*"
+    ]
+  }
+}

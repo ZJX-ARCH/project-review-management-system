@@ -1,0 +1,41 @@
+# V4.0 Git Ignore
+
+# Build outputs
+target/
+build/
+dist/
+out/
+*.class
+*.jar
+*.war
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+*.patch
+
+# Keep dev task files (these should be committed)
+!docs/dev/*.txt
+!docs/dev/*.md

@@ -1,0 +1,1515 @@
+{
+  "version": "4.0",
+  "workflow_name": "自主协作工作流系统 V4.0",
+  "description": "单一配置 + 林纳斯哲学 + SuperClaude + 迭代对抗 + 防遗漏 + 渐进休眠 + 强制记录",
+  "last_updated": "2025-11-30",
+  "V4新增改进": {
+    "问题修复": [
+      "✅ 解决中途停止问题（渐进式休眠机制）",
+      "✅ 解决忘记Git提交（每功能测试后立即提交）",
+      "✅ 解决并行执行混乱（强制串行执行）",
+      "✅ 解决忘记更新记录（强制更新HISTORY+TASKS）",
+      "✅ 解决Agent忘记交接（每次都要交接文档）",
+      "✅ 解决重启遗忘（4层记忆系统）",
+      "✅ 解决功能遗漏（迭代对抗设计，多轮循环直到无大错误）"
+    ],
+    "新增机制": [
+      "渐进式休眠：5分钟→10秒，5分钟→30秒，5分钟→1分钟...",
+      "迭代对抗：Designer → Critic ↔ Designer修正（循环最多5轮）→ Architect终审",
+      "循环退出：Critic报告无Critical/High问题后才交给Opus终审",
+      "4层记忆：QUICK_RESUME + PROJECT + MODULE + HISTORY",
+      "强制串行：禁止并行，一个一个完成",
+      "立即提交：测试通过立即Git提交，不堆积",
+      "P0用户审查：架构设计后必须等待用户确认"
+    ]
+  },
+
+  "致主控Claude_V4": {
+    "YOU_MUST_READ_THIS": "V4.0强化版工作流规范！",
+    "强制要求_不可违反": [
+      "✅ 你现在执行【工作流系统V4.0】，不是普通对话",
+      "✅ 每个'核心动作'逐条执行，不能跳过",
+      "✅ 每次调用Agent必须用Task工具，prompt中明确说'你正在执行工作流XX阶段'",
+      "✅ 每个Agent完成后必须返回给你检查，验证输出文件存在且正确",
+      "❌ 禁止并行执行，必须串行一个一个完成",
+      "✅ 每完成一个功能测试后，立即Git提交，不能堆积",
+      "✅ 每步都要更新HISTORY.md和TASKS.md，这是强制的",
+      "✅ 长任务必须在prompt中加渐进式休眠指令",
+      "✅ 每阶段结束必须更新QUICK_RESUME.md",
+      "✅ 每次都要准备交接文档给Agent，不能忘记"
+    ],
+    "渐进式休眠指令模板": "⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。"
+  },
+
+  "superclaude_enhancement": {
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "SuperClaude增强系统：专业化思维模式和标准化命令系统",
+    "配置文件": {
+      "命令目录": "C:\\Users\\lenovo\\.claude\\commands\\sc",
+      "persona_mapping": "C:\\Users\\lenovo\\.claude\\commands\\sc\\README.md",
+      "用户指南": "C:\\Users\\lenovo\\.claude\\commands\\sc\\sc.md"
+    },
+    "现有命令": {
+      "设计类": ["/sc:design", "/sc:spec-panel", "/sc:business-panel"],
+      "构建类": ["/sc:build", "/sc:implement"],
+      "分析类": ["/sc:analyze", "/sc:research", "/sc:troubleshoot"],
+      "审查类": ["/sc:improve", "/sc:reflect"],
+      "测试类": ["/sc:test"],
+      "管理类": ["/sc:task", "/sc:pm", "/sc:agent", "/sc:workflow"],
+      "文档类": ["/sc:index", "/sc:document", "/sc:explain"],
+      "工具类": ["/sc:git", "/sc:save", "/sc:load", "/sc:cleanup", "/sc:select-tool"],
+      "其他": ["/sc:brainstorm", "/sc:estimate", "/sc:recommend", "/sc:spawn", "/sc:help"]
+    },
+    "Persona系统": {
+      "说明": "SuperClaude命令已集成Persona系统，每个命令可指定使用的Persona",
+      "可用Persona": ["architect", "frontend", "backend", "security", "analyzer", "mentor", "refactorer", "performance", "qa", "scribe", "quality"],
+      "使用方式": "在命令的YAML元数据中定义personas字段"
+    },
+    "自动激活": {
+      "说明": "每个工作流阶段会自动激活对应的Persona，无需手动指定",
+      "映射规则": "参考 persona-mapping.json 中的 stagePersonaMapping",
+      "提示增强": "在每个阶段提示词中自动注入Persona的思维模式和推荐命令"
+    },
+    "使用方式": {
+      "方式1_完全自动": "工作流自动激活Persona和提示命令，用户无需操作",
+      "方式2_手动命令": "用户可主动使用斜杠命令简化任务描述",
+      "方式3_标志控制": "使用标志精细控制执行方式（如 -plan 查看计划, -tdd 测试驱动开发）"
+    },
+    "重要提示": [
+      "SuperClaude是增强层，不改变工作流核心流程",
+      "Persona会在每个阶段自动激活，主控Claude需读取persona-mapping.json了解映射关系",
+      "斜杠命令是可选的，不使用命令时用自然语言描述即可",
+      "只需记住5个常用标志：-plan, -tdd, -c7, -seq, -magic",
+      "完整文档参考 SUPERCLAUDE-GUIDE.md"
+    ],
+    "阶段增强示例": {
+      "阶段P0": "使用 /sc:design 或 /sc:spec-panel 进行项目规划，激活architect persona",
+      "阶段0": "使用 /sc:analyze 或 /sc:research 分析需求，激活analyzer persona",
+      "阶段1": "使用 /sc:design --architecture 设计方案，激活architect+security personas",
+      "阶段2": "使用 /sc:task 或 /sc:pm 拆解任务，激活architect+qa personas",
+      "阶段4_前端": "使用 /sc:build --react 或 /sc:implement 实现代码，激活frontend persona",
+      "阶段4_后端": "使用 /sc:build --api 或 /sc:implement 实现代码，激活backend persona",
+      "阶段5": "使用 /sc:improve 和 /sc:reflect 审查代码，激活refactorer+security+qa personas",
+      "阶段6": "使用 /sc:implement 或 /sc:improve 修正代码",
+      "阶段7": "使用 /sc:test 验证测试，激活qa+performance personas",
+      "阶段8": "使用 /sc:git 提交代码",
+      "阶段9": "使用 /sc:document 生成交付文档"
+    },
+    "实施建议": {
+      "启动任务时": "可以直接使用 /sc:xxx 命令，系统会自动识别并激活对应的Persona",
+      "CLAUDE.md中": "建议在项目的CLAUDE.md中说明SuperClaude命令可用",
+      "进度监控中": "在current-status.md中记录当前激活的Persona和使用的命令",
+      "命令发现": "使用 /sc:help 查看所有可用命令，使用 /sc:select-tool 选择合适的命令"
+    }
+  },
+
+  "核心原则": {
+    "自主性": "在预定义边界内自动执行，无需人类确认",
+    "持续运行": "完成一个任务后自动继续下一个，直到项目交付或遇到阻塞",
+    "可追溯": "每个动作都有MD文档记录，手机/电脑可查看进度",
+    "质量优先": "严格执行莱纳斯三问，拒绝过度设计",
+    "关注点分离": "CC负责决策，Codex负责执行",
+    "去繁为简": "不引入不必要的依赖，推迟非必要功能，简化逻辑",
+    "强制模型选择": "CRITICAL - 必须严格按照阶段要求使用Task工具调用指定模型，这不是可选的！",
+    "强制检查点": "CRITICAL - 每个阶段结束必须更新4层记忆文件，确保可恢复！",
+    "V4_强制串行执行": {
+      "规则": "❌ 禁止并行执行任何任务，必须严格串行一个一个完成",
+      "原因": "防止执行混乱、状态不一致、遗漏检查",
+      "执行方式": [
+        "1. 选择当前要执行的任务（只能1个）",
+        "2. 调用Agent执行该任务（使用Task工具）",
+        "3. 等待Agent返回结果",
+        "4. 主控验证Agent的输出（检查文件是否生成、内容是否正确）",
+        "5. 更新记忆文件（QUICK_RESUME + HISTORY）",
+        "6. 如果测试通过，立即Git提交",
+        "7. 选择下一个任务，回到步骤1"
+      ],
+      "禁止行为": [
+        "❌ 不允许同时调用多个Agent",
+        "❌ 不允许在一个Agent未完成时启动另一个",
+        "❌ 不允许批量提交多个任务的Git",
+        "❌ 不允许跳过Agent返回结果的验证"
+      ],
+      "验证要求": "每个Agent完成后，主控必须验证：1) 输出文件存在 2) 文件内容符合预期 3) 测试通过（如有）"
+    },
+    "V4_立即Git提交": {
+      "规则": "✅ 每完成一个功能测试后，立即Git提交，不能堆积",
+      "时机": "阶段7（测试验证）通过后，立即进入阶段8（Git提交）",
+      "禁止": "❌ 不允许完成多个功能后再一起提交",
+      "原因": "防止丢失工作成果，便于回滚，保持Git历史清晰"
+    },
+    "V4_强制记录更新": {
+      "规则": "✅ 每个步骤完成后，必须更新HISTORY.md和相应的记忆文件",
+      "L0_QUICK_RESUME": "每5-10分钟更新一次（每个原子步骤）",
+      "L3_HISTORY": "每个任务完成后追加",
+      "L2_MODULE_CONTEXT": "每个子模块完成后更新",
+      "L1_PROJECT_CONTEXT": "每个模块完成后更新",
+      "禁止": "❌ 不允许忘记更新，不允许批量更新",
+      "原因": "确保中断恢复能力，保持进度可追溯"
+    },
+    "V4_强制交接文档": {
+      "规则": "✅ 每次调用Agent必须准备交接文档",
+      "内容": "背景、任务、约束、验收标准、相关文件",
+      "格式": "使用 specs/handover-*.md 或在Task工具的prompt中明确说明",
+      "禁止": "❌ 不允许直接调用Agent而不提供上下文",
+      "原因": "确保Agent理解任务，减少返工"
+    }
+  },
+
+  "检查点与恢复机制": {
+    "目的": "支持中断恢复，管理长上下文",
+    "V4_四层记忆系统": {
+      "说明": "分层记忆架构，确保30秒快速恢复 + 完整上下文保留",
+      "层级架构": {
+        "L0_快速恢复": {
+          "文件": "docs/progress/QUICK_RESUME.md",
+          "更新频率": "每个原子步骤完成后（每5-10分钟）",
+          "内容": [
+            "最近3次操作（时间戳 + 操作描述）",
+            "当前所在层级（项目/模块/子模块/任务）",
+            "当前阶段和步骤",
+            "一句话恢复指令（直接可执行）",
+            "关键上下文（不超过500字）"
+          ],
+          "目的": "30秒内恢复80%的工作上下文",
+          "格式示例": "## 当前状态\n- 项目：用户管理系统\n- 模块：Auth认证模块\n- 阶段：阶段4（代码实现）\n- 任务：T003 - 实现登录API\n\n## 最近操作\n1. [14:23] 完成注册API实现\n2. [14:30] 测试通过并Git提交\n3. [14:35] 开始登录API实现\n\n## 恢复指令\n继续实现 Auth 模块的 T003 任务（登录API），参考 specs/03-context-T003.md"
+        },
+        "L1_项目上下文": {
+          "文件": "docs/progress/PROJECT_CONTEXT.md",
+          "更新频率": "每个模块完成后",
+          "内容": [
+            "项目整体目标和架构",
+            "技术栈和关键决策",
+            "已完成模块列表（带链接）",
+            "当前正在进行的模块",
+            "待完成模块列表",
+            "项目完成度百分比"
+          ],
+          "目的": "理解项目全貌和整体进度"
+        },
+        "L2_模块上下文": {
+          "文件": "docs/progress/MODULE_CONTEXT.md",
+          "更新频率": "每个子模块完成后",
+          "内容": [
+            "当前模块设计文档链接",
+            "模块的所有子模块列表",
+            "已完成子模块（带验收结果）",
+            "当前子模块状态",
+            "前后端实现对应关系",
+            "遗留问题和技术债"
+          ],
+          "目的": "理解当前模块的完整状态"
+        },
+        "L3_任务历史": {
+          "文件": "docs/progress/HISTORY.md",
+          "更新频率": "每个任务完成后追加",
+          "内容": [
+            "所有已完成任务的时间线",
+            "每个任务的Git提交ID",
+            "重要决策记录",
+            "遇到的问题和解决方案"
+          ],
+          "目的": "完整的工作历史追溯"
+        }
+      }
+    },
+    "检查点文件": "docs/progress/QUICK_RESUME.md",
+    "更新频率": "每个阶段结束后强制更新",
+    "强制更新规则": {
+      "每个阶段的最后一步": "更新 QUICK_RESUME.md，包含当前进度和下一步行动",
+      "每个任务完成后": "追加记录到 HISTORY.md",
+      "每个子模块完成后": "更新 MODULE_CONTEXT.md",
+      "每个模块完成后": "更新 PROJECT_CONTEXT.md",
+      "必须包含": [
+        "当前模块和阶段",
+        "已完成工作摘要",
+        "下一步行动",
+        "恢复指令"
+      ],
+      "违规后果": "如果不更新，中断后无法恢复"
+    },
+    "上下文管理策略": {
+      "引用优于复制": "使用文件路径引用，不复制大段内容",
+      "摘要优于全文": "只保留关键信息摘要",
+      "隔离子代理": "通过Task工具隔离子代理上下文",
+      "定期重置": "每完成一个模块后，建议重启会话",
+      "分层加载": "恢复时先读L0，需要更多上下文再读L1、L2、L3"
+    },
+    "恢复流程": {
+      "步骤1": "重启Claude Code后，读取 QUICK_RESUME.md（30秒快速理解）",
+      "步骤2": "如需更多上下文，读取 MODULE_CONTEXT.md",
+      "步骤3": "如需理解整体，读取 PROJECT_CONTEXT.md",
+      "步骤4": "如需历史细节，读取 HISTORY.md",
+      "步骤5": "检查当前阶段的完成状态",
+      "步骤6": "从中断点继续执行"
+    },
+    "幂等性要求": "每个阶段执行前检查输出文件是否存在，决定跳过或重做"
+  },
+
+  "模型切换强制规则": {
+    "YOU_MUST_FOLLOW_THIS": "这是强制规则，不是建议！",
+    "规则": "执行每个阶段前，检查该阶段的'模型'字段，如果与当前模型不同，必须使用Task工具调用指定模型",
+    "检查清单": [
+      "1. 读取阶段配置中的'模型'字段",
+      "2. 如果模型='opus'，必须使用Task工具，model='opus'",
+      "3. 如果模型='haiku'，必须使用Task工具，model='haiku'",
+      "4. 如果模型='sonnet'，可以直接执行（因为主控是Sonnet）",
+      "5. 在Task工具的prompt中，明确说明要执行的阶段和输出要求"
+    ],
+    "违规后果": "如果不遵守此规则，会导致成本浪费或质量下降",
+    "验证方式": "在current-status.md中记录每个阶段使用的模型"
+  },
+
+  "持续运行模式": {
+    "启用": true,
+    "运行级别": "项目级自主循环",
+    "主循环逻辑": {
+      "步骤1": "接收项目需求 → 项目初始化（阶段P0）",
+      "步骤2": "分析整体架构、技术方案、模块划分（阶段P0）",
+      "步骤3": "生成项目主计划：列出所有需要实现的模块/功能点",
+      "步骤4": "选择第一个模块 → 执行模块开发循环（阶段0-9）",
+      "步骤5": "模块交付后 → 检查项目完成度",
+      "步骤6a": "如果项目未完成 → 分析下一步需要做什么 → 回到步骤4",
+      "步骤6b": "如果项目完成 → 生成项目交付文档 → 结束",
+      "自我驱动": "每个模块完成后，主动分析剩余需求，自己决定下一步做什么"
+    },
+    "项目完成度判断": {
+      "检查维度": [
+        "所有核心功能是否已实现？",
+        "所有验收标准是否达成？",
+        "是否还有未实现的需求？",
+        "系统是否可以完整运行？",
+        "文档是否齐全？"
+      ],
+      "判断流程": "读取项目主计划 → 对比已完成模块 → 计算完成度百分比 → 决定继续或结束"
+    },
+    "下一步分析机制": {
+      "触发时机": "每个模块交付后（阶段9完成）",
+      "分析内容": [
+        "检查项目主计划中的待办模块",
+        "评估模块间依赖关系",
+        "确定优先级最高的下一个模块",
+        "如果所有计划模块完成，检查是否有遗漏",
+        "如果发现新需求，更新项目主计划"
+      ],
+      "输出": "明确的下一步行动：模块名称、目标、依赖"
+    },
+    "停止条件": [
+      "项目所有需求已完成并交付",
+      "遇到需要人类决策的问题（记录到current-status.md后暂停）",
+      "连续3次重试失败",
+      "发现需求存在根本性矛盾"
+    ]
+  },
+
+  "模型选择策略": {
+    "实现方式": "通过Task工具调用子代理实现模型切换",
+    "主控模型": "claude-4.5-sonnet（启动Claude Code时使用）",
+    "说明": "主控Claude使用Task工具调用不同模型的子代理执行具体阶段",
+    "V4模型版本": {
+      "Opus": "claude-4.5-opus",
+      "Sonnet": "claude-4.5-sonnet",
+      "Haiku": "claude-4.5-haiku",
+      "Codex": "gpt-5.1-codex",
+      "Gemini": "gemini-3.0-pro"
+    },
+    "决策矩阵": {
+      "opus": {
+        "model": "claude-4.5-opus",
+        "使用场景": [
+          "整体架构设计与技术选型（阶段P0）",
+          "复杂系统的关键决策点",
+          "安全性与性能的重大权衡",
+          "无法解决的复杂问题分析",
+          "跨模块的重大重构规划",
+          "三方对抗设计中的Architect终审"
+        ],
+        "判断标准": "影响范围>3个模块 OR 不可逆决策 OR 需要深度思考链",
+        "调用方式": "Task工具 + model参数设为'opus'"
+      },
+      "gemini": {
+        "model": "gemini-3.0-pro",
+        "使用场景": [
+          "前端设计与实现（阶段4前端）",
+          "UI/UX相关的需求分析",
+          "超长上下文分析（阶段0需求分析）",
+          "多模块设计的整体规划",
+          "三方对抗设计中的Designer起草"
+        ],
+        "判断标准": "需要超长上下文 OR 前端相关 OR 设计起草",
+        "调用方式": "Task工具 + model参数设为'gemini'",
+        "特点": "2M上下文窗口，适合大型项目分析"
+      },
+      "sonnet": {
+        "model": "claude-4.5-sonnet",
+        "使用场景": [
+          "单个模块的设计与实现规划",
+          "代码审查与质量分析（阶段5）",
+          "中等复杂度的问题解决",
+          "API设计与数据库设计",
+          "测试策略制定（阶段7）",
+          "文档编写与技术方案撰写",
+          "主控Claude的日常决策"
+        ],
+        "判断标准": "需要平衡速度与质量的常规任务",
+        "调用方式": "Task工具 + model参数设为'sonnet' OR 主控直接执行"
+      },
+      "haiku": {
+        "model": "claude-4.5-haiku",
+        "使用场景": [
+          "简单的代码格式化",
+          "文档格式调整",
+          "简单配置修改(<20行)",
+          "进度记录与日志生成（阶段更新）",
+          "简单的文件操作",
+          "状态更新通知",
+          "Git提交消息生成"
+        ],
+        "判断标准": "明确的、机械性的、低风险的任务",
+        "调用方式": "Task工具 + model参数设为'haiku'"
+      },
+      "codex": {
+        "model": "gpt-5.1-codex",
+        "使用场景": [
+          "后端代码生成与实现（阶段4后端）",
+          "代码重构与优化",
+          "测试用例编写",
+          "复杂算法实现",
+          "三方对抗设计中的Critic代码审查"
+        ],
+        "判断标准": "所有代码生成、重构、测试编写任务",
+        "调用方式": "通过MCP调用，不是Task工具",
+        "特点": "专注代码质量，强大的代码理解能力"
+      }
+    }
+  },
+
+  "自动化边界": {
+    "无需确认的操作": [
+      "创建、修改、删除代码文件（在项目目录内）",
+      "运行构建、测试、格式化命令",
+      "生成进度记录MD文档",
+      "提交代码到Git（带规范注释）",
+      "创建和切换Git分支",
+      "运行数据库迁移脚本（测试环境）",
+      "安装package.json或pom.xml中已定义的依赖",
+      "修改项目文档（docs/目录下）"
+    ],
+    "禁止的操作": [
+      "删除.git目录或关键配置文件",
+      "强制推送到main/master分支",
+      "修改生产环境配置",
+      "提交包含密钥、密码的文件",
+      "安装未经规划的新依赖",
+      "修改系统级配置",
+      "访问或上传敏感数据"
+    ],
+    "需要人类介入的情况": [
+      "发现原始需求存在根本性矛盾",
+      "技术方案有多个等价选择且各有利弊",
+      "预算或时间约束无法满足质量要求",
+      "需要访问外部系统或购买服务"
+    ]
+  },
+
+  "莱纳斯三问检查": {
+    "问题1": {
+      "question": "这是真实存在的问题，还是想象出来的？",
+      "目的": "拒绝过度设计",
+      "检查点": [
+        "是否有真实用户场景？",
+        "是否有数据或反馈支持？",
+        "是否为将来可能需要的功能？",
+        "能否用现有方案解决？"
+      ],
+      "行动": "如果是想象出来的问题，立即停止，削减需求"
+    },
+    "问题2": {
+      "question": "有没有更简单的方法？",
+      "目的": "始终寻求最简解决方案",
+      "检查点": [
+        "能否用标准库替代第三方库？",
+        "能否减少抽象层级？",
+        "能否复用现有代码？",
+        "能否用配置替代代码？"
+      ],
+      "行动": "找到最简方案后，再考虑优化"
+    },
+    "问题3": {
+      "question": "这会破坏什么？",
+      "目的": "向后兼容性是铁律",
+      "检查点": [
+        "API签名是否改变？",
+        "数据库schema是否兼容？",
+        "配置格式是否改变？",
+        "是否影响现有客户端？"
+      ],
+      "行动": "任何破坏性改动必须提供迁移方案和回滚策略"
+    }
+  },
+
+  "工作流阶段": [
+    {
+      "阶段名": "P0.项目初始化与整体规划",
+      "层级": "项目级",
+      "执行者": "claude-code",
+      "模型": "opus",
+      "执行方式": "主控通过Task工具调用Opus子代理",
+      "参考指南": [
+        "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\INTELLIGENT_USER_CONFIRMATION.md"
+      ],
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\docs\\project\\master-plan.md",
+      "Task调用示例": {
+        "subagent_type": "general-purpose",
+        "model": "opus",
+        "prompt": "根据以下项目需求，进行整体架构设计和模块规划...\n\n⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。",
+        "description": "项目初始化和架构设计"
+      },
+      "触发条件": "首次接收项目需求",
+      "输入": "用户提供的项目需求",
+      "核心动作": [
+        "⚠️ 执行前强制检查：本阶段模型='opus'，我是'sonnet' → 必须用Task工具！",
+        "⚠️ 使用Task(model='opus')调用子代理执行以下步骤：",
+        "⚠️ 在Task的prompt中添加渐进式休眠指令",
+        "理解项目整体目标和业务价值",
+        "分析技术栈和架构选型",
+        "设计系统整体架构（前端/后端/数据库/部署）",
+        "识别所有核心功能模块",
+        "规划模块间依赖关系",
+        "确定开发优先级",
+        "生成项目主计划（Master Plan）",
+        "定义项目验收标准",
+        "⚠️ 执行后验证：检查 master-plan.md 是否生成，内容是否完整",
+        "⚠️ 更新记忆：更新 PROJECT_CONTEXT.md 和 QUICK_RESUME.md",
+        "⚠️ V4新增：【用户审查】等待用户确认架构设计后再继续",
+        "   - 输出消息：'📋 项目架构设计已完成，请查看 docs/project/master-plan.md'",
+        "   - 输出消息：'⚠️ 请确认架构设计是否符合预期。确认后输入\"继续\"，如需修改请说明。'",
+        "   - 等待用户输入（必须等待，不能自动继续）",
+        "   - 如果用户要求修改，返回重新设计；如果确认，继续下一步"
+      ],
+      "输出文件": "docs/project/master-plan.md",
+      "输出内容": {
+        "项目概述": "项目目标、业务价值、目标用户",
+        "技术架构": "系统架构图、技术栈选择、部署方案",
+        "模块清单": [
+          {
+            "模块ID": "M001",
+            "模块名": "用户认证系统",
+            "功能描述": "用户注册、登录、权限管理",
+            "优先级": "P0（必须）/ P1（重要）/ P2（可选）",
+            "依赖": ["无依赖"],
+            "预估工作量": "2-3天",
+            "验收标准": ["具体的验收条件"]
+          }
+        ],
+        "开发路线图": "模块开发顺序，关键里程碑",
+        "技术风险": "潜在风险和应对策略",
+        "项目验收标准": "整个项目的验收条件"
+      },
+      "下一步": "用户确认后，进入阶段0，开始第一个模块的开发"
+    },
+    {
+      "阶段名": "0.需求接收与解析",
+      "层级": "模块级",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "输入": "用户提供的任务描述",
+      "参考指南": [
+        "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\USER_DEFINED_SPEC.md"
+      ],
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\00-requirement.md",
+      "核心动作": [
+        "解析任务目标、范围、约束",
+        "识别任务类型（新功能/Bug修复/重构/非编程任务）",
+        "提取关键信息：输入、输出、验收标准",
+        "评估复杂度与风险等级"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/00-requirement.md",
+      "输出内容": {
+        "任务ID": "自动生成的唯一标识",
+        "任务类型": "feature/bugfix/refactor/docs/other",
+        "目标": "简洁的目标描述（1-2句话）",
+        "输入": "需要的资源、数据、依赖",
+        "输出": "交付物清单",
+        "边界": "明确做什么和不做什么",
+        "非目标": "明确排除的范围",
+        "验收标准": "可执行的检查项",
+        "复杂度评估": "简单/中等/复杂",
+        "预估时间": "xx分钟",
+        "风险等级": "低/中/高"
+      },
+      "下一步判断": {
+        "简单任务": "直接进入阶段4（实现）",
+        "中等任务": "进入阶段1（方案设计）",
+        "复杂任务": "进入阶段1（方案设计），使用claude-opus-4-1"
+      },
+      "莱纳斯检查": "问题1：这是真实问题吗？"
+    },
+    {
+      "阶段名": "1.架构与方案设计（V4迭代对抗）",
+      "说明": "V4迭代对抗机制：Designer起草 → Critic攻击 ↔ Designer修正（循环直到无大错误）→ Architect终审",
+      "执行者": "claude-code（主控协调三个Agent）",
+      "模型选择": {
+        "条件": "复杂度评估",
+        "复杂任务": "启用完整迭代对抗",
+        "中等任务": "可简化为Designer + Architect两方"
+      },
+      "输入": "00-requirement.md",
+      "V4_迭代对抗流程": {
+        "核心思想": "不断迭代改进，直到设计质量达标后才交给Architect终审",
+        "迭代循环机制": {
+          "说明": "Designer和Critic之间进行多轮对抗，每次修正后Critic重新检查，直到没有Critical/High问题",
+          "最大迭代次数": 5,
+          "循环退出条件": "Critic报告中没有Critical和High级别的问题"
+        },
+        "步骤1_Designer起草": {
+          "执行者": "gemini-3.0-pro",
+          "调用方式": "Task工具 + model='gemini'",
+          "任务": "设计初稿，覆盖前后端",
+          "迭代轮次": 1,
+          "参考指南": [
+            "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\PHASE_SCOPE_DEFINITION.md",
+            "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\MULTI_LAYER_VERIFICATION.md"
+          ],
+          "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\01-design-draft.md",
+          "prompt模板": "作为Designer，请设计本模块的完整方案。\n\n⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。\n\n📋 参考模板：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\01-design-draft.md\n📋 阶段范围定义：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\PHASE_SCOPE_DEFINITION.md\n\n必须包含：\n1. 整体架构设计\n2. 前端设计（页面、组件、路由、状态管理）\n3. 后端设计（API、数据库、业务逻辑）\n4. 技术选型和理由\n5. 莱纳斯三问的回答",
+          "输出": "01-design-v1.md（首轮设计）"
+        },
+        "步骤2_迭代循环": {
+          "说明": "这是一个循环过程，包含Critic攻击和Designer修正两个子步骤",
+          "循环控制": {
+            "初始状态": "进入循环",
+            "退出条件": "Critic报告中Critical和High问题数为0",
+            "最大迭代次数": 5,
+            "超过最大次数处理": "强制进入Architect终审，由Architect决定是否批准或驳回"
+          },
+          "子步骤2a_Critic攻击": {
+            "执行者": "gpt-5.1-codex",
+            "调用方式": "通过MCP调用Codex",
+            "任务": "红队攻击，找出所有漏洞和遗漏",
+            "输入": "当前轮次的设计文档（01-design-vN.md）",
+            "参考指南": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\ANTI_FORGET_CHECKLIST.md",
+            "prompt模板": "作为Critic（红队），你的任务是攻击这个设计，找出所有问题。\n\n⚠️ 这是第{iteration}轮审查，请严格检查上一轮修正是否完整。\n\n⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。\n\n📋 请参考防遗漏检查清单：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\ANTI_FORGET_CHECKLIST.md\n\n重点检查：\n1. 功能遗漏（是否缺少必要的子功能）\n2. 前后端不对应（前端有页面但后端没API）\n3. 安全漏洞（SQL注入、XSS、认证缺陷）\n4. 性能问题（N+1查询、缺少索引）\n5. 边缘案例（空值、超长输入、并发）\n6. 过度设计（不必要的复杂度）\n\n请列出所有发现的问题，按严重程度分类：Critical/High/Medium/Low\n\n⚠️ 最后必须明确说明：\n- Critical问题数量：[X]个\n- High问题数量：[Y]个\n- 是否需要继续修正：[是/否]",
+            "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\01-critique.md",
+            "输出": "01-critique-vN.md（第N轮Critique）"
+          },
+          "子步骤2b_检查退出条件": {
+            "执行者": "claude-code（主控）",
+            "检查内容": "读取Critic报告，统计Critical和High问题数量",
+            "决策逻辑": {
+              "如果_Critical和High问题数为0": "退出循环，进入步骤3（Architect终审）",
+              "如果_还有Critical或High问题": "继续子步骤2c（Designer修正）",
+              "如果_迭代次数达到5次": "强制退出循环，进入步骤3（Architect终审）"
+            },
+            "记录": "在QUICK_RESUME.md中记录当前迭代次数和问题数量"
+          },
+          "子步骤2c_Designer修正": {
+            "执行者": "gemini-3.0-pro",
+            "调用方式": "Task工具 + model='gemini'",
+            "触发条件": "Critic发现Critical或High级别问题",
+            "任务": "根据Critic反馈修正设计",
+            "输入": [
+              "上一轮设计文档（01-design-vN.md）",
+              "最新Critique报告（01-critique-vN.md）"
+            ],
+            "prompt模板": "作为Designer，这是第{iteration}轮修正。\n\n⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。\n\n📋 Critic反馈：请仔细阅读 01-critique-v{N}.md\n\n请针对所有Critical和High问题进行修正：\n1. 补充遗漏的功能\n2. 修复安全漏洞\n3. 优化性能设计\n4. 处理边缘案例\n5. 简化过度设计\n\n修正后，请在文档中明确标注：\n- ✅ 已修正的问题列表\n- 📝 修正说明\n- ⚠️ 如有无法修正的问题，说明原因",
+            "输出": "01-design-v{N+1}.md（修正后的设计）",
+            "下一步": "返回子步骤2a（Critic重新攻击）"
+          }
+        },
+        "步骤3_Architect终审": {
+          "执行者": "claude-4.5-opus",
+          "调用方式": "Task工具 + model='opus'",
+          "触发条件": "迭代循环结束（无Critical/High问题 OR 达到最大迭代次数）",
+          "任务": "最终审查，确保质量",
+          "输入": [
+            "最终设计文档（01-design-vN.md）",
+            "所有Critique报告（01-critique-v1.md ~ 01-critique-vN.md）",
+            "迭代历史记录"
+          ],
+          "参考指南": [
+            "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\ANTI_FORGET_CHECKLIST.md",
+            "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\MULTI_LAYER_VERIFICATION.md",
+            "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\INTELLIGENT_USER_CONFIRMATION.md"
+          ],
+          "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\01-architect-verdict.md",
+          "prompt模板": "作为总架构师Architect，你拥有最终决定权。\n\n⚠️ 重要：请在执行过程中渐进式休眠防止超时：第1次工作5分钟后休眠10秒，第2次工作5分钟后休眠30秒，第3次及以后每工作5分钟休眠1分钟。\n\n📋 背景信息：\n- 经过{iteration}轮迭代对抗\n- 当前Critical问题：{critical_count}个\n- 当前High问题：{high_count}个\n\n请审查设计和所有Critic的反馈。\n\n📋 参考模板：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\01-architect-verdict.md\n📋 防遗漏检查清单：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\ANTI_FORGET_CHECKLIST.md\n📋 用户确认机制：C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\INTELLIGENT_USER_CONFIRMATION.md\n\n评审标准（林纳斯三问）：\n1. 这是真实问题吗？（是否有过度设计）\n2. 有没有更简单的方法？（技术选型是否合理）\n3. 这会破坏什么？（向后兼容性）\n\n防遗漏检查：\n- 所有必要功能是否完整？\n- 前后端是否完整对应？\n- 是否有未设计的边缘案例？\n\n⚠️ 你必须做出明确决策（三选一）：\n- ✅ 批准：所有功能完整，设计合理，无重大缺陷（即使有少量Medium/Low问题）→ 进入阶段2\n- ⚠️ 有条件批准：可以实施，但需要在实施阶段注意某些问题 → 进入阶段2，带警告\n- ❌ 驳回：设计存在根本性问题（如架构缺陷、重大功能遗漏、技术选型错误）→ 打回步骤1重新设计\n\n⚠️ 驳回后的处理：\n- 清空所有现有设计文档\n- Designer从零开始重新设计\n- 重新进入完整的迭代对抗流程",
+          "输出": "01-architect-verdict.md",
+          "驳回处理": {
+            "说明": "如果Opus驳回设计，必须打回重做",
+            "流程": [
+              "1. 记录驳回理由到 01-architect-verdict.md",
+              "2. 归档当前设计到 01-design-rejected-vN.md",
+              "3. 清空迭代计数器（重置为0）",
+              "4. 通知主控：设计被驳回，需要重新开始",
+              "5. 返回步骤1（Designer重新起草）",
+              "6. 重新进入完整迭代循环"
+            ],
+            "驳回条件示例": [
+              "架构设计存在根本性缺陷",
+              "技术选型严重不合理",
+              "遗漏了核心功能模块",
+              "设计过度复杂无法实施",
+              "违反了林纳斯三问的基本原则"
+            ]
+          }
+        }
+      },
+      "核心动作": [
+        "⚠️ V4迭代对抗：串行执行，支持多轮循环直到无大错误",
+        "",
+        "【步骤1：Designer起草初稿】",
+        "1.1 准备交接文档（需求、上下文、约束、渐进式休眠指令）",
+        "1.2 使用Task工具调用Gemini (model='gemini')",
+        "1.3 等待返回，验证 01-design-v1.md 是否生成",
+        "1.4 更新 QUICK_RESUME.md（记录：设计v1已完成）",
+        "",
+        "【步骤2：迭代循环（Designer ↔ Critic）】",
+        "⚠️ 循环变量：iteration = 1, max_iterations = 5",
+        "",
+        "2.1 Critic攻击（第{iteration}轮）",
+        "    - 准备交接文档（当前设计文档 01-design-v{iteration}.md）",
+        "    - 在prompt中注明这是第{iteration}轮审查",
+        "    - 通过MCP调用Codex",
+        "    - 等待返回，验证 01-critique-v{iteration}.md 是否生成",
+        "    - 更新 QUICK_RESUME.md（记录：Critique v{iteration}已完成）",
+        "",
+        "2.2 主控检查退出条件",
+        "    - 读取 01-critique-v{iteration}.md",
+        "    - 统计Critical问题数和High问题数",
+        "    - 记录到变量：critical_count, high_count",
+        "    ",
+        "    决策分支：",
+        "    IF (critical_count == 0 AND high_count == 0):",
+        "        → 退出循环，进入步骤3（Architect终审）",
+        "    ",
+        "    ELSE IF (iteration >= max_iterations):",
+        "        → 警告：已达最大迭代次数",
+        "        → 强制退出循环，进入步骤3（Architect终审）",
+        "    ",
+        "    ELSE:",
+        "        → 继续2.3（Designer修正）",
+        "",
+        "2.3 Designer修正（第{iteration}轮）",
+        "    - 准备交接文档：",
+        "      * 上一版设计 01-design-v{iteration}.md",
+        "      * Critique报告 01-critique-v{iteration}.md",
+        "      * 强调这是第{iteration}轮修正",
+        "      * 渐进式休眠指令",
+        "    - 使用Task工具调用Gemini (model='gemini')",
+        "    - 等待返回，验证 01-design-v{iteration+1}.md 是否生成",
+        "    - 更新 QUICK_RESUME.md（记录：设计v{iteration+1}已完成）",
+        "    - iteration = iteration + 1",
+        "    - 返回2.1（Critic重新攻击）",
+        "",
+        "【步骤3：Architect终审】",
+        "3.1 准备交接文档：",
+        "    - 最终设计文档 01-design-v{final_iteration}.md",
+        "    - 所有Critique报告 01-critique-v1.md ~ 01-critique-v{final_iteration}.md",
+        "    - 迭代历史记录（总共{final_iteration}轮）",
+        "    - 当前Critical和High问题数",
+        "    - 渐进式休眠指令",
+        "3.2 使用Task工具调用Opus (model='opus')",
+        "3.3 等待返回，验证 01-architect-verdict.md 是否生成",
+        "3.4 读取Architect决策（三选一）：",
+        "    ",
+        "    IF 批准（✅ APPROVED）：",
+        "        → 复制最终设计为 01-design-final.md",
+        "        → 更新 MODULE_CONTEXT.md",
+        "        → 更新 QUICK_RESUME.md（记录：阶段1已完成）",
+        "        → 继续下一阶段（阶段2：任务拆解）",
+        "    ",
+        "    ELSE IF 有条件批准（⚠️ CONDITIONALLY APPROVED）：",
+        "        → 复制最终设计为 01-design-final.md",
+        "        → 记录警告事项到 MODULE_CONTEXT.md",
+        "        → 更新 QUICK_RESUME.md（记录：阶段1已完成，带警告）",
+        "        → 继续下一阶段（阶段2：任务拆解）",
+        "    ",
+        "    ELSE IF 驳回（❌ REJECTED）：",
+        "        ⚠️ 打回重做流程开始",
+        "        → 归档当前设计：",
+        "           cp 01-design-v{final_iteration}.md 01-design-rejected-attempt1.md",
+        "        → 记录驳回理由：",
+        "           在 01-architect-verdict.md 中详细说明驳回原因",
+        "        → 清空迭代状态：",
+        "           iteration = 0",
+        "           设计文档版本重置",
+        "        → 更新 QUICK_RESUME.md：",
+        "           记录：设计被Opus驳回，原因[...], 需要重新设计",
+        "        → 通知用户（可选）：",
+        "           输出消息：'⚠️ 设计被Architect驳回，原因：[...]'",
+        "           输出消息：'正在返回步骤1，Designer将重新起草设计'",
+        "        → 返回步骤1（Designer重新起草）：",
+        "           重新调用Gemini，要求：",
+        "           - 充分理解驳回理由",
+        "           - 从零开始重新设计",
+        "           - 避免之前的错误",
+        "        → 重新进入完整迭代循环（步骤2）",
+        "        ",
+        "        ⚠️ 如果连续3次被Opus驳回：",
+        "        → 暂停流程",
+        "        → 记录到 HISTORY.md",
+        "        → 提示用户：设计需求可能存在根本性问题，建议人工介入",
+        "",
+        "3.5 验证决策执行结果",
+        "",
+        "【验证要求】",
+        "⚠️ 每个Agent完成后必须验证：",
+        "    1) 输出文件是否生成",
+        "    2) 文件内容是否符合预期",
+        "    3) 版本号是否正确",
+        "",
+        "【禁止行为】",
+        "❌ 不允许并行调用Designer和Critic",
+        "❌ 不允许跳过Critic的审查",
+        "❌ 不允许在循环未结束时进入Architect终审",
+        "❌ 不允许超过5轮迭代（硬性限制）"
+      ],
+      "输出文件": [
+        "docs/progress/sessions/<session-id>/01-design-v1.md (首轮设计)",
+        "docs/progress/sessions/<session-id>/01-critique-v1.md (首轮Critique)",
+        "docs/progress/sessions/<session-id>/01-design-v2.md (第2轮修正设计，如有)",
+        "docs/progress/sessions/<session-id>/01-critique-v2.md (第2轮Critique，如有)",
+        "docs/progress/sessions/<session-id>/01-design-vN.md (第N轮修正设计，N≤5)",
+        "docs/progress/sessions/<session-id>/01-critique-vN.md (第N轮Critique，N≤5)",
+        "docs/progress/sessions/<session-id>/01-architect-verdict.md (Opus终审)",
+        "docs/progress/sessions/<session-id>/01-design-final.md (最终批准版本，复制自01-design-vN.md)",
+        "docs/progress/sessions/<session-id>/01-iteration-history.md (迭代历史记录)"
+      ],
+      "输出内容": {
+        "方案概述": "核心思路（3-5句话）",
+        "架构设计": "模块划分、职责分配",
+        "前端设计": "页面、组件、路由、状态管理",
+        "后端设计": "API、数据库、业务逻辑",
+        "数据设计": "表结构/数据结构定义",
+        "API设计": "接口路径、参数、返回值",
+        "技术选型": "使用的库、框架、工具",
+        "莱纳斯三问答案": {
+          "问题1": "真实问题的证据",
+          "问题2": "最简方案的理由",
+          "问题3": "兼容性分析"
+        },
+        "Critic反馈": "发现的问题和修正方案",
+        "Architect审查": "最终批准意见",
+        "风险分析": "技术风险、依赖风险、性能风险",
+        "回滚策略": "如何撤销本次改动",
+        "验证方式": "如何证明方案有效"
+      },
+      "质量检查": [
+        "缩进层级是否超过3层？（超过则重新设计）",
+        "是否有更简单的数据结构？",
+        "是否引入了不必要的概念？",
+        "是否破坏了API兼容性？",
+        "前后端是否完整对应？",
+        "是否有功能遗漏？"
+      ],
+      "下一步": "Architect批准后，进入阶段2（任务拆解）"
+    },
+    {
+      "阶段名": "2.任务拆解与规划",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "输入": "00-requirement.md + 01-design.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\02-tasks.md",
+      "核心动作": [
+        "将方案拆解为可独立执行的小任务",
+        "每个任务控制在10-15分钟内完成",
+        "明确任务依赖关系",
+        "为每个任务指定执行者（CC/Codex）",
+        "为每个任务定义验收标准",
+        "规划Git提交策略"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/02-tasks.md",
+      "输出内容": {
+        "任务清单": [
+          {
+            "任务ID": "T001",
+            "描述": "具体任务描述",
+            "执行者": "codex/claude-code",
+            "输入": "依赖的文件/数据",
+            "输出": "产出的文件/结果",
+            "验收": "可执行的验证命令",
+            "预估时间": "10分钟",
+            "依赖": ["T000"],
+            "Git提交": "是/否"
+          }
+        ],
+        "执行顺序": "串行/并行的说明",
+        "里程碑": "关键检查点"
+      },
+      "拆分原则": [
+        "单一职责：一个任务只做一件事",
+        "小步提交：每个任务可独立提交",
+        "可验证：必须有明确的验证方式",
+        "低耦合：减少任务间依赖"
+      ],
+      "下一步": "阶段3（上下文准备）"
+    },
+    {
+      "阶段名": "3.上下文准备与交接",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "输入": "02-tasks.md + 项目现状",
+      "参考指南": [
+        "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\guides\\ENCODING_GUIDE.md"
+      ],
+      "handover_templates": {
+        "design": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\handover\\gemini-handover-design.md",
+        "frontend": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\handover\\codex-handover-frontend.md",
+        "backend": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\handover\\codex-handover-backend.md"
+      },
+      "核心动作": [
+        "检索相关代码文件",
+        "分析现有实现",
+        "提取关键约束与规范",
+        "准备Codex交接卡片",
+        "创建临时上下文文档"
+      ],
+      "输出文件": [
+        "docs/progress/sessions/<session-id>/03-context.md",
+        "docs/dev/handovers/<topic>.md（如需要）"
+      ],
+      "Codex交接卡片格式": {
+        "Context": "背景信息、相关文件、现有实现",
+        "Task": "具体要做什么（清晰的指令）",
+        "Constraints": [
+          "必须遵守的规范（引用CLAUDE.md）",
+          "不能改动的代码",
+          "必须使用的库/框架",
+          "性能/安全要求"
+        ],
+        "Acceptance": [
+          "验证命令（可一键复现）",
+          "预期输出",
+          "边界条件测试"
+        ],
+        "Files": {
+          "读取": ["需要参考的文件"],
+          "修改": ["需要改动的文件"],
+          "创建": ["需要新建的文件"]
+        }
+      },
+      "下一步": "阶段4（实现）"
+    },
+    {
+      "阶段名": "4.代码实现（Codex执行）",
+      "执行者": "codex",
+      "触发条件": "任务类型为代码相关 AND 改动>20行",
+      "Codex调用参数": {
+        "model": "gpt-5.1-codex",
+        "sandbox": "danger-full-access",
+        "approval-policy": "on-failure",
+        "说明": "这些参数是固定的，每次调用Codex必须使用"
+      },
+      "输入": "03-context.md 或 Codex交接卡片",
+      "task_templates": {
+        "frontend": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\tasks\\task-micro-spec-frontend.md",
+        "backend": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\tasks\\task-micro-spec-backend.md"
+      },
+      "核心动作": [
+        "⚠️ V4强制：准备交接文档，必须在最前面加入渐进式休眠指令",
+        "⚠️ 交接文档模板：",
+        "   ## ⚠️ 重要执行指令",
+        "   请在执行过程中渐进式休眠防止超时：",
+        "   - 第1次工作5分钟后休眠10秒",
+        "   - 第2次工作5分钟后休眠30秒",
+        "   - 第3次及以后每工作5分钟休眠1分钟",
+        "",
+        "   ## 任务说明",
+        "   [交接卡片内容...]",
+        "",
+        "根据交接卡片实现代码",
+        "遵守项目规范（CLAUDE.md）",
+        "编写必要的注释",
+        "实现单元测试",
+        "执行验收命令",
+        "生成实现报告",
+        "⚠️ 完成后：主控验证输出文件是否生成",
+        "⚠️ 更新记忆：更新 QUICK_RESUME.md 和 HISTORY.md"
+      ],
+      "强制规范": [
+        "UTF-8编码（无BOM）",
+        "4空格缩进",
+        "最大行长120字符",
+        "公共方法必须有注释",
+        "复杂逻辑必须有说明",
+        "必须使用import语句",
+        "不引入新的第三方依赖（除非明确允许）",
+        "不修改公共API签名（除非明确允许）"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/04-implementation-<task-id>.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\04-implementation.md",
+      "输出内容": {
+        "任务ID": "T001",
+        "改动文件": ["列出所有改动的文件"],
+        "关键逻辑": "核心实现思路",
+        "技术决策": "为什么这样做",
+        "验证结果": "测试命令执行结果",
+        "遇到的问题": "问题与解决方案",
+        "待审查点": "需要CC审查的地方"
+      },
+      "验收流程": [
+        "编译通过",
+        "单元测试通过",
+        "代码格式化检查通过",
+        "执行交接卡片中的验收命令"
+      ],
+      "下一步": "阶段5（代码审查）"
+    },
+    {
+      "阶段名": "5.代码审查（林纳斯视角）",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "角色": "林纳斯·托瓦兹",
+      "审查原则": [
+        "简洁性：代码是否过度复杂？",
+        "清晰性：逻辑是否容易理解？",
+        "正确性：是否有潜在bug？",
+        "性能：是否有明显的性能问题？",
+        "安全性：是否有安全漏洞？",
+        "可维护性：未来是否容易修改？"
+      ],
+      "输入": "04-implementation-<task-id>.md + 代码改动",
+      "核心动作": [
+        "检查代码规范遵守情况",
+        "分析逻辑正确性",
+        "识别潜在bug",
+        "评估性能影响",
+        "检查安全风险",
+        "验证测试覆盖",
+        "检查API兼容性"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/05-review-<task-id>.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\05-review.md",
+      "输出内容": {
+        "任务ID": "T001",
+        "总体评价": "通过/需修改/高风险",
+        "规范问题": [
+          {
+            "文件": "src/xxx.java",
+            "行号": "123",
+            "问题": "缺少方法注释",
+            "严重程度": "低/中/高",
+            "建议": "添加@param和@return注释"
+          }
+        ],
+        "逻辑问题": [],
+        "性能问题": [],
+        "安全问题": [],
+        "测试问题": [],
+        "林纳斯评语": "一句话总结（严格但公正）"
+      },
+      "严重程度定义": {
+        "高": "必须立即修复，否则拒绝合并",
+        "中": "应该修复，可以在下次迭代",
+        "低": "建议优化，不强制"
+      },
+      "下一步判断": {
+        "通过": "阶段7（Git提交）",
+        "需修改": "阶段6（修正）",
+        "高风险": "回退到阶段1（重新设计）"
+      }
+    },
+    {
+      "阶段名": "6.代码修正",
+      "执行者": "codex",
+      "触发条件": "审查结果为'需修改'",
+      "输入": "05-review-<task-id>.md",
+      "核心动作": [
+        "逐条修复审查问题",
+        "更新测试用例",
+        "重新执行验收",
+        "生成修正报告"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/06-fix-<task-id>.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\06-fix.md",
+      "输出内容": {
+        "修复清单": [
+          {
+            "问题ID": "引用审查报告中的问题",
+            "修复方式": "具体做了什么",
+            "验证": "如何验证已修复"
+          }
+        ],
+        "未修复项": "无法修复的问题与原因"
+      },
+      "下一步": "重新进入阶段5（代码审查）"
+    },
+    {
+      "阶段名": "7.测试验证",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "输入": "所有实现和审查报告",
+      "核心动作": [
+        "执行构建命令",
+        "运行所有测试",
+        "执行端到端验证",
+        "检查测试覆盖率",
+        "验证验收标准"
+      ],
+      "测试层级": [
+        "单元测试：核心业务逻辑",
+        "集成测试：模块间接口",
+        "端到端测试：关键用户路径"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/07-test-results.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\07-test-results.md",
+      "checkpoint_templates": {
+        "quick_resume": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\checkpoints\\L0-QUICK_RESUME.md",
+        "history": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\checkpoints\\L3-HISTORY.md"
+      },
+      "输出内容": {
+        "构建结果": "成功/失败",
+        "测试统计": {
+          "总数": 100,
+          "通过": 98,
+          "失败": 2,
+          "跳过": 0
+        },
+        "失败用例": [
+          {
+            "用例名": "testXxx",
+            "错误信息": "...",
+            "影响范围": "...",
+            "修复建议": "..."
+          }
+        ],
+        "性能数据": "关键路径的响应时间",
+        "覆盖率": "代码覆盖率百分比",
+        "结论": "通过/需修复"
+      },
+      "下一步判断": {
+        "通过": "阶段8（Git提交）",
+        "失败": "阶段6（修正）"
+      }
+    },
+    {
+      "阶段名": "8.Git提交（V4立即提交）",
+      "说明": "V4强制：测试通过后立即Git提交，不允许堆积",
+      "执行者": "claude-code",
+      "模型": "haiku",
+      "触发条件": "阶段7（测试验证）通过",
+      "V4_强制规则": {
+        "立即提交": "✅ 测试通过后，立即进入本阶段，不得延迟",
+        "禁止堆积": "❌ 不允许完成多个功能后再一起提交",
+        "原子提交": "✅ 每个任务完成后，单独提交一次",
+        "验证要求": "✅ 提交前必须确认测试通过（Exit Code 0）"
+      },
+      "输入": "所有改动文件 + 实现报告 + 测试结果",
+      "核心动作": [
+        "⚠️ V4强制检查：测试是否通过？如果没通过，不允许提交",
+        "检查git status，确认有改动",
+        "暂存相关文件（git add）",
+        "⚠️ V4：使用Haiku生成规范的commit message",
+        "   - 调用Task(model='haiku')生成commit message",
+        "   - 提供任务ID、改动文件、测试结果",
+        "执行git commit",
+        "⚠️ 提交后验证：运行 git log -1 确认提交成功",
+        "⚠️ 更新记忆：",
+        "   - HISTORY.md追加提交记录（任务ID + Commit Hash）",
+        "   - QUICK_RESUME.md更新最近操作",
+        "⚠️ V4强制：立即继续下一个任务，不能停顿"
+      ],
+      "Commit message规范": {
+        "格式": "<type>(<scope>): <subject>\n\n<body>\n\n<footer>",
+        "type": "feat/fix/refactor/docs/test/chore",
+        "subject": "简洁描述（不超过50字符）",
+        "body": [
+          "详细说明：为什么做这个改动",
+          "影响范围：改动了哪些模块",
+          "关键决策：重要的技术选择",
+          "验证方式：如何验证这个改动"
+        ],
+        "footer": [
+          "Task-ID: <session-id>-<task-id>",
+          "Reviewed-By: Claude Code",
+          "Implemented-By: Codex",
+          "Test-Status: ✅ Passed"
+        ]
+      },
+      "示例": {
+        "message": "feat(user): add user registration API\n\nImplemented user registration with email verification.\nAdded input validation and duplicate check.\nUsed BCrypt for password hashing.\n\nVerify: curl -X POST localhost:8080/api/users/register\n\nTask-ID: 20251117-001-T001\nReviewed-By: Claude Code\nImplemented-By: Codex\nTest-Status: ✅ Passed"
+      },
+      "提交策略": [
+        "✅ 小步提交：每个独立功能一次提交",
+        "✅ 原子性：每次提交都是完整可运行的",
+        "✅ 可追溯：通过Task-ID关联到进度文档",
+        "✅ 可回滚：每次提交都可以安全回退",
+        "✅ V4新增：测试通过立即提交，防止工作丢失"
+      ],
+      "下一步": "✅ 立即选择下一个任务（如有） OR 进入阶段9（模块交付）"
+    },
+    {
+      "阶段名": "9.模块交付",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "触发条件": "所有任务完成 AND 所有测试通过",
+      "输入": "所有进度文档 + 最终代码",
+      "核心动作": [
+        "汇总所有改动",
+        "生成交付文档",
+        "更新项目文档",
+        "记录已知问题",
+        "提供使用说明"
+      ],
+      "输出文件": "docs/progress/sessions/<session-id>/09-delivery.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\module\\09-delivery.md",
+      "输出内容": {
+        "交付物清单": ["列出所有交付的文件/功能"],
+        "功能说明": "业务人员可以看懂的描述",
+        "技术方案": "引用01-design.md",
+        "API文档": "接口列表、参数、返回值",
+        "数据库变更": "DDL脚本和数据迁移说明",
+        "配置变更": "需要修改的配置项",
+        "部署说明": "如何部署和启动",
+        "使用说明": "如何使用新功能",
+        "测试报告": "引用07-test-results.md",
+        "已知问题": "限制、风险、待优化项",
+        "回滚方案": "如何撤销本次发布",
+        "后续建议": "可能的优化方向"
+      },
+      "质量检查": [
+        "所有验收标准是否达成？",
+        "是否有未解决的高风险问题？",
+        "文档是否完整？",
+        "是否可以一键部署？"
+      ],
+      "最终Git操作": [
+        "如果在feature分支，合并到main",
+        "打tag标记版本",
+        "推送到远程仓库（如配置）"
+      ],
+      "下一步": "阶段P10（项目完成度检查）"
+    },
+    {
+      "阶段名": "P10.项目完成度检查与下一步决策",
+      "层级": "项目级",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "触发条件": "每个模块交付后（阶段9完成）",
+      "输入": "docs/project/master-plan.md + 所有已完成模块",
+      "核心动作": [
+        "读取项目主计划（master-plan.md）",
+        "统计已完成模块数量和状态",
+        "计算项目完成度百分比",
+        "检查所有验收标准达成情况",
+        "分析是否还有未实现的功能",
+        "评估系统整体可运行性",
+        "做出继续或结束的决策"
+      ],
+      "输出文件": "docs/project/progress-checkpoint.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\project\\P10-progress-checkpoint.md",
+      "输出内容": {
+        "检查时间": "ISO 8601格式",
+        "已完成模块": ["M001: 用户认证系统", "M002: ..."],
+        "待完成模块": ["M003: ...", "M004: ..."],
+        "项目完成度": "75%",
+        "验收标准达成情况": [
+          {"标准": "用户可以注册登录", "状态": "✅ 已达成"},
+          {"标准": "数据可以持久化", "状态": "❌ 未达成"}
+        ],
+        "决策": "继续 / 结束",
+        "下一步行动": "如果继续，明确下一个模块"
+      },
+      "决策逻辑": {
+        "如果_项目完成": {
+          "判断条件": [
+            "所有P0（必须）模块已完成",
+            "所有验收标准已达成",
+            "系统可以完整运行",
+            "文档齐全"
+          ],
+          "行动": "进入阶段P99（项目最终交付）"
+        },
+        "如果_项目未完成": {
+          "判断条件": "还有待完成模块",
+          "行动": [
+            "从项目主计划中选择下一个优先级最高的模块",
+            "检查该模块的依赖是否已满足",
+            "更新current-status.md，说明即将开始新模块",
+            "回到阶段0，开始新模块的开发"
+          ]
+        }
+      },
+      "下一步": "阶段0（新模块） OR 阶段P99（项目交付）"
+    },
+    {
+      "阶段名": "P99.项目最终交付",
+      "层级": "项目级",
+      "执行者": "claude-code",
+      "模型": "sonnet-4.5",
+      "触发条件": "项目完成度检查通过",
+      "输入": "所有模块交付文档 + 项目主计划",
+      "核心动作": [
+        "汇总所有模块功能",
+        "生成完整的项目文档",
+        "生成用户手册",
+        "生成部署文档",
+        "生成项目交接文档",
+        "更新README.md",
+        "标记项目状态为'已交付'"
+      ],
+      "输出文件": "docs/project/final-delivery.md",
+      "输出模板": "C:\\Users\\lenovo\\.claude\\workflows\\v4.0\\templates\\project\\P99-final-delivery.md",
+      "输出内容": {
+        "项目概述": "完整的项目介绍",
+        "功能清单": "所有已实现功能",
+        "技术架构": "最终的系统架构",
+        "部署指南": "完整的部署步骤",
+        "用户手册": "如何使用系统",
+        "API文档": "所有API接口说明",
+        "数据库文档": "完整的表结构说明",
+        "测试报告": "完整的测试覆盖情况",
+        "已知问题": "当前存在的限制和问题",
+        "后续规划": "可能的优化方向"
+      },
+      "最终操作": [
+        "生成项目总结报告",
+        "更新current-status.md为'项目已交付'",
+        "归档所有文档到docs/project/",
+        "创建Git release tag",
+        "输出成功消息"
+      ],
+      "结束消息": "🎉 项目开发完成！所有功能已实现并交付。查看 docs/project/final-delivery.md 了解详情。"
+    }
+  ],
+
+  "进度监控系统": {
+    "目录结构": {
+      "根目录": "docs/progress/",
+      "会话目录": "docs/progress/sessions/<session-id>/",
+      "实时进度": "docs/progress/current-status.md",
+      "历史记录": "docs/progress/history.md"
+    },
+    "实时进度文件": {
+      "路径": "docs/progress/current-status.md",
+      "更新频率": "每完成一个阶段立即更新",
+      "内容": {
+        "当前会话ID": "<session-id>",
+        "任务概述": "简短描述",
+        "当前阶段": "阶段名称",
+        "进度百分比": "xx%",
+        "已完成任务": ["T001", "T002"],
+        "进行中任务": ["T003"],
+        "待执行任务": ["T004", "T005"],
+        "最后更新时间": "ISO 8601格式",
+        "预计完成时间": "基于剩余任务估算",
+        "遇到的问题": "当前阻塞问题",
+        "下一步行动": "即将执行的操作"
+      },
+      "手机查看": "直接打开这个MD文件即可看到实时进度"
+    },
+    "会话目录": {
+      "命名规则": "YYYYMMDD-HHmmss-<任务简称>",
+      "示例": "20251117-143022-user-registration",
+      "包含文件": [
+        "00-requirement.md",
+        "01-design.md",
+        "02-tasks.md",
+        "03-context.md",
+        "04-implementation-*.md",
+        "05-review-*.md",
+        "06-fix-*.md",
+        "07-test-results.md",
+        "09-delivery.md"
+      ]
+    },
+    "历史记录": {
+      "路径": "docs/progress/history.md",
+      "内容": "所有已完成会话的索引和链接"
+    }
+  },
+
+  "异常处理与重试": {
+    "超时设置": {
+      "Codex执行": "480秒（8分钟）",
+      "构建命令": "300秒（5分钟）",
+      "测试命令": "600秒（10分钟）"
+    },
+    "重试机制": {
+      "最大重试次数": 3,
+      "重试间隔": "10秒",
+      "适用场景": [
+        "网络请求失败",
+        "临时文件锁",
+        "依赖下载失败"
+      ]
+    },
+    "异常分类": {
+      "可自动恢复": [
+        "网络超时 -> 重试",
+        "依赖冲突 -> 清理缓存重试",
+        "格式化失败 -> 跳过格式化继续"
+      ],
+      "需要调整策略": [
+        "测试失败 -> 进入修正流程",
+        "代码审查不通过 -> 进入修正流程",
+        "依赖缺失 -> 分析依赖树，安装缺失包"
+      ],
+      "需要人类介入": [
+        "方案根本性错误 -> 暂停，记录问题",
+        "所有重试都失败 -> 暂停，记录问题",
+        "发现需求矛盾 -> 暂停，请求澄清"
+      ]
+    },
+    "错误记录": {
+      "路径": "docs/progress/sessions/<session-id>/errors.md",
+      "内容": {
+        "错误时间": "ISO 8601格式",
+        "错误阶段": "发生在哪个阶段",
+        "错误描述": "详细的错误信息",
+        "尝试的解决方案": "做了什么尝试",
+        "最终结果": "是否解决"
+      }
+    }
+  },
+
+  "质量保证清单": {
+    "代码质量": [
+      "[ ] 缩进层级未超过3层",
+      "[ ] 公共方法有完整注释",
+      "[ ] 复杂逻辑有行内说明",
+      "[ ] 使用import而非完全限定类名",
+      "[ ] UTF-8编码，无BOM",
+      "[ ] 命名符合项目规范",
+      "[ ] 没有硬编码的配置"
+    ],
+    "功能质量": [
+      "[ ] 核心业务逻辑有单元测试",
+      "[ ] 边界条件有测试覆盖",
+      "[ ] 异常情况有测试覆盖",
+      "[ ] 端到端路径可正常运行",
+      "[ ] 所有验收标准已达成"
+    ],
+    "安全质量": [
+      "[ ] SQL注入防护",
+      "[ ] XSS防护",
+      "[ ] CSRF防护（如需要）",
+      "[ ] 敏感信息已加密/脱敏",
+      "[ ] 没有泄露密钥或密码"
+    ],
+    "文档质量": [
+      "[ ] API文档完整",
+      "[ ] 数据库变更有DDL",
+      "[ ] 配置变更有说明",
+      "[ ] 部署步骤可执行",
+      "[ ] 已知问题已记录"
+    ]
+  },
+
+  "Codex调用规范": {
+    "固定参数": {
+      "model": "gpt-5.1-codex",
+      "sandbox": "danger-full-access",
+      "approval-policy": "on-failure"
+    },
+    "调用时机": {
+      "必须使用Codex": [
+        "代码生成（>20行）",
+        "代码重构（>20行）",
+        "测试用例编写",
+        "批量文件操作",
+        "复杂的正则表达式",
+        "SQL语句编写"
+      ],
+      "可以由CC处理": [
+        "拼写错误修复",
+        "纯注释修改",
+        "简单配置调整（<20行）",
+        "进度文档生成",
+        "代码审查",
+        "方案设计"
+      ]
+    },
+    "交接规范": "必须使用标准的Codex交接卡片格式"
+  },
+
+  "扩展性配置": {
+    "支持的项目类型": [
+      "编程项目（Java/Python/JavaScript/Go/等）",
+      "Web应用项目（前端/全栈）",
+      "文档项目（写作、翻译、整理）",
+      "数据分析项目",
+      "配置管理项目",
+      "DevOps自动化项目",
+      "研究与学习项目"
+    ],
+    "建议的MCP扩展": [
+      {
+        "名称": "puppeteer MCP",
+        "用途": "浏览器自动化测试",
+        "安装": "npx -y @modelcontextprotocol/server-puppeteer",
+        "使用场景": "Web项目的端到端测试、控制台检查、截图验证",
+        "优先级": "高（Web项目必需）"
+      },
+      {
+        "名称": "codex MCP",
+        "用途": "代码生成和重构",
+        "安装": "npx -y @anthropics/codex-mcp-server",
+        "使用场景": "所有代码生成任务",
+        "优先级": "高（必需）"
+      },
+      {
+        "名称": "filesystem MCP",
+        "用途": "增强文件系统操作能力",
+        "优先级": "中"
+      },
+      {
+        "名称": "git MCP",
+        "用途": "更强大的Git操作",
+        "优先级": "中"
+      },
+      {
+        "名称": "database MCP",
+        "用途": "直接操作数据库",
+        "优先级": "中"
+      },
+      {
+        "名称": "notification MCP",
+        "用途": "手机推送进度通知",
+        "优先级": "低"
+      },
+      {
+        "名称": "web-search MCP",
+        "用途": "实时搜索技术文档",
+        "优先级": "低"
+      }
+    ],
+    "浏览器测试配置": {
+      "启用条件": "项目类型包含前端或Web",
+      "工具": "mcp__puppeteer__*",
+      "测试内容": [
+        "页面是否正常加载",
+        "控制台是否有错误",
+        "网络请求是否成功",
+        "关键功能是否可用",
+        "截图对比验证"
+      ],
+      "集成到阶段7": "测试验证阶段自动调用浏览器测试"
+    }
+  },
+
+  "监督机制": {
+    "CC监督Codex": [
+      "每次实现后必须进行代码审查",
+      "发现规范违反立即要求修正",
+      "检查是否引入不必要的复杂度",
+      "验证是否遵守莱纳斯三问",
+      "确保提交的commit message规范"
+    ],
+    "自我监督": [
+      "每个决策前执行莱纳斯三问",
+      "每个方案设计后评估复杂度",
+      "每个阶段结束后更新进度",
+      "发现问题立即记录到errors.md"
+    ]
+  },
+
+  "元数据": {
+    "工作流版本": "4.0",
+    "设计理念": "林纳斯·托瓦兹的工程哲学：简洁、实用、可维护",
+    "核心价值": "自主性、可追溯、高质量、去繁为简、渐进休眠、三方对抗",
+    "适用场景": "所有需要系统化、可追溯的工作流程"
+  }
+}
