@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建项目申请</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="application-list.html" class="back-link">← 返回申请列表</a>
+
+        <h1>创建项目申请</h1>
+
+        <form id="applicationForm">
+            <div class="form-group">
+                <label for="title">项目名称 <span style="color:red;">*</span></label>
+                <input type="text" id="title" name="title" required placeholder="请输入项目名称">
+            </div>
+
+            <div class="form-group">
+                <label for="dept">申请部门 <span style="color:red;">*</span></label>
+                <select id="dept" name="dept" required>
+                    <option value="">请选择部门</option>
+                    <option value="1">技术部</option>
+                    <option value="2">市场部</option>
+                    <option value="3">运营部</option>
+                    <option value="4">财务部</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">项目类别 <span style="color:red;">*</span></label>
+                <select id="category" name="category" required>
+                    <option value="">请选择类别</option>
+                    <option value="1">技术创新</option>
+                    <option value="2">产品研发</option>
+                    <option value="3">流程优化</option>
+                    <option value="4">其他</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="budget">预算金额（万元） <span style="color:red;">*</span></label>
+                <input type="text" id="budget" name="budget" required placeholder="请输入预算金额">
+            </div>
+
+            <div class="form-group">
+                <label for="startDate">计划开始日期 <span style="color:red;">*</span></label>
+                <input type="date" id="startDate" name="startDate" required>
+            </div>
+
+            <div class="form-group">
+                <label for="endDate">计划结束日期 <span style="color:red;">*</span></label>
+                <input type="date" id="endDate" name="endDate" required>
+            </div>
+
+            <div class="form-group">
+                <label for="background">项目背景 <span style="color:red;">*</span></label>
+                <textarea id="background" name="background" required placeholder="请描述项目背景和必要性"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="content">项目内容 <span style="color:red;">*</span></label>
+                <textarea id="content" name="content" required placeholder="请详细描述项目的主要内容和实施方案"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="goal">项目目标 <span style="color:red;">*</span></label>
+                <textarea id="goal" name="goal" required placeholder="请描述项目预期达成的目标"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="attachment">附件上传</label>
+                <input type="file" id="attachment" name="attachment" multiple>
+                <small style="color: #999;">支持上传项目方案、预算表等相关文件</small>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="button" class="btn btn-default" onclick="saveDraft()">保存草稿</button>
+                <button type="button" class="btn btn-primary" onclick="submitApplication()">提交申请</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='application-list.html'">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function saveDraft() {
+            if (confirm('确认保存为草稿？')) {
+                alert('草稿保存成功！');
+                window.location.href = 'application-list.html';
+            }
+        }
+
+        function submitApplication() {
+            const form = document.getElementById('applicationForm');
+            if (form.checkValidity()) {
+                if (confirm('确认提交申请？提交后将进入审核流程。')) {
+                    alert('提交成功！申请已进入待审核状态。');
+                    window.location.href = 'application-list.html';
+                }
+            } else {
+                alert('请填写所有必填项！');
+                form.reportValidity();
+            }
+        }
+    </script>
+</body>
+</html>

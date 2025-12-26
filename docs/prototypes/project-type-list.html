@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目类型管理</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="config-menu.html" class="back-link">← 返回配置管理</a>
+
+        <h1>项目类型管理</h1>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <input type="text" placeholder="搜索项目类型名称" style="width: 300px;">
+                <select style="width: 150px;">
+                    <option value="">全部状态</option>
+                    <option value="enabled">启用</option>
+                    <option value="disabled">停用</option>
+                </select>
+                <button class="btn btn-primary">搜索</button>
+                <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=add'" style="margin-left: 20px;">+ 新建项目类型</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>类型编码</th>
+                    <th>类型名称</th>
+                    <th>评审模板</th>
+                    <th>审批流程</th>
+                    <th>预算范围</th>
+                    <th>周期要求</th>
+                    <th>状态</th>
+                    <th>排序</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>TYPE_001</td>
+                    <td><strong>产品研发</strong></td>
+                    <td>产品研发评审模板</td>
+                    <td>标准审批流程（3级）</td>
+                    <td>50-500万</td>
+                    <td>6-18个月</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>1</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=edit&id=TYPE_001'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TYPE_001')">详情</button>
+                        <button class="btn btn-default" onclick="toggleStatus('TYPE_001', '产品研发', 'enabled')">停用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TYPE_002</td>
+                    <td><strong>技术创新</strong></td>
+                    <td>技术创新评审模板</td>
+                    <td>专家审批流程（4级）</td>
+                    <td>30-300万</td>
+                    <td>3-12个月</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>2</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=edit&id=TYPE_002'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TYPE_002')">详情</button>
+                        <button class="btn btn-default" onclick="toggleStatus('TYPE_002', '技术创新', 'enabled')">停用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TYPE_003</td>
+                    <td><strong>流程优化</strong></td>
+                    <td>流程优化评审模板</td>
+                    <td>快速审批流程（2级）</td>
+                    <td>10-100万</td>
+                    <td>1-6个月</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>3</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=edit&id=TYPE_003'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TYPE_003')">详情</button>
+                        <button class="btn btn-default" onclick="toggleStatus('TYPE_003', '流程优化', 'enabled')">停用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TYPE_004</td>
+                    <td><strong>基础设施</strong></td>
+                    <td>基础设施评审模板</td>
+                    <td>标准审批流程（3级）</td>
+                    <td>20-200万</td>
+                    <td>3-12个月</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>4</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=edit&id=TYPE_004'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TYPE_004')">详情</button>
+                        <button class="btn btn-default" onclick="toggleStatus('TYPE_004', '基础设施', 'enabled')">停用</button>
+                    </td>
+                </tr>
+                <tr style="background-color: #f5f5f5;">
+                    <td>TYPE_005</td>
+                    <td><strong>市场拓展</strong></td>
+                    <td>市场拓展评审模板</td>
+                    <td>标准审批流程（3级）</td>
+                    <td>30-300万</td>
+                    <td>6-12个月</td>
+                    <td><span class="status-badge" style="background-color: #999; color: white;">停用</span></td>
+                    <td>5</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-type-edit.html?mode=edit&id=TYPE_005'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TYPE_005')">详情</button>
+                        <button class="btn btn-default" onclick="toggleStatus('TYPE_005', '市场拓展', 'disabled')">启用</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px; color: #666;">
+            <p><strong>配置说明：</strong></p>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li><strong>类型编码</strong>：系统唯一标识，创建后不可修改</li>
+                <li><strong>评审模板</strong>：关联该类型项目的评审评分标准</li>
+                <li><strong>审批流程</strong>：定义该类型项目的审批节点和规则</li>
+                <li><strong>预算范围</strong>：建议预算区间，超出需特殊审批</li>
+                <li><strong>周期要求</strong>：项目建议执行周期</li>
+                <li><strong>排序</strong>：影响前端选择框中的显示顺序</li>
+                <li><strong>停用</strong>：停用后该类型将不可用于新项目申报</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function viewDetail(typeId) {
+            alert('查看项目类型详情：' + typeId + '\n\n包括：\n- 类型基本信息\n- 关联的评审模板配置\n- 审批流程定义\n- 历史使用统计\n- 修改记录');
+        }
+
+        function toggleStatus(typeId, typeName, currentStatus) {
+            const action = currentStatus === 'enabled' ? '停用' : '启用';
+            const warning = currentStatus === 'enabled' ?
+                '\n\n⚠️ 停用后，该类型将不再出现在新项目申报的类型选项中。\n已有该类型的项目不受影响。' :
+                '\n\n启用后，该类型将重新出现在项目申报的类型选项中。';
+
+            if (confirm(`确认${action}项目类型"${typeName}"？${warning}`)) {
+                alert(`项目类型"${typeName}"已${action}！`);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

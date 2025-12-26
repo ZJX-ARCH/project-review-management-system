@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目评审评分</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .score-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #fafafa;
+            border-radius: 4px;
+        }
+        .score-item {
+            margin-bottom: 15px;
+        }
+        .score-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .score-input input[type="number"] {
+            width: 100px;
+        }
+        .total-score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+            text-align: center;
+            padding: 20px;
+            background-color: #e6f7ff;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="evaluation-list.html" class="back-link">← 返回评审列表</a>
+
+        <h1>项目评审评分</h1>
+
+        <div class="card">
+            <div class="card-title">项目信息</div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">移动办公APP</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请人：</div>
+                <div class="info-value">张三（技术部）</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目类别：</div>
+                <div class="info-value">产品研发</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">预算金额：</div>
+                <div class="info-value">80 万元</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">计划时间：</div>
+                <div class="info-value">2026-01-15 至 2026-10-31</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">项目内容摘要</div>
+            <p style="line-height: 1.6; color: #666;">
+                开发移动办公APP，支持移动审批、即时通讯、日程管理等核心功能，预期审批效率提升50%，
+                移动办公使用率达到80%。项目包含移动审批、即时通讯、日程管理、企业通讯录等4个主要模块。
+            </p>
+            <div style="margin-top: 10px;">
+                <button class="btn btn-default" onclick="window.open('application-detail.html')">查看完整申请材料</button>
+            </div>
+        </div>
+
+        <form id="evaluationForm">
+            <h2>评分项（总分100分）</h2>
+
+            <div class="score-section">
+                <h3 style="margin-top: 0;">一、项目创新性（20分）</h3>
+                <div class="score-item">
+                    <label>1. 技术创新程度（10分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="10" step="0.5" onchange="calculateTotal()" id="score1">
+                        <span>分（评价项目采用的技术是否具有创新性）</span>
+                    </div>
+                </div>
+                <div class="score-item">
+                    <label>2. 应用模式创新（10分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="10" step="0.5" onchange="calculateTotal()" id="score2">
+                        <span>分（评价项目的应用模式是否新颖）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <h3 style="margin-top: 0;">二、技术可行性（25分）</h3>
+                <div class="score-item">
+                    <label>1. 技术方案合理性（15分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="15" step="0.5" onchange="calculateTotal()" id="score3">
+                        <span>分（评价技术方案是否合理可行）</span>
+                    </div>
+                </div>
+                <div class="score-item">
+                    <label>2. 实施团队能力（10分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="10" step="0.5" onchange="calculateTotal()" id="score4">
+                        <span>分（评价团队是否具备实施能力）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <h3 style="margin-top: 0;">三、应用价值（30分）</h3>
+                <div class="score-item">
+                    <label>1. 实际应用前景（15分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="15" step="0.5" onchange="calculateTotal()" id="score5">
+                        <span>分（评价项目的实际应用价值和前景）</span>
+                    </div>
+                </div>
+                <div class="score-item">
+                    <label>2. 预期效益（15分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="15" step="0.5" onchange="calculateTotal()" id="score6">
+                        <span>分（评价项目预期产生的经济和社会效益）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <h3 style="margin-top: 0;">四、预算合理性（15分）</h3>
+                <div class="score-item">
+                    <label>1. 预算编制合理性（15分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="15" step="0.5" onchange="calculateTotal()" id="score7">
+                        <span>分（评价项目预算是否合理，资金使用是否得当）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <h3 style="margin-top: 0;">五、风险控制（10分）</h3>
+                <div class="score-item">
+                    <label>1. 风险识别与应对（10分）</label>
+                    <div class="score-input">
+                        <input type="number" min="0" max="10" step="0.5" onchange="calculateTotal()" id="score8">
+                        <span>分（评价项目风险识别是否充分，应对措施是否有效）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="total-score">
+                总分：<span id="totalScore">0</span> 分
+            </div>
+
+            <div class="form-group">
+                <label for="comment">评审意见 <span style="color:red;">*</span></label>
+                <textarea id="comment" required placeholder="请填写详细的评审意见，包括项目优势、存在的问题、改进建议等..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>立项建议 <span style="color:red;">*</span></label>
+                <select id="recommendation" required style="width: 300px;">
+                    <option value="">请选择</option>
+                    <option value="strongly_recommend">强烈推荐立项</option>
+                    <option value="recommend">推荐立项</option>
+                    <option value="conditional">有条件推荐（需改进）</option>
+                    <option value="not_recommend">不推荐立项</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="button" class="btn btn-primary" onclick="submitEvaluation()">提交评审</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='evaluation-list.html'">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function calculateTotal() {
+            let total = 0;
+            for (let i = 1; i <= 8; i++) {
+                const value = parseFloat(document.getElementById('score' + i).value) || 0;
+                total += value;
+            }
+            document.getElementById('totalScore').textContent = total.toFixed(1);
+        }
+
+        function submitEvaluation() {
+            const form = document.getElementById('evaluationForm');
+            const totalScore = parseFloat(document.getElementById('totalScore').textContent);
+            const comment = document.getElementById('comment').value.trim();
+            const recommendation = document.getElementById('recommendation').value;
+
+            if (totalScore === 0) {
+                alert('请完成评分！');
+                return;
+            }
+
+            if (!comment) {
+                alert('请填写评审意见！');
+                return;
+            }
+
+            if (!recommendation) {
+                alert('请选择立项建议！');
+                return;
+            }
+
+            if (confirm(`确认提交评审？\n\n总分：${totalScore} 分\n立项建议：${document.getElementById('recommendation').options[document.getElementById('recommendation').selectedIndex].text}\n\n提交后将无法修改。`)) {
+                alert(`评审提交成功！\n\n您的评分：${totalScore} 分\n\n系统将汇总所有专家的评审结果，并通知申请人。`);
+                window.location.href = 'evaluation-list.html';
+            }
+        }
+    </script>
+</body>
+</html>

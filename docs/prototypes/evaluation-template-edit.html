@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑评审模板</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .category-section {
+            background-color: #fafafa;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1890ff;
+        }
+        .category-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .score-item {
+            background-color: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .score-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .total-score-display {
+            position: sticky;
+            top: 20px;
+            background-color: #e6f7ff;
+            border: 2px solid #1890ff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .total-score-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="evaluation-template-list.html" class="back-link">← 返回评审模板列表</a>
+
+        <h1 id="pageTitle">编辑评审模板</h1>
+
+        <div class="total-score-display">
+            <div style="font-size: 14px; color: #666; margin-bottom: 10px;">当前总分</div>
+            <div class="total-score-value" id="totalScore">100</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">（必须等于100分）</div>
+        </div>
+
+        <form id="templateForm">
+            <div class="card">
+                <div class="card-title">基本信息</div>
+
+                <div class="form-group">
+                    <label for="templateCode">模板编码 <span style="color:red;">*</span></label>
+                    <input type="text" id="templateCode" required placeholder="如：TPL_006" maxlength="20" value="TPL_002">
+                    <div style="margin-top: 5px; color: #999; font-size: 14px;">
+                        编码规则：TPL_XXX，创建后不可修改
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="templateName">模板名称 <span style="color:red;">*</span></label>
+                    <input type="text" id="templateName" required placeholder="如：产品研发评审模板" maxlength="50" value="技术创新评审模板">
+                </div>
+
+                <div class="form-group">
+                    <label for="templateDesc">模板说明</label>
+                    <textarea id="templateDesc" placeholder="描述该模板的适用场景、评审重点等...">适用于技术创新类项目评审，重点关注技术先进性、创新突破性、应用前景和知识产权保护。</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>状态 <span style="color:red;">*</span></label>
+                    <div>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="status" value="enabled" checked> 启用
+                        </label>
+                        <label>
+                            <input type="radio" name="status" value="disabled"> 停用
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    评分项配置
+                    <button type="button" class="btn btn-primary" style="float: right;" onclick="addCategory()">+ 添加评分大类</button>
+                </div>
+
+                <div id="categoriesContainer">
+                    <!-- 第一大类 -->
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div>
+                                <input type="text" value="一、技术创新性" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                                <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(25分)</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                                <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                            </div>
+                        </div>
+
+                        <div class="score-items">
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 1</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="技术先进性" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="15" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目采用的技术是否处于行业领先水平，是否代表技术发展方向。</textarea>
+                                </div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 2</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="创新突破性" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="10" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目是否有重大技术创新和突破，是否填补行业空白。</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第二大类 -->
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div>
+                                <input type="text" value="二、技术可行性" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                                <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(25分)</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                                <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                            </div>
+                        </div>
+
+                        <div class="score-items">
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 3</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="技术方案合理性" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="15" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价技术路线是否科学合理，实施方案是否切实可行。</textarea>
+                                </div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 4</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="实施团队能力" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="10" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目团队是否具备相应的技术实力和项目经验。</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第三大类 -->
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div>
+                                <input type="text" value="三、应用价值" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                                <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(30分)</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                                <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                            </div>
+                        </div>
+
+                        <div class="score-items">
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 5</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="应用前景" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="15" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价技术成果的应用潜力和推广价值。</textarea>
+                                </div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 6</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="预期效益" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="15" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目预期产生的经济效益和社会效益。</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第四大类 -->
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div>
+                                <input type="text" value="四、预算合理性" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                                <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(10分)</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                                <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                            </div>
+                        </div>
+
+                        <div class="score-items">
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 7</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="预算编制合理性" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="10" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目预算是否合理，资金使用计划是否得当。</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第五大类 -->
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div>
+                                <input type="text" value="五、风险控制" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                                <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(10分)</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                                <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                            </div>
+                        </div>
+
+                        <div class="score-items">
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 8</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="风险识别与应对" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="5" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价项目风险识别是否充分，应对措施是否有效。</textarea>
+                                </div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 9</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="知识产权保护" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="3" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价专利布局规划和知识产权保护措施。</textarea>
+                                </div>
+                            </div>
+
+                            <div class="score-item">
+                                <div class="score-item-header">
+                                    <strong>评分项 10</strong>
+                                    <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label>评分项名称 <span style="color:red;">*</span></label>
+                                        <input type="text" value="技术保密措施" required>
+                                    </div>
+                                    <div>
+                                        <label>满分值 <span style="color:red;">*</span></label>
+                                        <input type="number" value="2" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <label>评分说明</label>
+                                    <textarea placeholder="说明该项的评分标准、考察要点等...">评价核心技术保密方案的完善性。</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="button" class="btn btn-primary" onclick="submitForm()">保存模板</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='evaluation-template-list.html'">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 页面加载时计算总分
+        window.onload = function() {
+            calculateTotal();
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+
+        if (mode === 'add') {
+            document.getElementById('pageTitle').textContent = '新建评审模板';
+            document.getElementById('templateCode').value = '';
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateDesc').value = '';
+            document.getElementById('templateCode').readOnly = false;
+        } else if (mode === 'copy') {
+            document.getElementById('pageTitle').textContent = '复制评审模板';
+            document.getElementById('templateCode').value = '';
+            document.getElementById('templateName').value = document.getElementById('templateName').value + ' - 副本';
+            document.getElementById('templateCode').readOnly = false;
+        } else {
+            document.getElementById('pageTitle').textContent = '编辑评审模板';
+            document.getElementById('templateCode').readOnly = true;
+            document.getElementById('templateCode').style.backgroundColor = '#f5f5f5';
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const scoreInputs = document.querySelectorAll('input[type="number"][min="0"][max="100"]');
+            scoreInputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+
+            const totalDisplay = document.getElementById('totalScore');
+            totalDisplay.textContent = total.toFixed(1);
+
+            // 根据总分改变颜色
+            if (total === 100) {
+                totalDisplay.style.color = '#52c41a';
+                totalDisplay.parentElement.style.borderColor = '#52c41a';
+                totalDisplay.parentElement.style.backgroundColor = '#f6ffed';
+            } else if (total > 100) {
+                totalDisplay.style.color = '#ff4d4f';
+                totalDisplay.parentElement.style.borderColor = '#ff4d4f';
+                totalDisplay.parentElement.style.backgroundColor = '#fff1f0';
+            } else {
+                totalDisplay.style.color = '#faad14';
+                totalDisplay.parentElement.style.borderColor = '#faad14';
+                totalDisplay.parentElement.style.backgroundColor = '#fffbe6';
+            }
+
+            // 更新每个大类的分数
+            updateCategoryScores();
+        }
+
+        function updateCategoryScores() {
+            const categories = document.querySelectorAll('.category-section');
+            categories.forEach(category => {
+                const scoreInputs = category.querySelectorAll('input[type="number"][min="0"][max="100"]');
+                let categoryTotal = 0;
+                scoreInputs.forEach(input => {
+                    categoryTotal += parseFloat(input.value) || 0;
+                });
+                const categoryScoreDisplay = category.querySelector('.category-score');
+                if (categoryScoreDisplay) {
+                    categoryScoreDisplay.textContent = `(${categoryTotal.toFixed(1)}分)`;
+                }
+            });
+        }
+
+        function addCategory() {
+            const container = document.getElementById('categoriesContainer');
+            const categoryCount = container.querySelectorAll('.category-section').length + 1;
+            const categoryHTML = `
+                <div class="category-section">
+                    <div class="category-header">
+                        <div>
+                            <input type="text" placeholder="输入大类名称" style="font-size: 16px; font-weight: bold; border: none; background: transparent; width: 300px;">
+                            <span style="margin-left: 10px; color: #1890ff; font-weight: bold;" class="category-score">(0分)</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-default" onclick="addScoreItem(this)">+ 添加评分项</button>
+                            <button type="button" class="btn btn-default" onclick="removeCategory(this)">删除大类</button>
+                        </div>
+                    </div>
+                    <div class="score-items"></div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', categoryHTML);
+        }
+
+        function removeCategory(btn) {
+            if (confirm('确认删除该评分大类及其所有评分项？')) {
+                btn.closest('.category-section').remove();
+                calculateTotal();
+            }
+        }
+
+        function addScoreItem(btn) {
+            const scoreItems = btn.closest('.category-section').querySelector('.score-items');
+            const itemCount = scoreItems.querySelectorAll('.score-item').length + 1;
+            const itemHTML = `
+                <div class="score-item">
+                    <div class="score-item-header">
+                        <strong>评分项 ${itemCount}</strong>
+                        <button type="button" class="btn btn-default" onclick="removeScoreItem(this)">删除</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label>评分项名称 <span style="color:red;">*</span></label>
+                            <input type="text" placeholder="输入评分项名称" required>
+                        </div>
+                        <div>
+                            <label>满分值 <span style="color:red;">*</span></label>
+                            <input type="number" value="10" min="0" max="100" step="0.5" required onchange="calculateTotal()">
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label>评分说明</label>
+                        <textarea placeholder="说明该项的评分标准、考察要点等..."></textarea>
+                    </div>
+                </div>
+            `;
+            scoreItems.insertAdjacentHTML('beforeend', itemHTML);
+            calculateTotal();
+        }
+
+        function removeScoreItem(btn) {
+            if (confirm('确认删除该评分项？')) {
+                btn.closest('.score-item').remove();
+                calculateTotal();
+            }
+        }
+
+        function submitForm() {
+            const templateCode = document.getElementById('templateCode').value.trim();
+            const templateName = document.getElementById('templateName').value.trim();
+            const totalScore = parseFloat(document.getElementById('totalScore').textContent);
+
+            if (!templateCode) {
+                alert('请输入模板编码！');
+                return;
+            }
+
+            if (!templateName) {
+                alert('请输入模板名称！');
+                return;
+            }
+
+            if (totalScore !== 100) {
+                alert(`当前总分为 ${totalScore} 分，必须等于100分才能保存！\n\n请调整各评分项的分值。`);
+                return;
+            }
+
+            const action = mode === 'add' || mode === 'copy' ? '创建' : '更新';
+            if (confirm(`确认${action}评审模板"${templateName}"？\n\n模板配置将立即生效。`)) {
+                alert(`评审模板"${templateName}"${action}成功！\n\n该模板可用于项目类型配置。`);
+                window.location.href = 'evaluation-template-list.html';
+            }
+        }
+    </script>
+</body>
+</html>

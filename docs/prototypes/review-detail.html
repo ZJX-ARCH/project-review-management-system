@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审核详情</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .review-panel {
+            background-color: #f9f9f9;
+            border: 2px solid #1890ff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .review-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="review-list.html" class="back-link">← 返回审核列表</a>
+
+        <h1>项目审核</h1>
+
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>基本信息</span>
+                <span class="status-badge status-pending">待审核</span>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">移动办公APP</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请部门：</div>
+                <div class="info-value">技术部</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请人：</div>
+                <div class="info-value">张三</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目类别：</div>
+                <div class="info-value">产品研发</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">预算金额：</div>
+                <div class="info-value">80 万元</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">计划时间：</div>
+                <div class="info-value">2026-01-15 至 2026-10-31</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请时间：</div>
+                <div class="info-value">2025-12-08 09:00:00</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">项目内容</div>
+            <div style="margin-bottom: 15px;">
+                <strong>项目背景：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    随着远程办公需求增加，现有办公系统功能不足，急需开发移动办公APP，支持移动审批、即时通讯、
+                    日程管理等核心功能，提升员工办公效率。
+                </p>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>项目内容：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    1. 开发移动审批功能，支持多级审批流程<br>
+                    2. 集成即时通讯功能，支持文字、语音、视频通话<br>
+                    3. 开发日程管理模块，支持日历、提醒、会议室预订<br>
+                    4. 集成企业通讯录，支持组织架构查看
+                </p>
+            </div>
+            <div>
+                <strong>项目目标：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    1. 审批效率提升50%<br>
+                    2. 移动办公使用率达到80%<br>
+                    3. 员工满意度达到85%以上
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">附件材料</div>
+            <div>
+                <a href="#" style="color: #1890ff;">📄 移动办公APP产品方案.pdf</a><br>
+                <a href="#" style="color: #1890ff;">📊 项目预算表.xlsx</a><br>
+                <a href="#" style="color: #1890ff;">📋 技术可行性报告.docx</a><br>
+                <a href="#" style="color: #1890ff;">🎨 UI设计稿.fig</a>
+            </div>
+        </div>
+
+        <!-- 审核操作面板 -->
+        <div class="review-panel">
+            <h2 style="margin-top: 0; color: #1890ff;">审核操作</h2>
+
+            <div class="form-group">
+                <label>审核意见 <span style="color:red;">*</span></label>
+                <textarea id="reviewOpinion" placeholder="请填写审核意见..." required></textarea>
+            </div>
+
+            <div class="review-actions">
+                <button class="btn btn-success" onclick="approveApplication()">✓ 审核通过</button>
+                <button class="btn btn-danger" onclick="rejectApplication()">✗ 驳回申请</button>
+                <button class="btn btn-default" onclick="pauseReview()">⏸ 暂停审核（要求补充资料）</button>
+                <button class="btn btn-default" onclick="window.location.href='review-list.html'">取消</button>
+            </div>
+
+            <div style="margin-top: 15px; padding: 10px; background-color: #e6f7ff; border-left: 3px solid #1890ff;">
+                <strong>审核说明：</strong><br>
+                <span style="color: #666; font-size: 14px;">
+                    • 审核通过：项目将进入专家评审阶段<br>
+                    • 驳回申请：项目被驳回，申请人可修改后重新提交<br>
+                    • 暂停审核：要求申请人补充资料，补充完成后继续审核
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function approveApplication() {
+            const opinion = document.getElementById('reviewOpinion').value.trim();
+            if (!opinion) {
+                alert('请填写审核意见！');
+                return;
+            }
+
+            if (confirm('确认审核通过？项目将进入专家评审阶段。')) {
+                alert('审核通过成功！\n\n项目状态：审核通过 → 待分配专家');
+                window.location.href = 'expert-assign.html';
+            }
+        }
+
+        function rejectApplication() {
+            const opinion = document.getElementById('reviewOpinion').value.trim();
+            if (!opinion) {
+                alert('请填写驳回原因！');
+                return;
+            }
+
+            if (confirm('确认驳回申请？申请人将收到驳回通知。')) {
+                alert('驳回成功！\n\n项目状态：待审核 → 驳回\n申请人可修改后重新提交。');
+                window.location.href = 'review-list.html';
+            }
+        }
+
+        function pauseReview() {
+            const opinion = document.getElementById('reviewOpinion').value.trim();
+            if (!opinion) {
+                alert('请说明需要补充的资料！');
+                return;
+            }
+
+            if (confirm('确认暂停审核？将要求申请人补充资料。')) {
+                alert('暂停审核成功！\n\n项目状态：待审核 → 暂停审核 → 补充资料中\n等待申请人补充资料后继续审核。');
+                window.location.href = 'review-list.html';
+            }
+        }
+    </script>
+</body>
+</html>

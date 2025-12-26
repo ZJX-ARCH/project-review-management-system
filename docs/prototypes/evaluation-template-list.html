@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>评审模板管理</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="config-menu.html" class="back-link">← 返回配置管理</a>
+
+        <h1>评审模板管理</h1>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <input type="text" placeholder="搜索模板名称" style="width: 300px;">
+                <select style="width: 150px;">
+                    <option value="">全部状态</option>
+                    <option value="enabled">启用</option>
+                    <option value="disabled">停用</option>
+                </select>
+                <button class="btn btn-primary">搜索</button>
+                <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=add'" style="margin-left: 20px;">+ 新建评审模板</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>模板编码</th>
+                    <th>模板名称</th>
+                    <th>评分项数量</th>
+                    <th>总分</th>
+                    <th>关联项目类型</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>TPL_001</td>
+                    <td><strong>产品研发评审模板</strong></td>
+                    <td>8项（5大类）</td>
+                    <td>100分</td>
+                    <td>产品研发</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=edit&id=TPL_001'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TPL_001')">查看评分项</button>
+                        <button class="btn btn-default" onclick="copyTemplate('TPL_001')">复制</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TPL_002</td>
+                    <td><strong>技术创新评审模板</strong></td>
+                    <td>10项（6大类）</td>
+                    <td>100分</td>
+                    <td>技术创新</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=edit&id=TPL_002'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TPL_002')">查看评分项</button>
+                        <button class="btn btn-default" onclick="copyTemplate('TPL_002')">复制</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TPL_003</td>
+                    <td><strong>流程优化评审模板</strong></td>
+                    <td>6项（4大类）</td>
+                    <td>100分</td>
+                    <td>流程优化</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=edit&id=TPL_003'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TPL_003')">查看评分项</button>
+                        <button class="btn btn-default" onclick="copyTemplate('TPL_003')">复制</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>TPL_004</td>
+                    <td><strong>基础设施评审模板</strong></td>
+                    <td>7项（5大类）</td>
+                    <td>100分</td>
+                    <td>基础设施</td>
+                    <td><span class="status-badge status-approved">启用</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=edit&id=TPL_004'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TPL_004')">查看评分项</button>
+                        <button class="btn btn-default" onclick="copyTemplate('TPL_004')">复制</button>
+                    </td>
+                </tr>
+                <tr style="background-color: #f5f5f5;">
+                    <td>TPL_005</td>
+                    <td><strong>市场拓展评审模板</strong></td>
+                    <td>9项（5大类）</td>
+                    <td>100分</td>
+                    <td>市场拓展</td>
+                    <td><span class="status-badge" style="background-color: #999; color: white;">停用</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-template-edit.html?mode=edit&id=TPL_005'">编辑</button>
+                        <button class="btn btn-default" onclick="viewDetail('TPL_005')">查看评分项</button>
+                        <button class="btn btn-default" onclick="copyTemplate('TPL_005')">复制</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px; color: #666;">
+            <p><strong>模板说明：</strong></p>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li><strong>评审模板</strong>：定义专家评审时的评分标准和评分项</li>
+                <li><strong>评分项</strong>：每个模板包含多个评分项，每项有名称、满分值、权重、评分说明</li>
+                <li><strong>评分大类</strong>：评分项可归类为几个大类，如"项目创新性"、"技术可行性"等</li>
+                <li><strong>总分固定</strong>：所有评审模板的总分都是100分</li>
+                <li><strong>关联类型</strong>：每个项目类型关联一个评审模板</li>
+                <li><strong>复制功能</strong>：可以基于现有模板快速创建新模板</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function viewDetail(templateId) {
+            let detailMsg = '评审模板详情：' + templateId + '\n\n';
+
+            if (templateId === 'TPL_002') {
+                detailMsg += '【技术创新评审模板】\n\n';
+                detailMsg += '一、技术创新性（25分）\n';
+                detailMsg += '  1. 技术先进性（15分）- 评价技术的前沿性和先进性\n';
+                detailMsg += '  2. 创新突破性（10分）- 评价是否有重大创新突破\n\n';
+                detailMsg += '二、技术可行性（25分）\n';
+                detailMsg += '  3. 技术方案合理性（15分）- 评价技术方案是否科学合理\n';
+                detailMsg += '  4. 实施团队能力（10分）- 评价团队技术实力\n\n';
+                detailMsg += '三、应用价值（30分）\n';
+                detailMsg += '  5. 应用前景（15分）- 评价技术应用潜力\n';
+                detailMsg += '  6. 预期效益（15分）- 评价预期产生的效益\n\n';
+                detailMsg += '四、预算合理性（10分）\n';
+                detailMsg += '  7. 预算编制合理性（10分）- 评价预算是否合理\n\n';
+                detailMsg += '五、风险控制（10分）\n';
+                detailMsg += '  8. 风险识别与应对（5分）- 评价风险控制措施\n';
+                detailMsg += '  9. 知识产权保护（3分）- 评价专利布局规划\n';
+                detailMsg += '  10. 技术保密措施（2分）- 评价技术保密方案\n';
+            } else {
+                detailMsg += '点击"编辑"按钮可查看完整的评分项配置';
+            }
+
+            alert(detailMsg);
+        }
+
+        function copyTemplate(templateId) {
+            const templateName = event.target.closest('tr').querySelector('strong').textContent;
+            if (confirm(`确认复制评审模板"${templateName}"？\n\n将基于该模板创建一个新模板，您可以修改评分项配置。`)) {
+                window.location.href = `evaluation-template-edit.html?mode=copy&id=${templateId}`;
+            }
+        }
+    </script>
+</body>
+</html>

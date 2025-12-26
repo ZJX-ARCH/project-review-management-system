@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目进度历史</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 20px;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 30px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background-color: #d9d9d9;
+        }
+        .timeline-item:last-child::before {
+            display: none;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -28px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #1890ff;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #1890ff;
+        }
+        .timeline-content {
+            background-color: #fafafa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 3px solid #1890ff;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .progress-time {
+            color: #999;
+            font-size: 14px;
+        }
+        .progress-stage {
+            font-weight: bold;
+            color: #1890ff;
+            font-size: 16px;
+        }
+        .progress-percent {
+            font-size: 20px;
+            font-weight: bold;
+            color: #52c41a;
+        }
+        .progress-desc {
+            margin-top: 10px;
+            line-height: 1.6;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="project-detail.html" class="back-link">← 返回项目详情</a>
+
+        <h1>项目进度历史</h1>
+
+        <div class="card">
+            <div class="card-title">项目信息</div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">在线学习平台</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目编号：</div>
+                <div class="info-value">PRJ-2025-001</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目负责人：</div>
+                <div class="info-value">孙七</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">当前进度：</div>
+                <div class="info-value">
+                    <span style="color: #1890ff; font-weight: bold;">15%</span> - 需求分析阶段
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                进度更新记录
+                <button class="btn btn-primary" style="float: right;" onclick="window.location.href='progress-update.html'">+ 更新进度</button>
+            </div>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">项目启动 - 需求分析阶段</div>
+                                <div class="progress-time">2025-12-18 14:30:00 · 更新人：孙七</div>
+                            </div>
+                            <div class="progress-percent">15%</div>
+                        </div>
+                        <div class="progress-desc">
+                            <strong>本期完成工作：</strong><br>
+                            1. 完成项目启动会，明确项目目标和里程碑<br>
+                            2. 组建项目团队，确定各成员职责分工<br>
+                            3. 启动需求调研工作，完成10家企业访谈<br>
+                            4. 收集整理初步需求文档<br><br>
+                            <strong>遇到的问题：</strong><br>
+                            部分企业对在线培训需求存在差异，需要进一步明确核心功能优先级。<br><br>
+                            <strong>下一步计划：</strong><br>
+                            完成需求分析报告，进行原型设计评审，预计1周内完成。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background-color: #52c41a; box-shadow: 0 0 0 2px #52c41a;"></div>
+                    <div class="timeline-content" style="border-left-color: #52c41a;">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">立项成功</div>
+                                <div class="progress-time">2025-12-18 10:00:00 · 系统自动</div>
+                            </div>
+                            <div class="progress-percent">0%</div>
+                        </div>
+                        <div class="progress-desc">
+                            项目评审通过，正式立项。综合得分：92分<br>
+                            评审意见：项目创新性强，市场前景良好，技术方案可行，强烈推荐立项。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background-color: #faad14; box-shadow: 0 0 0 2px #faad14;"></div>
+                    <div class="timeline-content" style="border-left-color: #faad14;">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">专家评审完成</div>
+                                <div class="progress-time">2025-12-17 16:30:00 · 系统自动</div>
+                            </div>
+                            <div class="progress-percent">-</div>
+                        </div>
+                        <div class="progress-desc">
+                            3位专家已完成评审，平均分：92分<br>
+                            李教授：95分（强烈推荐）<br>
+                            王博士：90分（推荐）<br>
+                            张工：91分（推荐）
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background-color: #999; box-shadow: 0 0 0 2px #999;"></div>
+                    <div class="timeline-content" style="border-left-color: #999;">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">分配评审专家</div>
+                                <div class="progress-time">2025-12-12 11:00:00 · 管理员：admin</div>
+                            </div>
+                            <div class="progress-percent">-</div>
+                        </div>
+                        <div class="progress-desc">
+                            已分配3位专家进行评审：李教授、王博士、张工
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background-color: #999; box-shadow: 0 0 0 2px #999;"></div>
+                    <div class="timeline-content" style="border-left-color: #999;">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">审核通过</div>
+                                <div class="progress-time">2025-12-12 09:30:00 · 审核员：李四</div>
+                            </div>
+                            <div class="progress-percent">-</div>
+                        </div>
+                        <div class="progress-desc">
+                            审核意见：项目申请材料完整，符合立项要求，建议进入专家评审阶段。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background-color: #999; box-shadow: 0 0 0 2px #999;"></div>
+                    <div class="timeline-content" style="border-left-color: #999;">
+                        <div class="progress-header">
+                            <div>
+                                <div class="progress-stage">提交申请</div>
+                                <div class="progress-time">2025-12-10 15:20:00 · 申请人：孙七</div>
+                            </div>
+                            <div class="progress-percent">-</div>
+                        </div>
+                        <div class="progress-desc">
+                            项目申请已提交，等待审核。<br>
+                            项目名称：在线学习平台<br>
+                            预算金额：120万元<br>
+                            计划周期：12个月
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="btn btn-primary" onclick="window.location.href='progress-update.html'">更新进度</button>
+            <button class="btn btn-default" onclick="window.location.href='project-detail.html'">返回项目详情</button>
+        </div>
+    </div>
+</body>
+</html>

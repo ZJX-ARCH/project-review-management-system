@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专家分配</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .expert-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .expert-card {
+            border: 1px solid #d9d9d9;
+            padding: 15px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .expert-card.selected {
+            border-color: #1890ff;
+            background-color: #e6f7ff;
+        }
+        .expert-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .expert-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .expert-info {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .workload-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .workload-low { background-color: #52c41a; color: white; }
+        .workload-medium { background-color: #faad14; color: white; }
+        .workload-high { background-color: #ff4d4f; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回首页</a>
+
+        <h1>专家分配</h1>
+
+        <div class="card">
+            <div class="card-title">项目信息</div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">移动办公APP</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请人：</div>
+                <div class="info-value">张三（技术部）</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目类别：</div>
+                <div class="info-value">产品研发</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">当前状态：</div>
+                <div class="info-value"><span class="status-badge status-approved">审核通过</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                选择评审专家
+                <span style="font-size: 14px; color: #666; font-weight: normal; margin-left: 10px;">
+                    （已选择 <span id="selectedCount" style="color: #1890ff; font-weight: bold;">0</span> 人，建议选择 3-5 人）
+                </span>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label>专家筛选：</label>
+                <select style="width: 200px; margin-right: 10px;">
+                    <option value="">全部领域</option>
+                    <option value="tech">技术研发</option>
+                    <option value="product">产品设计</option>
+                    <option value="market">市场营销</option>
+                    <option value="finance">财务管理</option>
+                </select>
+                <select style="width: 150px;">
+                    <option value="">全部负载</option>
+                    <option value="low">负载较低</option>
+                    <option value="medium">负载适中</option>
+                    <option value="high">负载较高</option>
+                </select>
+                <button class="btn btn-primary" onclick="alert('自动分配功能：系统将根据专家专业领域和当前负载自动选择3-5名专家')">自动分配</button>
+            </div>
+
+            <div class="expert-list">
+                <div class="expert-card" onclick="toggleExpert(this, '李教授')">
+                    <div class="expert-name">李教授</div>
+                    <div class="expert-info">
+                        专业领域：技术研发、移动应用<br>
+                        所属单位：计算机学院<br>
+                        职称：教授<br>
+                        当前负载：2 个项目
+                        <span class="workload-badge workload-low">负载较低</span>
+                    </div>
+                </div>
+
+                <div class="expert-card" onclick="toggleExpert(this, '王博士')">
+                    <div class="expert-name">王博士</div>
+                    <div class="expert-info">
+                        专业领域：软件工程、用户体验<br>
+                        所属单位：软件学院<br>
+                        职称：副教授<br>
+                        当前负载：3 个项目
+                        <span class="workload-badge workload-medium">负载适中</span>
+                    </div>
+                </div>
+
+                <div class="expert-card" onclick="toggleExpert(this, '张工')">
+                    <div class="expert-name">张工</div>
+                    <div class="expert-info">
+                        专业领域：产品设计、项目管理<br>
+                        所属单位：信息中心<br>
+                        职称：高级工程师<br>
+                        当前负载：1 个项目
+                        <span class="workload-badge workload-low">负载较低</span>
+                    </div>
+                </div>
+
+                <div class="expert-card" onclick="toggleExpert(this, '刘老师')">
+                    <div class="expert-name">刘老师</div>
+                    <div class="expert-info">
+                        专业领域：移动开发、云计算<br>
+                        所属单位：计算机学院<br>
+                        职称：讲师<br>
+                        当前负载：4 个项目
+                        <span class="workload-badge workload-medium">负载适中</span>
+                    </div>
+                </div>
+
+                <div class="expert-card" onclick="toggleExpert(this, '赵专家')">
+                    <div class="expert-name">赵专家</div>
+                    <div class="expert-info">
+                        专业领域：系统架构、性能优化<br>
+                        所属单位：研究院<br>
+                        职称：研究员<br>
+                        当前负载：5 个项目
+                        <span class="workload-badge workload-high">负载较高</span>
+                    </div>
+                </div>
+
+                <div class="expert-card" onclick="toggleExpert(this, '孙教授')">
+                    <div class="expert-name">孙教授</div>
+                    <div class="expert-info">
+                        专业领域：人工智能、大数据<br>
+                        所属单位：数据科学学院<br>
+                        职称：教授<br>
+                        当前负载：2 个项目
+                        <span class="workload-badge workload-low">负载较低</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button class="btn btn-primary" onclick="confirmAssign()">确认分配</button>
+                <button class="btn btn-default" onclick="window.location.href='index.html'">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedExperts = new Set();
+
+        function toggleExpert(card, name) {
+            if (card.classList.contains('selected')) {
+                card.classList.remove('selected');
+                selectedExperts.delete(name);
+            } else {
+                card.classList.add('selected');
+                selectedExperts.add(name);
+            }
+            document.getElementById('selectedCount').textContent = selectedExperts.size;
+        }
+
+        function confirmAssign() {
+            if (selectedExperts.size === 0) {
+                alert('请至少选择一位专家！');
+                return;
+            }
+
+            if (selectedExperts.size < 3) {
+                if (!confirm(`您只选择了 ${selectedExperts.size} 位专家，建议选择 3-5 人。是否继续？`)) {
+                    return;
+                }
+            }
+
+            const expertNames = Array.from(selectedExperts).join('、');
+            alert(`分配成功！\n\n已为项目"移动办公APP"分配专家：\n${expertNames}\n\n项目状态：审核通过 → 评审中\n专家将收到评审通知。`);
+            window.location.href = 'evaluation-list.html';
+        }
+    </script>
+</body>
+</html>

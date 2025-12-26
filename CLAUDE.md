@@ -22,12 +22,13 @@
 7. **及时提交临时文件**：`docs/dev/` 下的任务文件也要提交到 Git
 8. **清理杂志文件**：发现 `.patch`、临时文件等要及时删除
 9. **配置 .gitignore 和 .gitattributes**：防止错误提交
+10. **仅项目级提交**：根目录不需要提交 Git，只在各子项目（continew-admin、continew-admin-ui、continew-starter）中提交
 
 ### 代码规范
-10. **Service 层规范**：Service 必须是接口，ServiceImpl 才是实现类
-11. **工具方法独立**：Controller 中不能堆砌工具方法，要独立成 `XxxUtils` 工具类
-12. **多使用 Lombok**：减少样板代码
-13. **代码整洁**：保持代码结构清晰，不能混乱
+11. **Service 层规范**：Service 必须是接口，ServiceImpl 才是实现类
+12. **工具方法独立**：Controller 中不能堆砌工具方法，要独立成 `XxxUtils` 工具类
+13. **多使用 Lombok**：减少样板代码
+14. **代码整洁**：保持代码结构清晰，不能混乱
 
 ---
 

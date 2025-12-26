@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审批流程配置</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .workflow-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .workflow-card {
+            border: 2px solid #d9d9d9;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: white;
+            transition: all 0.3s;
+        }
+        .workflow-card:hover {
+            border-color: #1890ff;
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+        }
+        .workflow-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1890ff;
+        }
+        .workflow-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .workflow-nodes {
+            margin-top: 15px;
+        }
+        .workflow-node {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #fafafa;
+            border-radius: 4px;
+            border-left: 3px solid #1890ff;
+        }
+        .node-number {
+            width: 30px;
+            height: 30px;
+            background-color: #1890ff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .node-content {
+            flex: 1;
+        }
+        .node-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .node-desc {
+            font-size: 12px;
+            color: #666;
+        }
+        .workflow-arrow {
+            text-align: center;
+            color: #1890ff;
+            font-size: 20px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="config-menu.html" class="back-link">← 返回配置管理</a>
+
+        <h1>审批流程配置</h1>
+
+        <div style="background-color: #e6f7ff; border: 1px solid #91d5ff; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+            <strong>流程说明：</strong><br>
+            审批流程定义了项目从申报到立项的审批路径和节点。不同项目类型可配置不同的审批流程，以满足差异化的管理需求。
+        </div>
+
+        <div class="workflow-list">
+            <!-- 快速审批流程 -->
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-title">快速审批流程（2级）</div>
+                    <span class="status-badge status-approved">启用</span>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    <strong>流程编码：</strong>WF_001<br>
+                    <strong>适用类型：</strong>流程优化、小型项目<br>
+                    <strong>平均耗时：</strong>3-5 工作日
+                </div>
+                <div class="workflow-nodes">
+                    <div class="workflow-node">
+                        <div class="node-number">1</div>
+                        <div class="node-content">
+                            <div class="node-name">部门初审</div>
+                            <div class="node-desc">部门负责人审核项目可行性</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">2</div>
+                        <div class="node-content">
+                            <div class="node-name">管理层审批</div>
+                            <div class="node-desc">管理层最终决策是否立项</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="editWorkflow('WF_001')">编辑配置</button>
+                    <button class="btn btn-default" onclick="viewWorkflowDetail('WF_001')">查看详情</button>
+                </div>
+            </div>
+
+            <!-- 标准审批流程 -->
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-title">标准审批流程（3级）</div>
+                    <span class="status-badge status-approved">启用</span>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    <strong>流程编码：</strong>WF_002<br>
+                    <strong>适用类型：</strong>产品研发、基础设施<br>
+                    <strong>平均耗时：</strong>7-10 工作日
+                </div>
+                <div class="workflow-nodes">
+                    <div class="workflow-node">
+                        <div class="node-number">1</div>
+                        <div class="node-content">
+                            <div class="node-name">形式审核</div>
+                            <div class="node-desc">审核员检查材料完整性和合规性</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">2</div>
+                        <div class="node-content">
+                            <div class="node-name">专家评审</div>
+                            <div class="node-desc">3-5名专家独立评分和评审</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">3</div>
+                        <div class="node-content">
+                            <div class="node-name">立项决策</div>
+                            <div class="node-desc">根据评审结果决定是否立项</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="editWorkflow('WF_002')">编辑配置</button>
+                    <button class="btn btn-default" onclick="viewWorkflowDetail('WF_002')">查看详情</button>
+                </div>
+            </div>
+
+            <!-- 专家审批流程 -->
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-title">专家审批流程（4级）</div>
+                    <span class="status-badge status-approved">启用</span>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    <strong>流程编码：</strong>WF_003<br>
+                    <strong>适用类型：</strong>技术创新、重大项目<br>
+                    <strong>平均耗时：</strong>10-15 工作日
+                </div>
+                <div class="workflow-nodes">
+                    <div class="workflow-node">
+                        <div class="node-number">1</div>
+                        <div class="node-content">
+                            <div class="node-name">形式审核</div>
+                            <div class="node-desc">审核员检查材料完整性</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">2</div>
+                        <div class="node-content">
+                            <div class="node-name">技术预审</div>
+                            <div class="node-desc">技术部门预审技术方案可行性</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">3</div>
+                        <div class="node-content">
+                            <div class="node-name">专家评审</div>
+                            <div class="node-desc">5-7名专家深度评审和评分</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">4</div>
+                        <div class="node-content">
+                            <div class="node-name">评审委员会决策</div>
+                            <div class="node-desc">评审委员会综合决策是否立项</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="editWorkflow('WF_003')">编辑配置</button>
+                    <button class="btn btn-default" onclick="viewWorkflowDetail('WF_003')">查看详情</button>
+                </div>
+            </div>
+
+            <!-- 特殊审批流程 -->
+            <div class="workflow-card">
+                <div class="workflow-header">
+                    <div class="workflow-title">特殊审批流程（5级）</div>
+                    <span class="status-badge status-approved">启用</span>
+                </div>
+                <div style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    <strong>流程编码：</strong>WF_004<br>
+                    <strong>适用类型：</strong>战略项目、高风险项目<br>
+                    <strong>平均耗时：</strong>15-20 工作日
+                </div>
+                <div class="workflow-nodes">
+                    <div class="workflow-node">
+                        <div class="node-number">1</div>
+                        <div class="node-content">
+                            <div class="node-name">形式审核</div>
+                            <div class="node-desc">审核员检查材料完整性</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">2</div>
+                        <div class="node-content">
+                            <div class="node-name">多部门联审</div>
+                            <div class="node-desc">技术、财务、法务等部门联合审核</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">3</div>
+                        <div class="node-content">
+                            <div class="node-name">外部专家评审</div>
+                            <div class="node-desc">邀请外部专家进行独立评审</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">4</div>
+                        <div class="node-content">
+                            <div class="node-name">风险评估</div>
+                            <div class="node-desc">专业团队进行全面风险评估</div>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-node">
+                        <div class="node-number">5</div>
+                        <div class="node-content">
+                            <div class="node-name">董事会决策</div>
+                            <div class="node-desc">提交董事会最终决策</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="editWorkflow('WF_004')">编辑配置</button>
+                    <button class="btn btn-default" onclick="viewWorkflowDetail('WF_004')">查看详情</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button class="btn btn-primary" onclick="alert('新建流程功能：创建自定义审批流程')">+ 新建审批流程</button>
+        </div>
+
+        <div style="margin-top: 30px; color: #666;">
+            <p><strong>流程配置说明：</strong></p>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li><strong>流程节点</strong>：每个流程由多个节点组成，每个节点代表一个审批环节</li>
+                <li><strong>节点配置</strong>：可配置节点名称、审批人/角色、超时时间、流转规则等</li>
+                <li><strong>条件分支</strong>：支持根据条件（如预算金额、项目类型）自动选择不同分支</li>
+                <li><strong>并行审批</strong>：支持多个节点并行审批，提高审批效率</li>
+                <li><strong>退回规则</strong>：可配置退回到哪个节点，以及退回后的处理方式</li>
+                <li><strong>超时处理</strong>：可配置节点超时后的自动提醒和升级机制</li>
+                <li><strong>流程监控</strong>：系统实时监控流程执行情况，记录每个节点的处理时间</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function editWorkflow(workflowId) {
+            alert(`编辑流程配置：${workflowId}\n\n功能包括：\n- 添加/删除/调整审批节点\n- 配置节点审批人和角色\n- 设置节点超时时间\n- 配置流转条件和规则\n- 设置退回和终止规则\n- 配置通知提醒方式`);
+        }
+
+        function viewWorkflowDetail(workflowId) {
+            let detailMsg = `流程详细配置：${workflowId}\n\n`;
+
+            if (workflowId === 'WF_003') {
+                detailMsg += '【专家审批流程】\n\n';
+                detailMsg += '节点1：形式审核\n';
+                detailMsg += '  - 审批人：审核员角色\n';
+                detailMsg += '  - 超时时间：2工作日\n';
+                detailMsg += '  - 通过条件：材料完整且符合规范\n\n';
+                detailMsg += '节点2：技术预审\n';
+                detailMsg += '  - 审批人：技术部负责人\n';
+                detailMsg += '  - 超时时间：3工作日\n';
+                detailMsg += '  - 通过条件：技术方案可行\n\n';
+                detailMsg += '节点3：专家评审\n';
+                detailMsg += '  - 审批人：5-7名领域专家\n';
+                detailMsg += '  - 超时时间：7工作日\n';
+                detailMsg += '  - 通过条件：平均分≥75分且无专家强烈反对\n\n';
+                detailMsg += '节点4：评审委员会决策\n';
+                detailMsg += '  - 审批人：评审委员会成员\n';
+                detailMsg += '  - 超时时间：3工作日\n';
+                detailMsg += '  - 通过条件：综合评估后投票通过\n';
+            } else {
+                detailMsg += '点击"编辑配置"可查看和修改完整的流程节点配置';
+            }
+
+            alert(detailMsg);
+        }
+    </script>
+</body>
+</html>

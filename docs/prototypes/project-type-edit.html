@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑项目类型</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="project-type-list.html" class="back-link">← 返回项目类型列表</a>
+
+        <h1 id="pageTitle">编辑项目类型</h1>
+
+        <form id="projectTypeForm">
+            <div class="card">
+                <div class="card-title">基本信息</div>
+
+                <div class="form-group">
+                    <label for="typeCode">类型编码 <span style="color:red;">*</span></label>
+                    <input type="text" id="typeCode" required placeholder="如：TYPE_006" maxlength="20" value="TYPE_002">
+                    <div style="margin-top: 5px; color: #999; font-size: 14px;">
+                        编码规则：TYPE_XXX，创建后不可修改
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="typeName">类型名称 <span style="color:red;">*</span></label>
+                    <input type="text" id="typeName" required placeholder="如：产品研发" maxlength="50" value="技术创新">
+                </div>
+
+                <div class="form-group">
+                    <label for="typeDesc">类型说明</label>
+                    <textarea id="typeDesc" placeholder="描述该项目类型的适用范围、特点等...">适用于新技术研究、技术攻关、专利申请等技术创新类项目。重点关注技术先进性、创新性和应用前景。</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="sortOrder">排序 <span style="color:red;">*</span></label>
+                    <input type="number" id="sortOrder" required min="1" max="999" value="2" style="width: 150px;">
+                    <span style="margin-left: 10px; color: #666;">数值越小越靠前</span>
+                </div>
+
+                <div class="form-group">
+                    <label>状态 <span style="color:red;">*</span></label>
+                    <div>
+                        <label style="margin-right: 20px;">
+                            <input type="radio" name="status" value="enabled" checked> 启用
+                        </label>
+                        <label>
+                            <input type="radio" name="status" value="disabled"> 停用
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">评审配置</div>
+
+                <div class="form-group">
+                    <label for="evaluationTemplate">评审模板 <span style="color:red;">*</span></label>
+                    <select id="evaluationTemplate" required>
+                        <option value="">请选择评审模板</option>
+                        <option value="TPL_001">产品研发评审模板</option>
+                        <option value="TPL_002" selected>技术创新评审模板</option>
+                        <option value="TPL_003">流程优化评审模板</option>
+                        <option value="TPL_004">基础设施评审模板</option>
+                        <option value="TPL_005">市场拓展评审模板</option>
+                    </select>
+                    <div style="margin-top: 5px;">
+                        <a href="evaluation-template-list.html" style="color: #1890ff; font-size: 14px;">→ 管理评审模板</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="passScore">评审通过分数线 <span style="color:red;">*</span></label>
+                    <input type="number" id="passScore" required min="0" max="100" value="75" style="width: 150px;">
+                    <span style="margin-left: 10px; color: #666;">分（满分100分）</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="expertCount">要求专家数量 <span style="color:red;">*</span></label>
+                    <input type="number" id="expertCount" required min="1" max="10" value="3" style="width: 150px;">
+                    <span style="margin-left: 10px; color: #666;">人</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">流程配置</div>
+
+                <div class="form-group">
+                    <label for="workflow">审批流程 <span style="color:red;">*</span></label>
+                    <select id="workflow" required>
+                        <option value="">请选择审批流程</option>
+                        <option value="WF_001">快速审批流程（2级）</option>
+                        <option value="WF_002">标准审批流程（3级）</option>
+                        <option value="WF_003" selected>专家审批流程（4级）</option>
+                        <option value="WF_004">特殊审批流程（5级）</option>
+                    </select>
+                    <div style="margin-top: 5px;">
+                        <a href="workflow-config.html" style="color: #1890ff; font-size: 14px;">→ 管理审批流程</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoAssignExpert" checked>
+                        启用专家自动分配
+                    </label>
+                    <div style="margin-top: 5px; color: #666; font-size: 14px;">
+                        系统将根据专家领域和负载自动分配评审专家
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="requireAllExpertApprove" checked>
+                        要求所有专家完成评审
+                    </label>
+                    <div style="margin-top: 5px; color: #666; font-size: 14px;">
+                        勾选后，必须等待所有专家完成评审才能进入下一流程
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">项目约束</div>
+
+                <div class="form-group">
+                    <label>预算范围（万元）</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="budgetMin" min="0" value="30" style="width: 150px;" placeholder="最小值">
+                        <span>至</span>
+                        <input type="number" id="budgetMax" min="0" value="300" style="width: 150px;" placeholder="最大值">
+                    </div>
+                    <div style="margin-top: 5px; color: #666; font-size: 14px;">
+                        建议预算区间，超出范围需要特殊说明
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>项目周期（月）</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="durationMin" min="1" value="3" style="width: 150px;" placeholder="最小值">
+                        <span>至</span>
+                        <input type="number" id="durationMax" min="1" value="12" style="width: 150px;" placeholder="最大值">
+                    </div>
+                    <div style="margin-top: 5px; color: #666; font-size: 14px;">
+                        建议项目执行周期范围
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">申报要求</div>
+
+                <div class="form-group">
+                    <label>必填字段配置</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <label><input type="checkbox" checked disabled> 项目名称（必须）</label>
+                        <label><input type="checkbox" checked disabled> 项目负责人（必须）</label>
+                        <label><input type="checkbox" checked disabled> 所属部门（必须）</label>
+                        <label><input type="checkbox" checked disabled> 项目类别（必须）</label>
+                        <label><input type="checkbox" checked> 预算金额</label>
+                        <label><input type="checkbox" checked> 计划时间</label>
+                        <label><input type="checkbox" checked> 项目背景</label>
+                        <label><input type="checkbox" checked> 项目内容</label>
+                        <label><input type="checkbox" checked> 项目目标</label>
+                        <label><input type="checkbox"> 预期收益</label>
+                        <label><input type="checkbox" checked> 技术方案</label>
+                        <label><input type="checkbox"> 风险分析</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>必须上传的附件</label>
+                    <div id="requiredAttachments">
+                        <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+                            <input type="text" value="项目方案书" style="flex: 1;">
+                            <button type="button" class="btn btn-default" onclick="removeAttachment(this)">删除</button>
+                        </div>
+                        <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+                            <input type="text" value="预算明细表" style="flex: 1;">
+                            <button type="button" class="btn btn-default" onclick="removeAttachment(this)">删除</button>
+                        </div>
+                        <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+                            <input type="text" value="技术可行性报告" style="flex: 1;">
+                            <button type="button" class="btn btn-default" onclick="removeAttachment(this)">删除</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-default" onclick="addAttachment()">+ 添加附件要求</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="button" class="btn btn-primary" onclick="submitForm()">保存配置</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='project-type-list.html'">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 根据URL参数判断是新增还是编辑模式
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+
+        if (mode === 'add') {
+            document.getElementById('pageTitle').textContent = '新建项目类型';
+            document.getElementById('typeCode').value = '';
+            document.getElementById('typeName').value = '';
+            document.getElementById('typeDesc').value = '';
+            document.getElementById('sortOrder').value = '999';
+            document.getElementById('typeCode').readOnly = false;
+        } else {
+            document.getElementById('pageTitle').textContent = '编辑项目类型';
+            document.getElementById('typeCode').readOnly = true;
+            document.getElementById('typeCode').style.backgroundColor = '#f5f5f5';
+        }
+
+        function addAttachment() {
+            const container = document.getElementById('requiredAttachments');
+            const div = document.createElement('div');
+            div.style.marginBottom = '10px';
+            div.style.display = 'flex';
+            div.style.gap = '10px';
+            div.style.alignItems = 'center';
+            div.innerHTML = `
+                <input type="text" placeholder="输入附件名称" style="flex: 1;">
+                <button type="button" class="btn btn-default" onclick="removeAttachment(this)">删除</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeAttachment(btn) {
+            btn.parentElement.remove();
+        }
+
+        function submitForm() {
+            const typeCode = document.getElementById('typeCode').value.trim();
+            const typeName = document.getElementById('typeName').value.trim();
+            const evaluationTemplate = document.getElementById('evaluationTemplate').value;
+            const workflow = document.getElementById('workflow').value;
+
+            if (!typeCode) {
+                alert('请输入类型编码！');
+                return;
+            }
+
+            if (!typeName) {
+                alert('请输入类型名称！');
+                return;
+            }
+
+            if (!evaluationTemplate) {
+                alert('请选择评审模板！');
+                return;
+            }
+
+            if (!workflow) {
+                alert('请选择审批流程！');
+                return;
+            }
+
+            const action = mode === 'add' ? '创建' : '更新';
+            if (confirm(`确认${action}项目类型"${typeName}"？\n\n配置将立即生效，影响后续的项目申报流程。`)) {
+                alert(`项目类型"${typeName}"${action}成功！\n\n配置已生效，用户在申报项目时可以看到该类型。`);
+                window.location.href = 'project-type-list.html';
+            }
+        }
+    </script>
+</body>
+</html>

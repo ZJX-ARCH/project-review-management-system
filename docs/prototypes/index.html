@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目评审管理系统 - 原型图导航</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .module-card {
+            border: 2px solid #1890ff;
+            padding: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .module-card:hover {
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .module-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1890ff;
+            margin-bottom: 10px;
+        }
+        .module-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .module-links {
+            list-style: none;
+            padding: 0;
+        }
+        .module-links li {
+            margin-bottom: 8px;
+        }
+        .module-links a {
+            color: #1890ff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .module-links a:hover {
+            text-decoration: underline;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .priority-p0 { background-color: #ff4d4f; color: white; }
+        .priority-p1 { background-color: #faad14; color: white; }
+        .priority-p2 { background-color: #52c41a; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>项目评审管理系统 - 业务原型图导航</h1>
+
+        <div class="card">
+            <p><strong>说明：</strong>以下是基于 ContiNew Admin 框架的项目评审管理系统业务模块原型图。</p>
+            <p><strong>涵盖模块：</strong>M101~M109（框架已有的系统管理模块 M001~M010 不包含在内）</p>
+            <p><strong>功能：</strong>页面包含基本的跳转交互，部分关键操作可点击体验流程。</p>
+            <p><strong>V2更新：</strong>新增 M109 系统配置管理模块，支持灵活配置项目类型、评审标准和审批流程。</p>
+        </div>
+
+        <div class="module-grid">
+            <!-- M101 项目申报管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M101 项目申报管理
+                    <span class="priority-badge priority-p0">P0</span>
+                </div>
+                <div class="module-desc">
+                    申请人创建、提交、管理项目申请
+                </div>
+                <ul class="module-links">
+                    <li><a href="application-list.html">➤ 我的申请列表</a></li>
+                    <li><a href="application-create.html">➤ 创建申请</a></li>
+                    <li><a href="application-detail.html">➤ 申请详情</a></li>
+                </ul>
+            </div>
+
+            <!-- M103 审核流程管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M103 审核流程管理
+                    <span class="priority-badge priority-p0">P0</span>
+                </div>
+                <div class="module-desc">
+                    审核员审核项目申请
+                </div>
+                <ul class="module-links">
+                    <li><a href="review-list.html">➤ 待审核列表</a></li>
+                    <li><a href="review-detail.html">➤ 审核详情</a></li>
+                </ul>
+            </div>
+
+            <!-- M104 专家分配管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M104 专家分配管理
+                    <span class="priority-badge priority-p1">P1</span>
+                </div>
+                <div class="module-desc">
+                    为通过审核的项目分配评审专家
+                </div>
+                <ul class="module-links">
+                    <li><a href="expert-assign.html">➤ 专家分配</a></li>
+                </ul>
+            </div>
+
+            <!-- M105 评审评分管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M105 评审评分管理
+                    <span class="priority-badge priority-p1">P1</span>
+                </div>
+                <div class="module-desc">
+                    专家对项目进行评审评分
+                </div>
+                <ul class="module-links">
+                    <li><a href="evaluation-list.html">➤ 待评审列表</a></li>
+                    <li><a href="evaluation-form.html">➤ 评审评分</a></li>
+                </ul>
+            </div>
+
+            <!-- M106 项目立项管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M106 项目立项管理
+                    <span class="priority-badge priority-p1">P1</span>
+                </div>
+                <div class="module-desc">
+                    评审完成后的项目立项管理
+                </div>
+                <ul class="module-links">
+                    <li><a href="project-list.html">➤ 立项项目列表</a></li>
+                    <li><a href="project-detail.html">➤ 项目详情</a></li>
+                </ul>
+            </div>
+
+            <!-- M107 项目进度管理 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M107 项目进度管理
+                    <span class="priority-badge priority-p2">P2</span>
+                </div>
+                <div class="module-desc">
+                    项目负责人更新项目进度
+                </div>
+                <ul class="module-links">
+                    <li><a href="progress-list.html">➤ 项目进度列表</a></li>
+                    <li><a href="progress-update.html">➤ 更新进度</a></li>
+                </ul>
+            </div>
+
+            <!-- M108 统计报表 -->
+            <div class="module-card">
+                <div class="module-title">
+                    M108 统计报表
+                    <span class="priority-badge priority-p1">P1</span>
+                </div>
+                <div class="module-desc">
+                    查看申报、审核、评审统计数据
+                </div>
+                <ul class="module-links">
+                    <li><a href="statistics.html">➤ 统计报表</a></li>
+                </ul>
+            </div>
+
+            <!-- M109 系统配置管理 -->
+            <div class="module-card" style="border-color: #722ed1;">
+                <div class="module-title" style="color: #722ed1;">
+                    M109 系统配置管理
+                    <span class="priority-badge priority-p0">P0</span>
+                </div>
+                <div class="module-desc">
+                    配置项目类型、评审模板、审批流程
+                </div>
+                <ul class="module-links">
+                    <li><a href="config-menu.html" style="color: #722ed1;">➤ 配置管理菜单</a></li>
+                    <li><a href="project-type-list.html" style="color: #722ed1;">➤ 项目类型配置</a></li>
+                    <li><a href="evaluation-template-list.html" style="color: #722ed1;">➤ 评审模板配置</a></li>
+                    <li><a href="workflow-config.html" style="color: #722ed1;">➤ 流程配置</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 30px;">
+            <h2>状态流转说明（M102）</h2>
+            <p><strong>10个申报状态：</strong></p>
+            <ul style="padding-left: 20px; color: #666;">
+                <li>0 - 草稿</li>
+                <li>10 - 待审核</li>
+                <li>20 - 审核通过</li>
+                <li>30 - 驳回</li>
+                <li>40 - 撤回</li>
+                <li>45 - 暂停审核</li>
+                <li>46 - 补充资料中</li>
+                <li>50 - 评审中</li>
+                <li>60 - 评审完成</li>
+                <li>70 - 已取消</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

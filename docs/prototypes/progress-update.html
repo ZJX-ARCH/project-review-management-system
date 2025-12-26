@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>更新项目进度</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="progress-list.html" class="back-link">← 返回进度历史</a>
+
+        <h1>更新项目进度</h1>
+
+        <div class="card">
+            <div class="card-title">项目信息</div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">在线学习平台</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目编号：</div>
+                <div class="info-value">PRJ-2025-001</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目负责人：</div>
+                <div class="info-value">孙七</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">当前进度：</div>
+                <div class="info-value">
+                    <span style="color: #1890ff; font-weight: bold;">15%</span> - 需求分析阶段
+                </div>
+            </div>
+        </div>
+
+        <form id="progressForm">
+            <div class="form-group">
+                <label for="stage">当前阶段 <span style="color:red;">*</span></label>
+                <select id="stage" required>
+                    <option value="">请选择项目阶段</option>
+                    <option value="需求分析" selected>需求分析</option>
+                    <option value="方案设计">方案设计</option>
+                    <option value="开发实施">开发实施</option>
+                    <option value="测试验收">测试验收</option>
+                    <option value="部署上线">部署上线</option>
+                    <option value="运维优化">运维优化</option>
+                    <option value="项目结项">项目结项</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="percentage">完成百分比 <span style="color:red;">*</span></label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="number" id="percentage" min="0" max="100" step="1" value="15" required
+                           style="width: 150px;" oninput="updateProgressBar()">
+                    <span>%</span>
+                </div>
+                <div style="margin-top: 10px; background-color: #f0f0f0; height: 30px; border-radius: 4px; overflow: hidden;">
+                    <div id="progressBar" style="background-color: #1890ff; height: 100%; width: 15%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        15%
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="completed">本期完成工作 <span style="color:red;">*</span></label>
+                <textarea id="completed" required placeholder="请详细描述本期已完成的工作内容，可以分点列出..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="problems">遇到的问题</label>
+                <textarea id="problems" placeholder="请描述项目执行过程中遇到的问题、风险或困难..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="nextPlan">下一步计划 <span style="color:red;">*</span></label>
+                <textarea id="nextPlan" required placeholder="请描述下一阶段的工作计划和目标..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="milestones">里程碑完成情况</label>
+                <div style="padding: 10px; background-color: #fafafa; border-radius: 4px;">
+                    <div style="margin-bottom: 10px;">
+                        <input type="checkbox" id="m1" checked disabled>
+                        <label for="m1">项目启动会 (2025-12-18)</label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <input type="checkbox" id="m2">
+                        <label for="m2">需求分析报告 (预计 2025-12-25)</label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <input type="checkbox" id="m3">
+                        <label for="m3">原型设计评审 (预计 2026-01-10)</label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <input type="checkbox" id="m4">
+                        <label for="m4">技术方案评审 (预计 2026-01-20)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="attachments">进度相关附件</label>
+                <input type="file" id="attachments" multiple>
+                <div style="margin-top: 5px; color: #999; font-size: 14px;">
+                    可上传进度报告、会议纪要、阶段性成果等文件
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="remark">备注说明</label>
+                <textarea id="remark" placeholder="其他需要说明的内容..."></textarea>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="button" class="btn btn-primary" onclick="submitProgress()">提交更新</button>
+                <button type="button" class="btn btn-default" onclick="saveDraft()">保存草稿</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='progress-list.html'">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function updateProgressBar() {
+            const percentage = document.getElementById('percentage').value || 0;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+
+            // 根据进度改变颜色
+            if (percentage < 30) {
+                progressBar.style.backgroundColor = '#ff4d4f';
+            } else if (percentage < 70) {
+                progressBar.style.backgroundColor = '#1890ff';
+            } else {
+                progressBar.style.backgroundColor = '#52c41a';
+            }
+        }
+
+        function submitProgress() {
+            const form = document.getElementById('progressForm');
+            const stage = document.getElementById('stage').value;
+            const percentage = document.getElementById('percentage').value;
+            const completed = document.getElementById('completed').value.trim();
+            const nextPlan = document.getElementById('nextPlan').value.trim();
+
+            if (!stage) {
+                alert('请选择当前阶段！');
+                return;
+            }
+
+            if (!percentage || percentage < 0 || percentage > 100) {
+                alert('请输入有效的完成百分比（0-100）！');
+                return;
+            }
+
+            if (!completed) {
+                alert('请填写本期完成工作！');
+                return;
+            }
+
+            if (!nextPlan) {
+                alert('请填写下一步计划！');
+                return;
+            }
+
+            if (confirm(`确认提交进度更新？\n\n当前阶段：${stage}\n完成百分比：${percentage}%\n\n提交后将通知项目相关人员。`)) {
+                alert(`进度更新成功！\n\n项目进度已更新至 ${percentage}%\n\n相关人员将收到进度通知。`);
+                window.location.href = 'progress-list.html';
+            }
+        }
+
+        function saveDraft() {
+            alert('进度草稿已保存！\n\n您可以稍后继续编辑。');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申请详情</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="application-list.html" class="back-link">← 返回申请列表</a>
+
+        <h1>项目申请详情</h1>
+
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>基本信息</span>
+                <span class="status-badge status-reviewing">评审中</span>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目名称：</div>
+                <div class="info-value">智能交通管理系统</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请部门：</div>
+                <div class="info-value">技术部</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请人：</div>
+                <div class="info-value">张三</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">项目类别：</div>
+                <div class="info-value">技术创新</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">预算金额：</div>
+                <div class="info-value">50 万元</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">计划时间：</div>
+                <div class="info-value">2026-01-01 至 2026-12-31</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">申请时间：</div>
+                <div class="info-value">2025-12-15 10:30:00</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">项目内容</div>
+            <div style="margin-bottom: 15px;">
+                <strong>项目背景：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    随着城市化进程加快，交通拥堵问题日益严重。现有交通管理系统功能单一，无法满足智能化管理需求。
+                    本项目旨在建设一套智能交通管理系统，通过大数据分析和人工智能技术，提升交通管理效率。
+                </p>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>项目内容：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    1. 建设智能交通监控平台，实时采集交通数据<br>
+                    2. 开发交通流量预测模型，优化信号灯控制策略<br>
+                    3. 建立应急响应机制，快速处理交通事故<br>
+                    4. 开发移动端APP，为市民提供实时路况信息
+                </p>
+            </div>
+            <div>
+                <strong>项目目标：</strong>
+                <p style="margin-top: 5px; line-height: 1.6;">
+                    1. 主干道通行效率提升30%<br>
+                    2. 交通事故响应时间缩短50%<br>
+                    3. 市民满意度达到90%以上
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">附件材料</div>
+            <div>
+                <a href="#" style="color: #1890ff;">📄 项目方案书.pdf</a><br>
+                <a href="#" style="color: #1890ff;">📊 预算明细表.xlsx</a><br>
+                <a href="#" style="color: #1890ff;">📋 可行性分析报告.docx</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">审核记录</div>
+            <table style="margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th>操作人</th>
+                        <th>操作</th>
+                        <th>意见</th>
+                        <th>操作时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>李四（审核员）</td>
+                        <td><span class="status-badge status-approved">审核通过</span></td>
+                        <td>项目方案完整，可行性高，同意进入评审阶段</td>
+                        <td>2025-12-16 14:00:00</td>
+                    </tr>
+                    <tr>
+                        <td>张三（申请人）</td>
+                        <td><span class="status-badge status-pending">提交申请</span></td>
+                        <td>-</td>
+                        <td>2025-12-15 10:30:00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="btn btn-default" onclick="window.location.href='application-list.html'">返回列表</button>
+            <button class="btn btn-primary" onclick="window.location.href='application-create.html'">编辑申请</button>
+        </div>
+    </div>
+</body>
+</html>

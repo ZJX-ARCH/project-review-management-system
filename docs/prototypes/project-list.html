@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>立项项目列表</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回首页</a>
+
+        <h1>立项项目列表</h1>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <input type="text" placeholder="搜索项目名称" style="width: 300px;">
+                <select style="width: 150px;">
+                    <option value="">全部状态</option>
+                    <option value="approved">已立项</option>
+                    <option value="ongoing">进行中</option>
+                    <option value="completed">已完成</option>
+                    <option value="suspended">已暂停</option>
+                </select>
+                <select style="width: 150px;">
+                    <option value="">全部年度</option>
+                    <option value="2025">2025年</option>
+                    <option value="2024">2024年</option>
+                </select>
+                <button class="btn btn-primary">搜索</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>项目编号</th>
+                    <th>项目名称</th>
+                    <th>项目负责人</th>
+                    <th>所属部门</th>
+                    <th>预算金额</th>
+                    <th>评审得分</th>
+                    <th>立项时间</th>
+                    <th>项目状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PRJ-2025-001</td>
+                    <td>在线学习平台</td>
+                    <td>孙七</td>
+                    <td>市场部</td>
+                    <td>120 万</td>
+                    <td><span style="color: #52c41a; font-weight: bold;">92分</span></td>
+                    <td>2025-12-18</td>
+                    <td><span class="status-badge" style="background-color: #1890ff; color: white;">进行中</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                        <button class="btn btn-default" onclick="window.location.href='progress-update.html'">更新进度</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>PRJ-2025-002</td>
+                    <td>数据分析平台</td>
+                    <td>李四</td>
+                    <td>技术部</td>
+                    <td>100 万</td>
+                    <td><span style="color: #52c41a; font-weight: bold;">88分</span></td>
+                    <td>2025-12-16</td>
+                    <td><span class="status-badge" style="background-color: #1890ff; color: white;">进行中</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                        <button class="btn btn-default" onclick="window.location.href='progress-update.html'">更新进度</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>PRJ-2025-003</td>
+                    <td>智能交通管理系统</td>
+                    <td>张三</td>
+                    <td>技术部</td>
+                    <td>50 万</td>
+                    <td><span style="color: #52c41a; font-weight: bold;">85分</span></td>
+                    <td>2025-12-15</td>
+                    <td><span class="status-badge" style="background-color: #1890ff; color: white;">进行中</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                        <button class="btn btn-default" onclick="window.location.href='progress-update.html'">更新进度</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>PRJ-2024-050</td>
+                    <td>企业知识库系统</td>
+                    <td>钱八</td>
+                    <td>技术部</td>
+                    <td>80 万</td>
+                    <td><span style="color: #faad14; font-weight: bold;">78分</span></td>
+                    <td>2024-11-20</td>
+                    <td><span class="status-badge status-approved">已完成</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>PRJ-2024-048</td>
+                    <td>智能客服系统</td>
+                    <td>周九</td>
+                    <td>市场部</td>
+                    <td>60 万</td>
+                    <td><span style="color: #faad14; font-weight: bold;">82分</span></td>
+                    <td>2024-10-15</td>
+                    <td><span class="status-badge status-approved">已完成</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                    </td>
+                </tr>
+                <tr style="background-color: #fff7e6;">
+                    <td>PRJ-2024-045</td>
+                    <td>供应链优化项目</td>
+                    <td>吴十</td>
+                    <td>运营部</td>
+                    <td>90 万</td>
+                    <td><span style="color: #faad14; font-weight: bold;">80分</span></td>
+                    <td>2024-09-01</td>
+                    <td><span class="status-badge" style="background-color: #faad14; color: white;">已暂停</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='project-detail.html'">查看详情</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px; color: #666;">
+            <p><strong>项目状态说明：</strong></p>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li>进行中：项目正在按计划执行</li>
+                <li>已完成：项目已完成验收</li>
+                <li>已暂停：项目因特殊原因暂停，需要恢复后继续</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

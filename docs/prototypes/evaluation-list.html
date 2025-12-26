@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待评审列表</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回首页</a>
+
+        <h1>我的评审任务</h1>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <input type="text" placeholder="搜索项目名称" style="width: 300px;">
+                <select style="width: 150px;">
+                    <option value="">全部状态</option>
+                    <option value="pending" selected>待评审</option>
+                    <option value="completed">已评审</option>
+                </select>
+                <button class="btn btn-primary">搜索</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>项目名称</th>
+                    <th>申请人</th>
+                    <th>申请部门</th>
+                    <th>项目类别</th>
+                    <th>分配时间</th>
+                    <th>评审状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>移动办公APP</td>
+                    <td>张三</td>
+                    <td>技术部</td>
+                    <td>产品研发</td>
+                    <td>2025-12-17 10:00:00</td>
+                    <td><span class="status-badge status-pending">待评审</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-form.html'">开始评审</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>智能交通管理系统</td>
+                    <td>李四</td>
+                    <td>技术部</td>
+                    <td>技术创新</td>
+                    <td>2025-12-16 15:00:00</td>
+                    <td><span class="status-badge status-pending">待评审</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-form.html'">开始评审</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>电商平台升级项目</td>
+                    <td>王五</td>
+                    <td>技术部</td>
+                    <td>流程优化</td>
+                    <td>2025-12-15 11:00:00</td>
+                    <td><span class="status-badge status-pending">待评审</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="window.location.href='evaluation-form.html'">开始评审</button>
+                    </td>
+                </tr>
+                <tr style="background-color: #f6ffed;">
+                    <td>数据分析平台</td>
+                    <td>赵六</td>
+                    <td>技术部</td>
+                    <td>技术创新</td>
+                    <td>2025-12-14 09:00:00</td>
+                    <td><span class="status-badge status-approved">已评审</span></td>
+                    <td>
+                        <button class="btn btn-default" onclick="alert('您的评分：88分\n评审意见：项目方案完善，技术可行性高，建议立项。')">查看评审</button>
+                    </td>
+                </tr>
+                <tr style="background-color: #f6ffed;">
+                    <td>在线学习平台</td>
+                    <td>孙七</td>
+                    <td>市场部</td>
+                    <td>产品研发</td>
+                    <td>2025-12-12 14:00:00</td>
+                    <td><span class="status-badge status-approved">已评审</span></td>
+                    <td>
+                        <button class="btn btn-default" onclick="alert('您的评分：92分\n评审意见：项目创新性强，市场前景良好，强烈推荐立项。')">查看评审</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px; color: #666;">
+            <p><strong>评审说明：</strong></p>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li>待评审：需要您进行评审评分的项目</li>
+                <li>已评审：您已完成评审的项目</li>
+                <li>请尽快完成待评审项目的评审工作，评审结果将作为项目立项的重要依据</li>
+                <li>所有专家完成评审后，系统将自动汇总评分结果</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
