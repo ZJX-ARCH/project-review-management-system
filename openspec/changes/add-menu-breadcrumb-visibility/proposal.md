@@ -1,43 +1,27 @@
-# Proposal: Add Menu Breadcrumb Visibility Control
+# Change: Add Breadcrumb Visibility Control for Menu Items
 
-## Summary
+## Why
 
-Add a menu management option to control whether a route appears in the breadcrumb, so transient pages (e.g., create/edit/detail) can be excluded without page-level custom logic.
+Many form pages (add, edit, view details) do not need to appear in breadcrumb navigation, cluttering the UI unnecessarily. Currently, there is no way to control which menu items should be displayed in the breadcrumb. This change adds a configurable field to allow system administrators to control breadcrumb visibility on a per-menu basis, improving navigation clarity and user experience.
 
-## Problem Statement
+## What Changes
 
-The UI breadcrumb currently derives from route meta (`meta.breadcrumb !== false`). However:
-
-- Backend menu management does not provide a field to control breadcrumb visibility.
-- Teams must implement page-level workarounds (manual closing tabs or custom logic) for transient pages.
-- Behavior is inconsistent across modules and easy to regress.
-
-## Proposed Solution
-
-### What Changes
-
-- **Backend**
-  - Add a boolean field on menu records (e.g. `showBreadcrumb`) to control breadcrumb visibility.
-  - Include this field in the route tree returned by `getUserRoute`.
-  - Default behavior: if not configured, fall back to `!isHidden` (hidden menus usually should not appear in breadcrumb).
-
-- **Frontend**
-  - Extend `RouteItem` typing to include breadcrumb visibility.
-  - Map backend field into `route.meta.breadcrumb` so `Breadcrumb/index.vue` can use it directly.
-  - Add a safe fallback: `meta.breadcrumb = item.showBreadcrumb ?? !item.isHidden` to preserve behavior for older backend versions.
-
-- **Menu Management UI**
-  - Add a switch/checkbox "显示面包屑" (default: on) in menu create/edit form.
-  - Persist and load this setting.
-
-### Non-Goals
-
-- Redesigning breadcrumb component or route building pipeline.
-- Changing how active menu highlighting works.
+- Add `is_breadcrumb` boolean field to `sys_menu` database table
+- Update backend MenuDO entity, MenuReq, and MenuResp models to include breadcrumb visibility field
+- Update frontend menu form to show breadcrumb toggle **only for menu type (type=2)**, removing it from directory type (type=1)
+- Add validation logic to ensure breadcrumb field is only applicable to menus, not directories or buttons
+- Add Liquibase changelog to manage database schema migration
+- Update existing menu data with default `is_breadcrumb = true` for backward compatibility
 
 ## Impact
 
-- Affected backend: menu entity/schema, menu CRUD, route tree API.
-- Affected frontend: route store mapping (`src/stores/modules/route.ts`) and menu management UI.
-- Backward compatibility: frontend fallback keeps current behavior when backend field is absent.
-
+- Affected specs: `menu-management`
+- Affected code:
+  - Database: `continew-admin/continew-server/src/main/resources/db/changelog/mysql/main_table.sql` (new changeset)
+  - Backend:
+    - `continew-admin/continew-system/src/main/java/top/continew/admin/system/model/entity/MenuDO.java`
+    - `continew-admin/continew-system/src/main/java/top/continew/admin/system/model/req/MenuReq.java`
+    - `continew-admin/continew-system/src/main/java/top/continew/admin/system/model/resp/MenuResp.java`
+  - Frontend:
+    - `continew-admin-ui/src/views/system/menu/AddModal.vue` (restrict breadcrumb toggle to menu type only)
+    - `continew-admin-ui/src/apis/system/type.ts` (already has isBreadcrumb field)
