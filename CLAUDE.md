@@ -19,6 +19,39 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ---
 
+## ⚠️ 重要：Windows 文件路径规范 (CRITICAL: Windows File Path Requirements)
+
+**Claude Code 文件操作 Bug 解决方案**
+
+在 Windows 环境下，所有文件操作（Read、Write、Edit 等）**必须**使用完整的绝对路径格式，包括：
+- ✅ 盘符（如 `D:`）
+- ✅ 反斜杠 `\`（不是正斜杠 `/`）
+- ✅ 完整的绝对路径
+
+**正确示例**：
+```
+D:\project-review-management-system\continew-admin-ui\src\views\system\user\index.vue
+D:\project-review-management-system\continew-admin\src\main\java\top\continew\admin\User.java
+```
+
+**错误示例**（会导致文件修改失败）：
+```
+D:/project-review-management-system/continew-admin-ui/src/views/system/user/index.vue  ❌ 使用正斜杠
+continew-admin-ui/src/views/system/user/index.vue  ❌ 缺少盘符
+./src/views/system/user/index.vue  ❌ 相对路径
+```
+
+**适用范围**：
+- Read 工具
+- Write 工具
+- Edit 工具
+- NotebookEdit 工具
+- 所有其他文件操作工具
+
+**注意**：此规则适用于 Claude Code 在 Windows 环境下的所有文件操作，必须严格遵守。
+
+---
+
 ## 前端编码规范 (Frontend Coding Standards)
 
 ### 1. 导入顺序 (Import Order)
