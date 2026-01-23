@@ -1,0 +1,10 @@
+__________    ____.____  ______________.____     ___ ___ .____
+\____    /   |    |\   \/  /\__    ___/|    |   /   |   \|    |
+  /     /    |    | \     /   |    |   |    |  /    ~    \    |
+ /     /_/\__|    | /     \   |    |   |    |__\    Y    /    |___
+/_______ \________|/___/\  \  |____|   |_______ \___|_  /|_______ \
+        \/               \_/                   \/     \/         \/
+
+ :: ${application.name}   ::                                               v${application.version} (Profile: ${spring.profiles.active})
+ :: ContiNew Starter ::                                               v${application.starter}
+ :: Spring Boot      ::                                               v${spring-boot.version}

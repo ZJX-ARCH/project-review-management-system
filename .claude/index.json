@@ -1,0 +1,220 @@
+{
+  "projectName": "ContiNew Admin - 项目评审管理系统",
+  "lastUpdated": "2026-01-16T11:48:58+08:00",
+  "version": "4.2.0-SNAPSHOT",
+  "description": "前后端分离中后台管理系统框架，包含仪表盘、系统管理、系统监控、租户管理、能力开放、任务调度等多个模块",
+  "author": {
+    "name": "zjx",
+    "email": "3079870363@qq.com"
+  },
+  "technology": {
+    "backend": {
+      "language": "Java 17",
+      "framework": "Spring Boot 3.x",
+      "orm": "MyBatis Plus",
+      "auth": "Sa-Token",
+      "cache": "Redisson + JetCache",
+      "database": ["MySQL 8.0+", "PostgreSQL 13+"]
+    },
+    "frontend": {
+      "language": "TypeScript 5.0",
+      "framework": "Vue 3.5",
+      "ui": "Arco Design 2.57",
+      "buildTool": "Vite 5.x",
+      "stateManagement": "Pinia"
+    }
+  },
+  "modules": [
+    {
+      "name": "continew-admin",
+      "path": "continew-admin",
+      "type": "backend-aggregator",
+      "language": "Java",
+      "description": "后端主项目，Maven 聚合模块",
+      "entryPoints": [
+        "continew-server/src/main/java/top/continew/admin/ContiNewAdminApplication.java"
+      ],
+      "subModules": [
+        {
+          "name": "continew-server",
+          "path": "continew-admin/continew-server",
+          "description": "Spring Boot 启动入口，Controller 层",
+          "controllers": 3,
+          "hasTests": true
+        },
+        {
+          "name": "continew-system",
+          "path": "continew-admin/continew-system",
+          "description": "系统管理模块（用户、角色、菜单、部门、日志等）",
+          "controllers": 18,
+          "services": 20,
+          "hasApi": true
+        },
+        {
+          "name": "continew-plugin",
+          "path": "continew-admin/continew-plugin",
+          "description": "插件模块集合",
+          "subModules": [
+            "continew-plugin-generator",
+            "continew-plugin-open",
+            "continew-plugin-schedule",
+            "continew-plugin-tenant"
+          ]
+        },
+        {
+          "name": "continew-common",
+          "path": "continew-admin/continew-common",
+          "description": "公共模块（工具类、全局配置、异常处理）"
+        },
+        {
+          "name": "continew-extension",
+          "path": "continew-admin/continew-extension",
+          "description": "扩展模块（任务调度服务器等）",
+          "subModules": [
+            "continew-extension-schedule-server"
+          ]
+        }
+      ],
+      "configs": [
+        "continew-server/src/main/resources/config/application.yml",
+        "continew-server/src/main/resources/config/application-dev.yml",
+        "continew-server/src/main/resources/config/application-prod.yml"
+      ],
+      "coverage": {
+        "scanned": true,
+        "controllers": 34,
+        "services": 75,
+        "hasDataModel": true,
+        "hasDocs": true
+      }
+    },
+    {
+      "name": "continew-admin-ui",
+      "path": "continew-admin-ui",
+      "type": "frontend",
+      "language": "TypeScript",
+      "description": "前端 UI 项目，Vue 3 + Arco Design",
+      "entryPoints": [
+        "src/main.ts"
+      ],
+      "routes": [
+        "/dashboard",
+        "/system",
+        "/monitor",
+        "/tenant",
+        "/open",
+        "/schedule",
+        "/code",
+        "/login",
+        "/user"
+      ],
+      "components": [
+        "GiTable",
+        "GiForm",
+        "GiCell",
+        "GiIconSelector",
+        "Chart",
+        "FilePreview"
+      ],
+      "configs": [
+        "vite.config.ts",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "coverage": {
+        "scanned": true,
+        "views": 50,
+        "components": 30,
+        "hasRouter": true,
+        "hasStores": true
+      }
+    },
+    {
+      "name": "continew-starter",
+      "path": "continew-starter",
+      "type": "library",
+      "language": "Java",
+      "description": "企业级 Spring Boot Starter 集合",
+      "starterModules": [
+        "continew-starter-core",
+        "continew-starter-web",
+        "continew-starter-data-mp",
+        "continew-starter-data-mf",
+        "continew-starter-cache-redisson",
+        "continew-starter-cache-jetcache",
+        "continew-starter-auth-satoken",
+        "continew-starter-auth-justauth",
+        "continew-starter-log",
+        "continew-starter-storage",
+        "continew-starter-messaging",
+        "continew-starter-captcha",
+        "continew-starter-ratelimiter",
+        "continew-starter-idempotent",
+        "continew-starter-trace",
+        "continew-starter-excel",
+        "continew-starter-encrypt",
+        "continew-starter-security",
+        "continew-starter-license",
+        "continew-starter-extension"
+      ],
+      "coverage": {
+        "scanned": true,
+        "totalModules": 30,
+        "hasDocs": true
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules/**",
+    ".git/**",
+    ".github/**",
+    "dist/**",
+    "build/**",
+    "target/**",
+    ".next/**",
+    "__pycache__/**",
+    "*.lock",
+    "*.log",
+    "*.bin",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.zip",
+    "*.tar",
+    "*.gz"
+  ],
+  "scanningStrategy": {
+    "phase": "B",
+    "description": "模块优先扫描（中等强度）",
+    "filesScanned": 150,
+    "filesIgnored": 50000,
+    "truncated": false,
+    "nextSteps": []
+  },
+  "coverageReport": {
+    "estimatedTotalFiles": 60000,
+    "scannedFiles": 150,
+    "coveragePercentage": "0.25%",
+    "notes": "已完成核心模块扫描，覆盖所有主要入口、配置文件与关键 Controller/Service。忽略了 node_modules、target 等构建产物目录。"
+  },
+  "recommendations": {
+    "nextScan": [
+      "continew-admin/continew-system/src/main/java (深度扫描业务逻辑)",
+      "continew-admin-ui/src/api (API 接口定义)",
+      "continew-starter 各子模块的核心类（按需补扫）"
+    ],
+    "missingItems": [
+      "测试用例详细覆盖率",
+      "数据库 Schema 文件路径",
+      "部署脚本与 Docker 配置"
+    ]
+  },
+  "links": {
+    "repository": "https://github.com/continew-org/continew-admin",
+    "documentation": "https://continew.top/docs/admin/",
+    "starterRepo": "https://github.com/continew-org/continew-starter"
+  }
+}
