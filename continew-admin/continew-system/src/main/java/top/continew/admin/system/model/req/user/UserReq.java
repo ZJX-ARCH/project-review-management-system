@@ -89,18 +89,22 @@ public class UserReq implements Serializable {
     private GenderEnum gender;
 
     /**
-     * 所属部门
+     * 所属部门（兼容旧版，优先使用deptRoles）
      */
     @Schema(description = "所属部门", example = "5")
-    @NotNull(message = "所属部门不能为空")
     private Long deptId;
 
     /**
-     * 所属角色
+     * 所属角色（兼容旧版，优先使用deptRoles）
      */
-    @Schema(description = "所属角色", example = "2")
-    @NotEmpty(message = "所属角色不能为空")
+    @Schema(description = "所属角色", example = "[2, 3]")
     private List<Long> roleIds;
+
+    /**
+     * 部门角色列表（多部门多角色）
+     */
+    @Schema(description = "部门角色列表", example = "[{\"deptId\":1,\"roleIds\":[2,3]},{\"deptId\":2,\"roleIds\":[4]}]")
+    private List<DeptRoleReq> deptRoles;
 
     /**
      * 描述

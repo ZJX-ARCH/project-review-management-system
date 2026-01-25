@@ -18,6 +18,7 @@ export interface UserResp {
   deptName: string
   roleIds: Array<number>
   roleNames: Array<string>
+  deptRoles?: Array<{ deptId: number, roleIds: number[] }>
   disabled: boolean
 }
 export type UserDetailResp = UserResp & {

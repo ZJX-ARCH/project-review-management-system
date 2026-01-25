@@ -147,7 +147,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         Long userId = user.getId();
         baseMapper.lambdaUpdate().set(UserDO::getPwdResetTime, LocalDateTime.now()).eq(UserDO::getId, userId).update();
         // 保存用户和角色关联
-        userRoleService.assignRolesToUser(req.getRoleIds(), userId);
+        this.saveUserRoles(req, userId);
     }
 
     @Override
@@ -173,16 +173,14 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         newUser.setId(id);
         baseMapper.updateById(newUser);
         // 保存用户和角色关联
-        boolean isSaveUserRoleSuccess = userRoleService.assignRolesToUser(req.getRoleIds(), id);
+        this.saveUserRoles(req, id);
         // 如果禁用用户，则踢出在线用户
         if (DisEnableStatusEnum.DISABLE.equals(newStatus)) {
             onlineUserService.kickOut(id);
             return;
         }
-        // 如果角色有变更，则更新在线用户权限信息
-        if (isSaveUserRoleSuccess) {
-            this.updateContext(id);
-        }
+        // 更新在线用户权限信息
+        this.updateContext(id);
     }
 
     @Override
@@ -651,6 +649,47 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         int passwordRepetitionTimes = MapUtil.getInt(passwordPolicy, PASSWORD_REPETITION_TIMES.name());
         PASSWORD_REPETITION_TIMES.validate(password, passwordRepetitionTimes, user);
         return passwordRepetitionTimes;
+    }
+
+    /**
+     * 保存用户角色关联
+     *
+     * @param req    用户请求参数
+     * @param userId 用户 ID
+     */
+    private void saveUserRoles(UserReq req, Long userId) {
+        // 优先使用多部门多角色配置
+        if (CollUtil.isNotEmpty(req.getDeptRoles())) {
+            // 删除用户的所有角色关联
+            userRoleService.deleteByUserIds(List.of(userId));
+            
+            // 为每个部门分配角色
+            req.getDeptRoles().forEach(deptRole -> {
+                userRoleService.assignRolesToUserByDept(
+                    deptRole.getRoleIds(), 
+                    userId, 
+                    deptRole.getDeptId()
+                );
+            });
+            
+            // 如果设置了主部门，更新user表的deptId
+            if (req.getDeptId() != null) {
+                baseMapper.lambdaUpdate()
+                    .set(UserDO::getDeptId, req.getDeptId())
+                    .eq(UserDO::getId, userId)
+                    .update();
+            } else if (!req.getDeptRoles().isEmpty()) {
+                // 如果没有指定主部门，使用第一个部门作为主部门
+                Long firstDeptId = req.getDeptRoles().get(0).getDeptId();
+                baseMapper.lambdaUpdate()
+                    .set(UserDO::getDeptId, firstDeptId)
+                    .eq(UserDO::getId, userId)
+                    .update();
+            }
+        } else if (req.getDeptId() != null && CollUtil.isNotEmpty(req.getRoleIds())) {
+            // 兼容旧版：单部门模式
+            userRoleService.assignRolesToUser(req.getRoleIds(), userId);
+        }
     }
 
     /**
