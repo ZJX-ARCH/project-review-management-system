@@ -54,3 +54,13 @@ export const getUserInfo = () => {
 export const getUserRoute = () => {
   return http.get<T.RouteItem[]>(`${BASE_URL}/user/route`)
 }
+
+/** @desc 切换部门 */
+export const switchDept = (req: T.SwitchDeptReq) => {
+  return http.post(`${BASE_URL}/dept/switch`, req)
+}
+
+/** @desc 获取可选部门列表 */
+export const getOptionalDepts = () => {
+  return http.get<T.DeptOption[]>(`${BASE_URL}/dept/optional`)
+}

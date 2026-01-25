@@ -1,3 +1,9 @@
+/** 部门选项类型 */
+export interface DeptOption {
+  label: string
+  value: number
+}
+
 /** 用户类型 */
 export interface UserInfo {
   id: string
@@ -14,6 +20,7 @@ export interface UserInfo {
   roles: string[]
   roleNames: string[]
   permissions: string[]
+  optionalDepts?: DeptOption[]
 }
 
 /** 路由类型 */
@@ -87,4 +94,9 @@ export interface LoginResp {
 /** 第三方登录授权类型 */
 export interface SocialAuthAuthorizeResp {
   authorizeUrl: string
+}
+
+/** 切换部门请求参数 */
+export interface SwitchDeptReq {
+  deptId: number
 }
