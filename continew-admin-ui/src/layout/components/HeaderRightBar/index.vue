@@ -3,6 +3,8 @@
     <a-space size="medium">
       <!-- 搜索 -->
       <Search v-if="isDesktop" />
+      <!-- 部门切换 -->
+      <DeptSwitcher v-if="userStore.optionalDepts && userStore.optionalDepts.length > 1" />
       <!-- 项目配置 -->
       <a-tooltip content="项目配置" position="bl">
         <a-button size="mini" class="gi_hover_btn" @click="SettingDrawerRef?.open">
@@ -77,6 +79,7 @@
 import { Modal } from '@arco-design/web-vue'
 import { useFullscreen } from '@vueuse/core'
 import { onMounted, ref } from 'vue'
+import DeptSwitcher from './DeptSwitcher.vue'
 import Message from './Message.vue'
 import SettingDrawer from './SettingDrawer.vue'
 import Search from './Search.vue'

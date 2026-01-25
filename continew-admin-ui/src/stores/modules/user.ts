@@ -10,7 +10,9 @@ import {
   type UserInfo,
   accountLogin as accountLoginApi,
   emailLogin as emailLoginApi,
+  getOptionalDepts as getOptionalDeptsApi,
   getUserInfo as getUserInfoApi,
+  getUserRoute as getUserRouteApi,
   logout as logoutApi,
   phoneLogin as phoneLoginApi,
   socialLogin as socialLoginApi,
@@ -39,6 +41,8 @@ const storeSetup = () => {
   const nickname = computed(() => userInfo.nickname)
   const username = computed(() => userInfo.username)
   const avatar = computed(() => userInfo.avatar)
+  const deptName = computed(() => userInfo.deptName)
+  const optionalDepts = computed(() => userInfo.optionalDepts)
 
   const token = ref(getToken() || '')
   const pwdExpiredShow = ref<boolean>(true)
@@ -113,6 +117,20 @@ const storeSetup = () => {
       roles.value = res.data.roles
       permissions.value = res.data.permissions
     }
+    // 获取可选部门列表
+    const deptsRes = await getOptionalDeptsApi()
+    userInfo.optionalDepts = deptsRes.data
+  }
+
+  // 获取用户信息（供外部调用）
+  const getUserInfo = async () => {
+    await getInfo()
+  }
+
+  // 刷新路由（供部门切换后调用）
+  const refreshRoutes = async () => {
+    await getUserRouteApi()
+    resetHasRouteFlag()
   }
 
   return {
@@ -120,6 +138,8 @@ const storeSetup = () => {
     nickname,
     username,
     avatar,
+    deptName,
+    optionalDepts,
     token,
     roles,
     permissions,
@@ -131,6 +151,8 @@ const storeSetup = () => {
     logout,
     logoutCallBack,
     getInfo,
+    getUserInfo,
+    refreshRoutes,
     resetToken,
   }
 }
