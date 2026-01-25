@@ -81,48 +81,53 @@ const selectedDepts = computed(() => form.selectedDepts || [])
 // 部门角色映射 { deptId: [roleId1, roleId2] }
 const deptRolesMap = reactive<Record<number, number[]>>({})
 
-// 扁平化的部门列表
-const flatDeptList = computed(() => {
-  const flatten = (nodes: TreeNodeData[]): any[] => {
-    const result: any[] = []
-    nodes.forEach((node) => {
-      result.push({
-        label: node.title,
-        value: node.value,
-      })
-      if (node.children && node.children.length > 0) {
-        result.push(...flatten(node.children))
-      }
-    })
-    return result
-  }
-  return flatten(deptList.value)
-})
-
 // 获取部门名称
 const getDeptName = (deptId: number) => {
-  const dept = flatDeptList.value.find(d => d.value === deptId)
-  return dept ? dept.label : `部门 ${deptId}`
+  // 直接从 deptList 中递归查找
+  const findDept = (nodes: TreeNodeData[], targetId: number): TreeNodeData | null => {
+    for (const node of nodes) {
+      // TreeNodeData 使用 key 字段存储 ID
+      const nodeId = node.key || node.value
+      if (Number(nodeId) === targetId) {
+        return node
+      }
+      if (node.children && node.children.length > 0) {
+        const found = findDept(node.children, targetId)
+        if (found)
+          return found
+      }
+    }
+    return null
+  }
+
+  const dept = findDept(deptList.value, deptId)
+  return dept ? (dept.title as string) : `部门 ${deptId}`
 }
 
 // 处理部门变更
-const handleDeptChange = (value: number[]) => {
+const handleDeptChange = (value: number[] | string[]) => {
+  // 确保value是number数组
+  const numericValues = value.map((v: number | string) => Number(v))
+
   // 移除未选中部门的角色配置
   Object.keys(deptRolesMap).forEach((key) => {
-    if (!value.includes(Number(key))) {
+    if (!numericValues.includes(Number(key))) {
       delete deptRolesMap[Number(key)]
     }
   })
 
   // 如果当前主部门被移除，选择第一个部门作为主部门
-  if (form.deptId && !value.includes(form.deptId)) {
-    form.deptId = value.length > 0 ? value[0] : undefined
+  if (form.deptId && !numericValues.includes(form.deptId)) {
+    form.deptId = numericValues.length > 0 ? numericValues[0] : undefined
   }
 
   // 如果还没有主部门且有部门被选中，默认第一个为主部门
-  if (!form.deptId && value.length > 0) {
-    form.deptId = value[0]
+  if (!form.deptId && numericValues.length > 0) {
+    form.deptId = numericValues[0]
   }
+
+  // 更新 selectedDepts
+  form.selectedDepts = numericValues
 }
 
 const [form, resetForm] = useResetReactive({
@@ -195,11 +200,11 @@ const columns: ColumnItem[] = reactive([
   {
     label: '选择部门（可多选）',
     field: 'selectedDepts',
-    type: 'select',
+    type: 'tree-select',
     span: 24,
     required: true,
     props: {
-      options: flatDeptList,
+      data: deptList,
       multiple: true,
       allowClear: true,
       allowSearch: true,
