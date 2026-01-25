@@ -50,12 +50,23 @@ public class UserRoleDO implements Serializable {
     private Long userId;
 
     /**
+     * 部门 ID（NULL表示全局角色）
+     */
+    private Long deptId;
+
+    /**
      * 角色 ID
      */
     private Long roleId;
 
     public UserRoleDO(Long userId, Long roleId) {
         this.userId = userId;
+        this.roleId = roleId;
+    }
+
+    public UserRoleDO(Long userId, Long deptId, Long roleId) {
+        this.userId = userId;
+        this.deptId = deptId;
         this.roleId = roleId;
     }
 }
