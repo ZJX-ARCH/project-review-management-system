@@ -31,11 +31,13 @@ import me.zhyd.oauth.utils.AuthStateUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
 import top.continew.admin.auth.model.resp.SocialAuthAuthorizeResp;
 import top.continew.admin.auth.model.resp.UserInfoResp;
 import top.continew.admin.auth.service.AuthService;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 import top.continew.admin.common.context.UserContext;
 import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.system.enums.SocialSourceEnum;
@@ -110,5 +112,18 @@ public class AuthController {
     @GetMapping("/user/route")
     public List<RouteResp> listRoute() {
         return authService.buildRouteTree(UserContextHolder.getUserId());
+    }
+
+    @Operation(summary = "切换部门", description = "用户切换当前工作部门")
+    @PostMapping("/dept/switch")
+    public void switchDept(@RequestBody @Valid SwitchDeptReq req) {
+        authService.switchDept(req);
+    }
+
+    @Log(ignore = true)
+    @Operation(summary = "查询可选部门", description = "查询当前用户可以切换的部门列表")
+    @GetMapping("/dept/optional")
+    public List<LabelValueResp<Long>> listOptionalDepts() {
+        return authService.listOptionalDepts();
     }
 }

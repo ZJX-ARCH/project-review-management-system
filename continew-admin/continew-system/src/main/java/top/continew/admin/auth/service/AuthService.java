@@ -18,8 +18,10 @@ package top.continew.admin.auth.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 
 import java.util.List;
 
@@ -47,4 +49,18 @@ public interface AuthService {
      * @return 路由树
      */
     List<RouteResp> buildRouteTree(Long userId);
+
+    /**
+     * 切换部门
+     *
+     * @param req 切换部门请求参数
+     */
+    void switchDept(SwitchDeptReq req);
+
+    /**
+     * 查询用户可选部门列表
+     *
+     * @return 可选部门列表
+     */
+    List<LabelValueResp<Long>> listOptionalDepts();
 }

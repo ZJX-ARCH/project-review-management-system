@@ -28,21 +28,30 @@ import top.continew.admin.auth.LoginHandler;
 import top.continew.admin.auth.LoginHandlerFactory;
 import top.continew.admin.auth.enums.AuthTypeEnum;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
 import top.continew.admin.auth.service.AuthService;
 import top.continew.admin.common.context.RoleContext;
+import top.continew.admin.common.context.UserContext;
+import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.system.constant.SystemConstants;
 import top.continew.admin.system.enums.MenuTypeEnum;
+import top.continew.admin.system.model.entity.DeptDO;
 import top.continew.admin.system.model.resp.ClientResp;
 import top.continew.admin.system.model.resp.MenuResp;
 import top.continew.admin.system.service.ClientService;
+import top.continew.admin.system.service.DeptService;
 import top.continew.admin.system.service.MenuService;
 import top.continew.admin.system.service.RoleService;
+import top.continew.admin.system.service.UserRoleService;
+import top.continew.starter.core.util.CollUtils;
+import top.continew.starter.core.util.validation.CheckUtils;
 import top.continew.starter.core.util.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.TreeField;
 import top.continew.starter.extension.crud.autoconfigure.CrudProperties;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -63,6 +72,8 @@ public class AuthServiceImpl implements AuthService {
     private final ClientService clientService;
     private final RoleService roleService;
     private final MenuService menuService;
+    private final UserRoleService userRoleService;
+    private final DeptService deptService;
     private final CrudProperties crudProperties;
 
     @Override
@@ -122,5 +133,37 @@ public class AuthServiceImpl implements AuthService {
             tree.putExtra("permission", m.getPermission());
         });
         return BeanUtil.copyToList(treeList, RouteResp.class);
+    }
+
+    @Override
+    public void switchDept(SwitchDeptReq req) {
+        Long userId = UserContextHolder.getUserId();
+        Long deptId = req.getDeptId();
+        
+        // 检查用户是否在该部门有角色
+        List<Long> roleIds = userRoleService.listRoleIdByUserIdAndDeptId(userId, deptId);
+        CheckUtils.throwIf(CollUtil.isEmpty(roleIds), "您在该部门没有分配角色，无法切换");
+        
+        // 更新用户上下文
+        UserContext userContext = UserContextHolder.getContext();
+        userContext.setDeptId(deptId);
+        userContext.setRoles(roleService.listByUserIdAndDeptId(userId, deptId));
+        userContext.setPermissions(roleService.listPermissionByUserIdAndDeptId(userId, deptId));
+        UserContextHolder.setContext(userContext);
+    }
+
+    @Override
+    public List<LabelValueResp<Long>> listOptionalDepts() {
+        Long userId = UserContextHolder.getUserId();
+        
+        // 获取用户拥有角色的部门ID列表
+        List<Long> deptIds = userRoleService.listDeptIdByUserId(userId);
+        if (CollUtil.isEmpty(deptIds)) {
+            return new ArrayList<>(0);
+        }
+        
+        // 查询部门信息
+        List<DeptDO> deptList = deptService.listByIds(deptIds);
+        return CollUtils.mapToList(deptList, dept -> new LabelValueResp<>(dept.getName(), dept.getId()));
     }
 }
