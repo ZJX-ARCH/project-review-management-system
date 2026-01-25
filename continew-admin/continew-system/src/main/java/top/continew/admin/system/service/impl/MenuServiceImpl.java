@@ -118,6 +118,11 @@ public class MenuServiceImpl extends BaseServiceImpl<MenuMapper, MenuDO, MenuRes
     }
 
     @Override
+    public Set<String> listPermissionByUserIdAndDeptId(Long userId, Long deptId) {
+        return baseMapper.selectPermissionByUserIdAndDeptId(userId, deptId);
+    }
+
+    @Override
     @Cached(key = "#roleId", name = CacheConstants.ROLE_MENU_KEY_PREFIX)
     public List<MenuResp> listByRoleId(Long roleId) {
         if (SystemConstants.SUPER_ADMIN_ROLE_ID.equals(roleId)) {

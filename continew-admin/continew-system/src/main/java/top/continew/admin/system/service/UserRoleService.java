@@ -51,6 +51,16 @@ public interface UserRoleService {
     boolean assignRolesToUser(List<Long> roleIds, Long userId);
 
     /**
+     * 为用户在指定部门分配角色
+     *
+     * @param roleIds 角色 ID 列表
+     * @param userId  用户 ID
+     * @param deptId  部门 ID
+     * @return 是否成功（true：成功；false：无变更/失败）
+     */
+    boolean assignRolesToUserByDept(List<Long> roleIds, Long userId, Long deptId);
+
+    /**
      * 批量分配角色给用户
      *
      * @param roleId  角色 ID
@@ -87,6 +97,23 @@ public interface UserRoleService {
      * @return 角色 ID 列表
      */
     List<Long> listRoleIdByUserId(Long userId);
+
+    /**
+     * 根据用户ID和部门ID查询角色ID列表
+     *
+     * @param userId 用户 ID
+     * @param deptId 部门 ID
+     * @return 角色 ID 列表
+     */
+    List<Long> listRoleIdByUserIdAndDeptId(Long userId, Long deptId);
+
+    /**
+     * 查询用户的可选部门列表
+     *
+     * @param userId 用户 ID
+     * @return 部门 ID 列表
+     */
+    List<Long> listDeptIdByUserId(Long userId);
 
     /**
      * 根据角色 ID 查询

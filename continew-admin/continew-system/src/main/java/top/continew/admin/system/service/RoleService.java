@@ -85,6 +85,24 @@ public interface RoleService extends BaseService<RoleResp, RoleDetailResp, RoleQ
     Set<RoleContext> listByUserId(Long userId);
 
     /**
+     * 根据用户ID和部门ID查询角色列表
+     *
+     * @param userId 用户 ID
+     * @param deptId 部门 ID
+     * @return 角色集合
+     */
+    Set<RoleContext> listByUserIdAndDeptId(Long userId, Long deptId);
+
+    /**
+     * 根据用户ID和部门ID查询权限列表
+     *
+     * @param userId 用户 ID
+     * @param deptId 部门 ID
+     * @return 权限码集合
+     */
+    Set<String> listPermissionByUserIdAndDeptId(Long userId, Long deptId);
+
+    /**
      * 根据编码查询 ID
      *
      * @param code 编码

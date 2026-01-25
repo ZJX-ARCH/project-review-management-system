@@ -85,30 +85,54 @@ public class UserRoleServiceImpl implements UserRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean assignRolesToUser(List<Long> roleIds, Long userId) {
+        // 获取用户的主部门
+        UserDO user = userService.getById(userId);
+        Long deptId = user.getDeptId();
+        // 调用新方法
+        return this.assignRolesToUserByDept(roleIds, userId, deptId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean assignRolesToUserByDept(List<Long> roleIds, Long userId, Long deptId) {
+        // 系统内置用户保护
         UserDO userDO = userService.getById(userId);
         if (Boolean.TRUE.equals(userDO.getIsSystem())) {
-            Collection<Long> disjunctionRoleIds = CollUtil.disjunction(roleIds, this.listRoleIdByUserId(userId));
-            CheckUtils.throwIfNotEmpty(disjunctionRoleIds, "[{}] 是系统内置用户，不允许变更角色", userDO.getNickname());
+            Collection<Long> disjunctionRoleIds = CollUtil.disjunction(
+                roleIds,
+                this.listRoleIdByUserIdAndDeptId(userId, deptId)
+            );
+            CheckUtils.throwIfNotEmpty(disjunctionRoleIds,
+                "[{}] 是系统内置用户，不允许变更角色", userDO.getNickname());
         }
+
         // 超级管理员和租户管理员角色不允许分配
-        CheckUtils.throwIf(roleIds.contains(SystemConstants.SUPER_ADMIN_ROLE_ID), "不允许分配超级管理员角色");
-        Set<String> roleCodeSet = CollUtils.mapToSet(roleService.listByUserId(userId), RoleContext::getCode);
-        CheckUtils.throwIf(roleCodeSet.contains(RoleCodeEnum.TENANT_ADMIN.getCode()), "不允许分配系统管理员角色");
+        CheckUtils.throwIf(roleIds.contains(SystemConstants.SUPER_ADMIN_ROLE_ID),
+            "不允许分配超级管理员角色");
+        Set<String> roleCodeSet = CollUtils.mapToSet(
+            roleService.listByUserId(userId),
+            RoleContext::getCode
+        );
+        CheckUtils.throwIf(roleCodeSet.contains(RoleCodeEnum.TENANT_ADMIN.getCode()),
+            "不允许分配系统管理员角色");
+
         // 检查是否有变更
-        List<Long> oldRoleIdList = baseMapper.lambdaQuery()
-            .select(UserRoleDO::getRoleId)
-            .eq(UserRoleDO::getUserId, userId)
-            .list()
-            .stream()
-            .map(UserRoleDO::getRoleId)
-            .toList();
+        List<Long> oldRoleIdList = this.listRoleIdByUserIdAndDeptId(userId, deptId);
         if (CollUtil.isEmpty(CollUtil.disjunction(roleIds, oldRoleIdList))) {
             return false;
         }
-        // 删除原有关联
-        baseMapper.lambdaUpdate().eq(UserRoleDO::getUserId, userId).remove();
-        // 保存最新关联
-        List<UserRoleDO> userRoleList = CollUtils.mapToList(roleIds, roleId -> new UserRoleDO(userId, roleId));
+
+        // 删除该用户在该部门的原有角色
+        baseMapper.lambdaUpdate()
+            .eq(UserRoleDO::getUserId, userId)
+            .eq(UserRoleDO::getDeptId, deptId)
+            .remove();
+
+        // 保存新角色
+        List<UserRoleDO> userRoleList = CollUtils.mapToList(
+            roleIds,
+            roleId -> new UserRoleDO(userId, deptId, roleId)
+        );
         return baseMapper.insertBatch(userRoleList);
     }
 
@@ -164,5 +188,34 @@ public class UserRoleServiceImpl implements UserRoleService {
             return false;
         }
         return baseMapper.lambdaQuery().in(UserRoleDO::getRoleId, roleIds).exists();
+    }
+
+    @Override
+    public List<Long> listRoleIdByUserIdAndDeptId(Long userId, Long deptId) {
+        return baseMapper.lambdaQuery()
+            .select(UserRoleDO::getRoleId)
+            .eq(UserRoleDO::getUserId, userId)
+            .and(wrapper -> wrapper
+                .eq(UserRoleDO::getDeptId, deptId)
+                .or()
+                .isNull(UserRoleDO::getDeptId) // 包含全局角色
+            )
+            .list()
+            .stream()
+            .map(UserRoleDO::getRoleId)
+            .toList();
+    }
+
+    @Override
+    public List<Long> listDeptIdByUserId(Long userId) {
+        return baseMapper.lambdaQuery()
+            .select(UserRoleDO::getDeptId)
+            .eq(UserRoleDO::getUserId, userId)
+            .isNotNull(UserRoleDO::getDeptId)
+            .list()
+            .stream()
+            .map(UserRoleDO::getDeptId)
+            .distinct()
+            .toList();
     }
 }

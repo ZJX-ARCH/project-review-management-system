@@ -217,6 +217,32 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, RoleDO, RoleRes
     }
 
     @Override
+    public Set<RoleContext> listByUserIdAndDeptId(Long userId, Long deptId) {
+        List<Long> roleIdList = userRoleService.listRoleIdByUserIdAndDeptId(userId, deptId);
+        if (CollUtil.isEmpty(roleIdList)) {
+            return Collections.emptySet();
+        }
+        List<RoleDO> roleList = baseMapper.lambdaQuery()
+            .select(RoleDO::getId, RoleDO::getCode, RoleDO::getDataScope)
+            .in(RoleDO::getId, roleIdList)
+            .list();
+        return CollUtils.mapToSet(roleList, r -> new RoleContext(r.getId(), r.getCode(), r.getDataScope()));
+    }
+
+    @Override
+    public Set<String> listPermissionByUserIdAndDeptId(Long userId, Long deptId) {
+        Set<String> roleCodeSet = CollUtils.mapToSet(
+            this.listByUserIdAndDeptId(userId, deptId),
+            RoleContext::getCode
+        );
+        // 超级管理员赋予全部权限
+        if (roleCodeSet.contains(RoleCodeEnum.SUPER_ADMIN.getCode())) {
+            return CollUtil.newHashSet(SystemConstants.ALL_PERMISSION);
+        }
+        return menuService.listPermissionByUserIdAndDeptId(userId, deptId);
+    }
+
+    @Override
     public Long getIdByCode(String code) {
         return baseMapper.lambdaQuery().eq(RoleDO::getCode, code).oneOpt().map(RoleDO::getId).orElse(null);
     }
