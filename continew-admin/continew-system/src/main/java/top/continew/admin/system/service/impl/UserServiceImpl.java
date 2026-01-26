@@ -61,6 +61,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.system.enums.OptionCategoryEnum;
+import top.continew.admin.system.mapper.UserRoleMapper;
 import top.continew.admin.system.mapper.user.UserMapper;
 import top.continew.admin.system.model.entity.DeptDO;
 import top.continew.admin.system.model.entity.RoleDO;
@@ -117,6 +118,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     @Resource
     private DeptService deptService;
+    @Resource
+    private UserRoleMapper userRoleMapper;
     @Value("${avatar.support-suffix}")
     private String[] avatarSupportSuffix;
     @Value("${avatar.path}")
@@ -130,6 +133,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             .getSize()), queryWrapper);
         PageResp<UserResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
+        // 填充多部门多角色相关字段
+        this.fillDeptRoleInfo(pageResp.getList());
         return pageResp;
     }
 
@@ -174,7 +179,17 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         baseMapper.updateById(newUser);
         // 保存用户和角色关联
         this.saveUserRoles(req, id);
-        // 如果禁用用户，则踢出在线用户
+
+        // 判断是否修改的是当前登录用户
+        boolean isCurrentUser = ObjectUtil.equal(id, UserContextHolder.getUserId());
+
+        // 如果修改的是当前用户，清除缓存并强制下线（需要重新登录以应用新的部门角色信息）
+        if (isCurrentUser) {
+            onlineUserService.kickOut(id);
+            return;
+        }
+
+        // 如果禁用其他用户，则踢出在线用户
         if (DisEnableStatusEnum.DISABLE.equals(newStatus)) {
             onlineUserService.kickOut(id);
             return;
@@ -787,6 +802,97 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             userContext.setRoles(roleService.listByUserId(id));
             userContext.setPermissions(roleService.listPermissionByUserId(id));
             UserContextHolder.setContext(userContext);
+        }
+    }
+
+    /**
+     * 填充用户的部门角色信息
+     *
+     * @param userList 用户列表
+     */
+    private void fillDeptRoleInfo(List<UserResp> userList) {
+        if (CollUtil.isEmpty(userList)) {
+            return;
+        }
+
+        // 收集所有用户ID
+        List<Long> userIds = CollUtils.mapToList(userList, UserResp::getId);
+
+        // 批量查询所有用户的部门角色关联
+        List<UserRoleDO> userRoleList = userRoleMapper
+            .selectList(Wrappers.<UserRoleDO>lambdaQuery()
+                .in(UserRoleDO::getUserId, userIds));
+
+        // 按用户ID分组
+        Map<Long, List<UserRoleDO>> userRoleMap = userRoleList.stream()
+            .collect(Collectors.groupingBy(UserRoleDO::getUserId));
+
+        // 查询所有相关的部门和角色
+        Set<Long> deptIds = userRoleList.stream()
+            .map(UserRoleDO::getDeptId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+        Set<Long> roleIds = userRoleList.stream()
+            .map(UserRoleDO::getRoleId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        // 构建部门ID到部门名称的映射
+        Map<Long, String> deptNameMap = new HashMap<>();
+        if (CollUtil.isNotEmpty(deptIds)) {
+            List<DeptDO> deptList = deptService.listByIds(deptIds);
+            deptNameMap = deptList.stream()
+                .collect(Collectors.toMap(DeptDO::getId, DeptDO::getName));
+        }
+
+        // 构建角色ID到角色名称的映射
+        Map<Long, String> roleNameMap = new HashMap<>();
+        if (CollUtil.isNotEmpty(roleIds)) {
+            List<RoleDO> roleList = roleService.listByIds(roleIds);
+            roleNameMap = roleList.stream()
+                .collect(Collectors.toMap(RoleDO::getId, RoleDO::getName));
+        }
+
+        // 为每个用户填充数据
+        Map<Long, String> finalDeptNameMap = deptNameMap;
+        Map<Long, String> finalRoleNameMap = roleNameMap;
+        for (UserResp user : userList) {
+            List<UserRoleDO> roles = userRoleMap.get(user.getId());
+            if (CollUtil.isEmpty(roles)) {
+                continue;
+            }
+
+            // 收集所有部门名称
+            Set<String> allDeptNames = roles.stream()
+                .map(UserRoleDO::getDeptId)
+                .filter(Objects::nonNull)
+                .map(finalDeptNameMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+            // 设置所属部门（所有部门，逗号分隔）
+            if (CollUtil.isNotEmpty(allDeptNames)) {
+                user.setDeptName(String.join(",", allDeptNames));
+            }
+
+            // 设置当前部门（主部门）
+            Long mainDeptId = user.getDeptId();
+            if (mainDeptId != null) {
+                String currentDeptName = finalDeptNameMap.get(mainDeptId);
+                user.setCurrentDeptName(currentDeptName);
+
+                // 设置当前部门角色（主部门的角色）
+                List<String> currentDeptRoles = roles.stream()
+                    .filter(r -> Objects.equals(r.getDeptId(), mainDeptId))
+                    .map(UserRoleDO::getRoleId)
+                    .map(finalRoleNameMap::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+                if (CollUtil.isNotEmpty(currentDeptRoles)) {
+                    user.setCurrentDeptRoleNames(String.join(",", currentDeptRoles));
+                }
+            }
         }
     }
 
