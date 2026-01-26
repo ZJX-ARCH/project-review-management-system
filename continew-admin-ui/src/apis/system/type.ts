@@ -16,8 +16,10 @@ export interface UserResp {
   updateTime: string
   deptId: string
   deptName: string
+  currentDeptName?: string
   roleIds: Array<number>
   roleNames: Array<string>
+  currentDeptRoleNames?: string
   deptRoles?: Array<{ deptId: number, roleIds: number[] }>
   disabled: boolean
 }
