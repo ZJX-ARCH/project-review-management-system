@@ -1,85 +1,89 @@
 <template>
-  <a-row justify="end" align="center">
-    <a-space size="medium">
-      <!-- 搜索 -->
-      <Search v-if="isDesktop" />
-      <!-- 部门切换 -->
-      <DeptSwitcher v-if="userStore.optionalDepts && userStore.optionalDepts.length > 1" />
-      <!-- 项目配置 -->
-      <a-tooltip content="项目配置" position="bl">
-        <a-button size="mini" class="gi_hover_btn" @click="SettingDrawerRef?.open">
-          <template #icon>
-            <icon-settings :size="18" />
-          </template>
-        </a-button>
-      </a-tooltip>
-
-      <!-- 消息通知 -->
-      <a-popover
-        position="bottom"
-        trigger="click"
-        :content-style="{ marginTop: '-5px', padding: 0, border: 'none' }"
-        :arrow-style="{ width: 0, height: 0 }"
-      >
-        <a-badge :count="unreadMessageCount" dot>
-          <a-button size="mini" class="gi_hover_btn">
+  <div>
+    <a-row justify="end" align="center">
+      <a-space size="medium">
+        <!-- 搜索 -->
+        <Search v-if="isDesktop" />
+        <!-- 项目配置 -->
+        <a-tooltip content="项目配置" position="bl">
+          <a-button size="mini" class="gi_hover_btn" @click="SettingDrawerRef?.open">
             <template #icon>
-              <icon-notification :size="18" />
+              <icon-settings :size="18" />
             </template>
           </a-button>
-        </a-badge>
-        <template #content>
-          <Message @readall-success="getMessageCount" />
-        </template>
-      </a-popover>
+        </a-tooltip>
 
-      <!-- 全屏切换组件 -->
-      <a-tooltip v-if="!['xs', 'sm'].includes(breakpoint)" content="全屏切换" position="bottom">
-        <a-button size="mini" class="gi_hover_btn" @click="toggle">
-          <template #icon>
-            <icon-fullscreen v-if="!isFullscreen" :size="18" />
-            <icon-fullscreen-exit v-else :size="18" />
+        <!-- 消息通知 -->
+        <a-popover
+          position="bottom"
+          trigger="click"
+          :content-style="{ marginTop: '-5px', padding: 0, border: 'none' }"
+          :arrow-style="{ width: 0, height: 0 }"
+        >
+          <a-badge :count="unreadMessageCount" dot>
+            <a-button size="mini" class="gi_hover_btn">
+              <template #icon>
+                <icon-notification :size="18" />
+              </template>
+            </a-button>
+          </a-badge>
+          <template #content>
+            <Message @readall-success="getMessageCount" />
           </template>
-        </a-button>
-      </a-tooltip>
+        </a-popover>
 
-      <!-- 暗黑模式切换 -->
-      <a-tooltip content="主题切换" position="bottom">
-        <GiThemeBtn></GiThemeBtn>
-      </a-tooltip>
+        <!-- 全屏切换组件 -->
+        <a-tooltip v-if="!['xs', 'sm'].includes(breakpoint)" content="全屏切换" position="bottom">
+          <a-button size="mini" class="gi_hover_btn" @click="toggle">
+            <template #icon>
+              <icon-fullscreen v-if="!isFullscreen" :size="18" />
+              <icon-fullscreen-exit v-else :size="18" />
+            </template>
+          </a-button>
+        </a-tooltip>
 
-      <!-- 管理员账户 -->
-      <a-dropdown trigger="hover">
-        <a-row align="center" :wrap="false" class="user">
-          <!-- 管理员头像 -->
-          <Avatar :src="userStore.avatar" :name="userStore.nickname" :size="32" />
-          <span class="username">{{ userStore.nickname }}</span>
-          <icon-down />
-        </a-row>
-        <template #content>
-          <a-doption @click="router.push('/user/profile')">
-            <span>个人中心</span>
-          </a-doption>
-          <a-doption @click="router.push('/user/message')">
-            <span>消息中心</span>
-          </a-doption>
-          <a-divider :margin="0" />
-          <a-doption @click="logout">
-            <span>退出登录</span>
-          </a-doption>
-        </template>
-      </a-dropdown>
-    </a-space>
-  </a-row>
+        <!-- 暗黑模式切换 -->
+        <a-tooltip content="主题切换" position="bottom">
+          <GiThemeBtn></GiThemeBtn>
+        </a-tooltip>
 
-  <SettingDrawer ref="SettingDrawerRef"></SettingDrawer>
+        <!-- 管理员账户 -->
+        <a-dropdown trigger="hover">
+          <a-row align="center" :wrap="false" class="user">
+            <!-- 管理员头像 -->
+            <Avatar :src="userStore.avatar" :name="userStore.nickname" :size="32" />
+            <span class="username">{{ userStore.nickname }}</span>
+            <icon-down />
+          </a-row>
+          <template #content>
+            <a-doption @click="router.push('/user/profile')">
+              <span>个人中心</span>
+            </a-doption>
+            <a-doption @click="router.push('/user/message')">
+              <span>消息中心</span>
+            </a-doption>
+            <a-doption v-if="userStore.optionalDepts && userStore.optionalDepts.length > 1" @click="DeptManageModalRef?.open">
+              <span>部门管理</span>
+            </a-doption>
+            <a-divider :margin="0" />
+            <a-doption @click="logout">
+              <span>退出登录</span>
+            </a-doption>
+          </template>
+        </a-dropdown>
+      </a-space>
+    </a-row>
+
+    <SettingDrawer ref="SettingDrawerRef"></SettingDrawer>
+    <DeptManageModal ref="DeptManageModalRef"></DeptManageModal>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { Modal } from '@arco-design/web-vue'
 import { useFullscreen } from '@vueuse/core'
 import { onMounted, ref } from 'vue'
-import DeptSwitcher from './DeptSwitcher.vue'
+import DeptManageModal from './DeptManageModal.vue'
 import Message from './Message.vue'
 import SettingDrawer from './SettingDrawer.vue'
 import Search from './Search.vue'
@@ -135,6 +139,7 @@ const { isFullscreen, toggle } = useFullscreen()
 const router = useRouter()
 const userStore = useUserStore()
 const SettingDrawerRef = ref<InstanceType<typeof SettingDrawer>>()
+const DeptManageModalRef = ref<InstanceType<typeof DeptManageModal>>()
 
 // 退出登录
 const logout = () => {

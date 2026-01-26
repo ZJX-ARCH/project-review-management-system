@@ -64,3 +64,13 @@ export const switchDept = (req: T.SwitchDeptReq) => {
 export const getOptionalDepts = () => {
   return http.get<T.DeptOption[]>(`${BASE_URL}/dept/optional`)
 }
+
+/** @desc 获取用户部门角色信息 */
+export const getUserDeptRoles = () => {
+  return http.get<T.UserDeptRolesResp>(`${BASE_URL}/user/dept-roles`)
+}
+
+/** @desc 设置默认部门 */
+export const setDefaultDept = (req: T.SetDefaultDeptReq) => {
+  return http.post(`${BASE_URL}/dept/set-default`, req)
+}

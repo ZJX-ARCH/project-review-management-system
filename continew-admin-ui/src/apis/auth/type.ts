@@ -100,3 +100,19 @@ export interface SocialAuthAuthorizeResp {
 export interface SwitchDeptReq {
   deptId: number
 }
+
+/** 设置默认部门请求参数 */
+export interface SetDefaultDeptReq {
+  deptId: number
+}
+
+/** 用户部门角色信息 */
+export interface UserDeptRolesResp {
+  currentDeptId: number
+  mainDeptId: number
+  deptRoles: Array<{
+    deptId: number
+    deptName: string
+    roleNames: string[]
+  }>
+}

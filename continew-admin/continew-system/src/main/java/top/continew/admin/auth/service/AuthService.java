@@ -18,9 +18,11 @@ package top.continew.admin.auth.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SetDefaultDeptReq;
 import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
+import top.continew.admin.auth.model.resp.UserDeptRolesResp;
 import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 
 import java.util.List;
@@ -63,4 +65,18 @@ public interface AuthService {
      * @return 可选部门列表
      */
     List<LabelValueResp<Long>> listOptionalDepts();
+
+    /**
+     * 获取用户部门角色信息
+     *
+     * @return 用户部门角色信息
+     */
+    UserDeptRolesResp getUserDeptRoles();
+
+    /**
+     * 设置默认部门
+     *
+     * @param req 设置默认部门请求参数
+     */
+    void setDefaultDept(SetDefaultDeptReq req);
 }

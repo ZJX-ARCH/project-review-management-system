@@ -28,9 +28,11 @@ import top.continew.admin.auth.LoginHandler;
 import top.continew.admin.auth.LoginHandlerFactory;
 import top.continew.admin.auth.enums.AuthTypeEnum;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SetDefaultDeptReq;
 import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
+import top.continew.admin.auth.model.resp.UserDeptRolesResp;
 import top.continew.admin.auth.service.AuthService;
 import top.continew.admin.common.context.RoleContext;
 import top.continew.admin.common.context.UserContext;
@@ -39,6 +41,8 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.system.constant.SystemConstants;
 import top.continew.admin.system.enums.MenuTypeEnum;
 import top.continew.admin.system.model.entity.DeptDO;
+import top.continew.admin.system.model.entity.RoleDO;
+import top.continew.admin.system.model.entity.user.UserDO;
 import top.continew.admin.system.model.resp.ClientResp;
 import top.continew.admin.system.model.resp.MenuResp;
 import top.continew.admin.system.service.ClientService;
@@ -46,6 +50,7 @@ import top.continew.admin.system.service.DeptService;
 import top.continew.admin.system.service.MenuService;
 import top.continew.admin.system.service.RoleService;
 import top.continew.admin.system.service.UserRoleService;
+import top.continew.admin.system.service.UserService;
 import top.continew.starter.core.util.CollUtils;
 import top.continew.starter.core.util.validation.CheckUtils;
 import top.continew.starter.core.util.validation.ValidationUtils;
@@ -56,7 +61,9 @@ import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 认证业务实现
@@ -74,6 +81,7 @@ public class AuthServiceImpl implements AuthService {
     private final MenuService menuService;
     private final UserRoleService userRoleService;
     private final DeptService deptService;
+    private final UserService userService;
     private final CrudProperties crudProperties;
 
     @Override
@@ -167,15 +175,88 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public List<LabelValueResp<Long>> listOptionalDepts() {
         Long userId = UserContextHolder.getUserId();
-        
+
         // 获取用户拥有角色的部门ID列表
         List<Long> deptIds = userRoleService.listDeptIdByUserId(userId);
         if (CollUtil.isEmpty(deptIds)) {
             return new ArrayList<>(0);
         }
-        
+
         // 查询部门信息
         List<DeptDO> deptList = deptService.listByIds(deptIds);
         return CollUtils.mapToList(deptList, dept -> new LabelValueResp<>(dept.getName(), dept.getId()));
+    }
+
+    @Override
+    public UserDeptRolesResp getUserDeptRoles() {
+        Long userId = UserContextHolder.getUserId();
+        UserContext userContext = UserContextHolder.getContext();
+        Long currentDeptId = userContext != null ? userContext.getDeptId() : null;
+
+        // 获取用户的主部门ID（默认部门）
+        Long mainDeptId = userService.getById(userId).getDeptId();
+
+        // 获取用户所有有角色的部门ID列表
+        List<Long> deptIds = userRoleService.listDeptIdByUserId(userId);
+        if (CollUtil.isEmpty(deptIds)) {
+            UserDeptRolesResp resp = new UserDeptRolesResp();
+            resp.setCurrentDeptId(currentDeptId);
+            resp.setMainDeptId(mainDeptId);
+            resp.setDeptRoles(new ArrayList<>(0));
+            return resp;
+        }
+
+        // 批量查询部门信息
+        List<DeptDO> deptList = deptService.listByIds(deptIds);
+        Map<Long, String> deptIdNameMap = deptList.stream()
+            .collect(Collectors.toMap(DeptDO::getId, DeptDO::getName));
+
+        // 查询每个部门下的角色信息
+        List<UserDeptRolesResp.DeptRoleInfo> deptRoles = new ArrayList<>();
+        for (Long deptId : deptIds) {
+            UserDeptRolesResp.DeptRoleInfo deptRoleInfo = new UserDeptRolesResp.DeptRoleInfo();
+            deptRoleInfo.setDeptId(deptId);
+            deptRoleInfo.setDeptName(deptIdNameMap.get(deptId));
+
+            // 查询该部门下用户的角色
+            Set<RoleContext> roles = roleService.listByUserIdAndDeptId(userId, deptId);
+            List<Long> roleIds = roles.stream()
+                .map(RoleContext::getId)
+                .collect(Collectors.toList());
+
+            // 根据角色ID查询角色名称
+            List<String> roleNames = new ArrayList<>();
+            if (CollUtil.isNotEmpty(roleIds)) {
+                List<RoleDO> roleDOList = roleService.listByIds(roleIds);
+                roleNames = roleDOList.stream()
+                    .map(RoleDO::getName)
+                    .collect(Collectors.toList());
+            }
+            deptRoleInfo.setRoleNames(roleNames);
+
+            deptRoles.add(deptRoleInfo);
+        }
+
+        UserDeptRolesResp resp = new UserDeptRolesResp();
+        resp.setCurrentDeptId(currentDeptId);
+        resp.setMainDeptId(mainDeptId);
+        resp.setDeptRoles(deptRoles);
+        return resp;
+    }
+
+    @Override
+    public void setDefaultDept(SetDefaultDeptReq req) {
+        Long userId = UserContextHolder.getUserId();
+        Long deptId = req.getDeptId();
+
+        // 验证用户在该部门是否有角色
+        List<Long> roleIds = userRoleService.listRoleIdByUserIdAndDeptId(userId, deptId);
+        CheckUtils.throwIf(CollUtil.isEmpty(roleIds), "您在该部门没有分配角色，无法设为默认部门");
+
+        // 更新用户的主部门
+        userService.lambdaUpdate()
+            .set(UserDO::getDeptId, deptId)
+            .eq(UserDO::getId, userId)
+            .update();
     }
 }

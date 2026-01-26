@@ -31,10 +31,12 @@ import me.zhyd.oauth.utils.AuthStateUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import top.continew.admin.auth.model.req.LoginReq;
+import top.continew.admin.auth.model.req.SetDefaultDeptReq;
 import top.continew.admin.auth.model.req.SwitchDeptReq;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.auth.model.resp.RouteResp;
 import top.continew.admin.auth.model.resp.SocialAuthAuthorizeResp;
+import top.continew.admin.auth.model.resp.UserDeptRolesResp;
 import top.continew.admin.auth.model.resp.UserInfoResp;
 import top.continew.admin.auth.service.AuthService;
 import top.continew.starter.extension.crud.model.resp.LabelValueResp;
@@ -125,5 +127,18 @@ public class AuthController {
     @GetMapping("/dept/optional")
     public List<LabelValueResp<Long>> listOptionalDepts() {
         return authService.listOptionalDepts();
+    }
+
+    @Log(ignore = true)
+    @Operation(summary = "获取用户部门角色信息", description = "获取当前用户在所有部门的角色信息")
+    @GetMapping("/user/dept-roles")
+    public UserDeptRolesResp getUserDeptRoles() {
+        return authService.getUserDeptRoles();
+    }
+
+    @Operation(summary = "设置默认部门", description = "设置用户登录时的默认部门")
+    @PostMapping("/dept/set-default")
+    public void setDefaultDept(@RequestBody @Valid SetDefaultDeptReq req) {
+        authService.setDefaultDept(req);
     }
 }
