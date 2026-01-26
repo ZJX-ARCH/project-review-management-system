@@ -413,9 +413,42 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     @Override
     public void updateRole(UserRoleUpdateReq updateReq, Long id) {
         this.getById(id);
-        List<Long> roleIds = updateReq.getRoleIds();
-        // 保存用户和角色关联
-        userRoleService.assignRolesToUser(roleIds, id);
+
+        // 更新用户的主部门
+        baseMapper.lambdaUpdate()
+            .set(UserDO::getDeptId, updateReq.getDeptId())
+            .eq(UserDO::getId, id)
+            .update();
+
+        // 删除旧的用户角色关联
+        userRoleService.deleteByUserIds(CollUtil.newArrayList(id));
+
+        // 构建新的用户角色关联列表
+        List<UserRoleDO> userRoleList = new java.util.ArrayList<>();
+        for (DeptRoleReq deptRole : updateReq.getDeptRoles()) {
+            for (Long roleId : deptRole.getRoleIds()) {
+                UserRoleDO userRoleDO = new UserRoleDO();
+                userRoleDO.setUserId(id);
+                userRoleDO.setRoleId(roleId);
+                userRoleDO.setDeptId(deptRole.getDeptId());
+                userRoleList.add(userRoleDO);
+            }
+        }
+
+        // 批量保存用户角色关联
+        if (CollUtil.isNotEmpty(userRoleList)) {
+            userRoleService.saveBatch(userRoleList);
+        }
+
+        // 判断是否修改的是当前登录用户
+        boolean isCurrentUser = ObjectUtil.equal(id, UserContextHolder.getUserId());
+
+        // 如果修改的是当前用户，清除缓存并强制下线（需要重新登录以应用新的部门角色信息）
+        if (isCurrentUser) {
+            onlineUserService.kickOut(id);
+            return;
+        }
+
         // 更新用户上下文
         this.updateContext(id);
     }
@@ -540,19 +573,43 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         if (query.getRoleId() != null) {
             excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
         }
-        return new QueryWrapper<UserDO>().and(StrUtil.isNotBlank(description), q -> q.like("t1.username", description)
-            .or()
-            .like("t1.nickname", description)
-            .or()
-            .like("t1.description", description))
+
+        QueryWrapper<UserDO> queryWrapper = new QueryWrapper<UserDO>()
+            .and(StrUtil.isNotBlank(description), q -> q.like("t1.username", description)
+                .or()
+                .like("t1.nickname", description)
+                .or()
+                .like("t1.description", description))
             .eq(status != null, "t1.status", status)
             .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
-                .getLast(createTimeList))
-            .and(deptId != null, q -> {
-                List<Long> deptIdList = CollUtils.mapToList(deptService.listChildren(deptId), DeptDO::getId);
-                deptIdList.add(deptId);
-                q.in("t1.dept_id", deptIdList);
-            })
+                .getLast(createTimeList));
+
+        // 部门过滤：查询主部门为该部门 OR 在该部门有角色的用户
+        if (deptId != null) {
+            List<Long> deptIdList = CollUtils.mapToList(deptService.listChildren(deptId), DeptDO::getId);
+            deptIdList.add(deptId);
+
+            // 查询在这些部门中有角色的所有用户ID
+            List<Long> userIdsWithRoleInDept = userRoleMapper.lambdaQuery()
+                .select(UserRoleDO::getUserId)
+                .in(UserRoleDO::getDeptId, deptIdList)
+                .list()
+                .stream()
+                .map(UserRoleDO::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+
+            // 主部门在列表中 OR 用户ID在有角色的用户列表中
+            if (CollUtil.isNotEmpty(userIdsWithRoleInDept)) {
+                queryWrapper.and(q -> q.in("t1.dept_id", deptIdList)
+                    .or()
+                    .in("t1.id", userIdsWithRoleInDept));
+            } else {
+                queryWrapper.in("t1.dept_id", deptIdList);
+            }
+        }
+
+        return queryWrapper
             .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList)
             .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList)
             .eq("t1.deleted", 0L);

@@ -17,6 +17,7 @@
 package top.continew.admin.system.model.req.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
@@ -104,6 +105,8 @@ public class UserReq implements Serializable {
      * 部门角色列表（多部门多角色）
      */
     @Schema(description = "部门角色列表", example = "[{\"deptId\":1,\"roleIds\":[2,3]},{\"deptId\":2,\"roleIds\":[4]}]")
+    @NotEmpty(message = "部门角色配置不能为空")
+    @Valid
     private List<DeptRoleReq> deptRoles;
 
     /**

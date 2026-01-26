@@ -93,7 +93,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
         baseService.resetPassword(req, id);
     }
 
-    @Operation(summary = "分配角色", description = "为用户新增或移除角色")
+    @Operation(summary = "分配部门角色", description = "为用户分配部门和角色")
     @Parameter(name = "id", description = "ID", example = "1", in = ParameterIn.PATH)
     @SaCheckPermission("system:user:updateRole")
     @PatchMapping("/{id}/role")

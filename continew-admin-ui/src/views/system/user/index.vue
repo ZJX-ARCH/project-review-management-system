@@ -67,7 +67,7 @@
             </a-button>
             <template #content>
               <a-doption v-permission="['system:user:resetPwd']" title="重置密码" @click="onResetPwd(record)">重置密码</a-doption>
-              <a-doption v-permission="['system:user:updateRole']" :disabled="record.isSystem" title="分配角色" @click="onUpdateRole(record)">分配角色</a-doption>
+              <a-doption v-permission="['system:user:updateRole']" :disabled="record.isSystem" title="分配部门角色" @click="onUpdateRole(record)">分配部门角色</a-doption>
               <a-doption v-permission="['system:user:delete']">
                 <a-link
                   status="danger"
@@ -250,7 +250,7 @@ const onResetPwd = (record: UserResp) => {
 }
 
 const RoleUpdateModalRef = ref<InstanceType<typeof RoleUpdateModal>>()
-// 分配角色
+// 分配部门角色
 const onUpdateRole = (record: UserResp) => {
   RoleUpdateModalRef.value?.onOpen(record.id)
 }

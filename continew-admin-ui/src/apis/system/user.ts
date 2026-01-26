@@ -59,8 +59,8 @@ export function resetUserPwd(data: any, id: string) {
   return http.patch(`${BASE_URL}/${id}/password`, data)
 }
 
-/** @desc 分配角色 */
-export function updateUserRole(data: { roleIds: string[] }, id: string) {
+/** @desc 分配部门角色 */
+export function updateUserRole(data: { deptId: number | string, deptRoles: Array<{ deptId: number | string, roleIds: number[] }> }, id: string) {
   return http.patch(`${BASE_URL}/${id}/role`, data)
 }
 

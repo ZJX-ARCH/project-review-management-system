@@ -17,7 +17,9 @@
 package top.continew.admin.system.model.req.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serial;
@@ -25,22 +27,30 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 用户角色修改请求参数
+ * 用户部门角色修改请求参数
  *
  * @author Charles7c
  * @since 2023/2/24 23:05
  */
 @Data
-@Schema(description = "用户角色修改请求参数")
+@Schema(description = "用户部门角色修改请求参数")
 public class UserRoleUpdateReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 角色 ID 列表
+     * 主部门 ID
      */
-    @Schema(description = "所属角色", example = "1,2")
-    @NotEmpty(message = "所属角色不能为空")
-    private List<Long> roleIds;
+    @Schema(description = "主部门 ID", example = "1")
+    @NotNull(message = "主部门不能为空")
+    private Long deptId;
+
+    /**
+     * 部门角色列表（多部门多角色）
+     */
+    @Schema(description = "部门角色列表", example = "[{\"deptId\":1,\"roleIds\":[2,3]},{\"deptId\":2,\"roleIds\":[4]}]")
+    @NotEmpty(message = "部门角色配置不能为空")
+    @Valid
+    private List<DeptRoleReq> deptRoles;
 }
