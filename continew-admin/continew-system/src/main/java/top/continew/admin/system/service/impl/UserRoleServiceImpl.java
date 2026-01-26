@@ -172,6 +172,13 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
+    public List<UserRoleDO> listByUserId(Long userId) {
+        return baseMapper.lambdaQuery()
+            .eq(UserRoleDO::getUserId, userId)
+            .list();
+    }
+
+    @Override
     public List<Long> listUserIdByRoleId(Long roleId) {
         return baseMapper.lambdaQuery()
             .select(UserRoleDO::getUserId)

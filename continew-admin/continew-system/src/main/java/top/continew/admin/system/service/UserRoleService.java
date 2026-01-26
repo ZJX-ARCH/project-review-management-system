@@ -99,6 +99,14 @@ public interface UserRoleService {
     List<Long> listRoleIdByUserId(Long userId);
 
     /**
+     * 根据用户ID查询所有用户角色关联记录
+     *
+     * @param userId 用户 ID
+     * @return 用户角色关联记录列表
+     */
+    List<UserRoleDO> listByUserId(Long userId);
+
+    /**
      * 根据用户ID和部门ID查询角色ID列表
      *
      * @param userId 用户 ID

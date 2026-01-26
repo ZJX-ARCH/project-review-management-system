@@ -32,6 +32,7 @@ import top.continew.admin.common.constant.ContainerConstants;
 import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
+import top.continew.admin.system.model.req.user.DeptRoleReq;
 import top.continew.admin.system.model.resp.DeptResp;
 import top.continew.admin.system.service.DeptService;
 import top.continew.starter.excel.converter.ExcelBaseEnumConverter;
@@ -116,6 +117,12 @@ public class UserDetailResp extends BaseDetailResp {
     @Schema(description = "角色名称列表", example = "测试人员")
     @ExcelProperty(value = "角色", converter = ExcelListConverter.class, order = 9)
     private List<String> roleNames;
+
+    /**
+     * 部门角色列表（多部门多角色）
+     */
+    @Schema(description = "部门角色列表", example = "[{\"deptId\":1,\"roleIds\":[2,3]},{\"deptId\":2,\"roleIds\":[4]}]")
+    private List<DeptRoleReq> deptRoles;
 
     /**
      * 手机号码

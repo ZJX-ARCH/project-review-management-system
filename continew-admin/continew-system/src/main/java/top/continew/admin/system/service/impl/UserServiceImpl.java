@@ -184,6 +184,37 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     @Override
+    public UserDetailResp get(Long id) {
+        // 调用父类方法获取基本信息
+        UserDetailResp detail = super.get(id);
+
+        // 查询用户的所有部门角色关联记录
+        List<UserRoleDO> userRoles = userRoleService.listByUserId(id);
+
+        // 按部门ID分组，组装部门角色列表
+        Map<Long, List<Long>> deptRoleMap = new java.util.HashMap<>();
+        for (UserRoleDO userRole : userRoles) {
+            Long deptId = userRole.getDeptId();
+            if (deptId != null) {
+                deptRoleMap.computeIfAbsent(deptId, k -> new java.util.ArrayList<>()).add(userRole.getRoleId());
+            }
+        }
+
+        // 转换为 DeptRoleReq 列表
+        List<DeptRoleReq> deptRoles = deptRoleMap.entrySet().stream()
+            .map(entry -> {
+                DeptRoleReq deptRole = new DeptRoleReq();
+                deptRole.setDeptId(entry.getKey());
+                deptRole.setRoleIds(entry.getValue());
+                return deptRole;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        detail.setDeptRoles(deptRoles);
+        return detail;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheInvalidate(key = "#ids", name = CacheConstants.USER_KEY_PREFIX, multi = true)
     public void delete(List<Long> ids) {
