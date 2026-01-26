@@ -863,16 +863,17 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             }
 
             // 收集所有部门名称
-            Set<String> allDeptNames = roles.stream()
+            List<String> allDeptNames = roles.stream()
                 .map(UserRoleDO::getDeptId)
                 .filter(Objects::nonNull)
                 .map(finalDeptNameMap::get)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .distinct()
+                .collect(Collectors.toList());
 
-            // 设置所属部门（所有部门，逗号分隔）
+            // 设置所属部门名称列表
             if (CollUtil.isNotEmpty(allDeptNames)) {
-                user.setDeptName(String.join(",", allDeptNames));
+                user.setDeptNames(allDeptNames);
             }
 
             // 设置当前部门（主部门）
@@ -881,7 +882,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
                 String currentDeptName = finalDeptNameMap.get(mainDeptId);
                 user.setCurrentDeptName(currentDeptName);
 
-                // 设置当前部门角色（主部门的角色）
+                // 设置当前部门角色名称列表
                 List<String> currentDeptRoles = roles.stream()
                     .filter(r -> Objects.equals(r.getDeptId(), mainDeptId))
                     .map(UserRoleDO::getRoleId)
@@ -890,7 +891,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
                     .collect(Collectors.toList());
 
                 if (CollUtil.isNotEmpty(currentDeptRoles)) {
-                    user.setCurrentDeptRoleNames(String.join(",", currentDeptRoles));
+                    user.setCurrentDeptRoleNames(currentDeptRoles);
                 }
             }
         }

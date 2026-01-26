@@ -111,10 +111,10 @@ public class UserResp extends BaseDetailResp {
     private Long deptId;
 
     /**
-     * 所属部门（所有部门，逗号分隔）
+     * 所属部门名称列表（所有部门）
      */
-    @Schema(description = "所属部门（所有部门）", example = "测试部,研发部")
-    private String deptName;
+    @Schema(description = "所属部门名称列表", example = "[\"测试部\",\"研发部\"]")
+    private List<String> deptNames;
 
     /**
      * 当前部门（主部门）
@@ -136,10 +136,10 @@ public class UserResp extends BaseDetailResp {
     private List<String> roleNames;
 
     /**
-     * 当前部门角色（主部门的角色，逗号分隔）
+     * 当前部门角色名称列表
      */
-    @Schema(description = "当前部门角色", example = "测试人员,开发人员")
-    private String currentDeptRoleNames;
+    @Schema(description = "当前部门角色名称列表", example = "[\"测试人员\",\"开发人员\"]")
+    private List<String> currentDeptRoleNames;
 
     @Override
     public Boolean getDisabled() {

@@ -15,11 +15,11 @@ export interface UserResp {
   updateUserString: string
   updateTime: string
   deptId: string
-  deptName: string
+  deptNames?: Array<string>
   currentDeptName?: string
   roleIds: Array<number>
   roleNames: Array<string>
-  currentDeptRoleNames?: string
+  currentDeptRoleNames?: Array<string>
   deptRoles?: Array<{ deptId: number, roleIds: number[] }>
   disabled: boolean
 }

@@ -39,8 +39,14 @@
       <template #gender="{ record }">
         <GiCellGender :gender="record.gender" />
       </template>
+      <template #deptNames="{ record }">
+        <GiCellTags :data="record.deptNames" />
+      </template>
       <template #roleNames="{ record }">
         <GiCellTags :data="record.roleNames" />
+      </template>
+      <template #currentDeptRoleNames="{ record }">
+        <GiCellTags :data="record.currentDeptRoleNames" />
       </template>
       <template #status="{ record }">
         <GiCellStatus :status="record.status" />
@@ -161,9 +167,9 @@ const columns: TableInstance['columns'] = [
   { title: '用户名', dataIndex: 'username', slotName: 'username', minWidth: 140, ellipsis: true, tooltip: true },
   { title: '状态', dataIndex: 'status', slotName: 'status', align: 'center' },
   { title: '性别', dataIndex: 'gender', slotName: 'gender', align: 'center' },
-  { title: '所属部门', dataIndex: 'deptName', minWidth: 180, ellipsis: true, tooltip: true },
+  { title: '所属部门', dataIndex: 'deptNames', slotName: 'deptNames', minWidth: 180 },
   { title: '当前部门', dataIndex: 'currentDeptName', minWidth: 140, ellipsis: true, tooltip: true },
-  { title: '当前部门角色', dataIndex: 'currentDeptRoleNames', minWidth: 165, ellipsis: true, tooltip: true },
+  { title: '当前部门角色', dataIndex: 'currentDeptRoleNames', slotName: 'currentDeptRoleNames', minWidth: 165 },
   { title: '手机号', dataIndex: 'phone', minWidth: 170, ellipsis: true, tooltip: true },
   { title: '邮箱', dataIndex: 'email', minWidth: 170, ellipsis: true, tooltip: true },
   { title: '系统内置', dataIndex: 'isSystem', slotName: 'isSystem', width: 100, align: 'center', show: false },

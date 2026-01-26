@@ -75,18 +75,8 @@ const formRef = ref<InstanceType<typeof GiForm>>()
 const { roleList, getRoleList } = useRole()
 const { deptList, getDeptList } = useDept()
 
-// 选中的部门ID列表(从form中获取，主部门排在第一位)
-const selectedDepts = computed(() => {
-  const depts = form.selectedDepts || []
-  if (depts.length === 0 || !form.deptId) {
-    return depts
-  }
-
-  // 将主部门排在第一位
-  const mainDeptId = form.deptId
-  const otherDepts = depts.filter(id => String(id) !== String(mainDeptId))
-  return [mainDeptId, ...otherDepts]
-})
+// 选中的部门ID列表(从form中获取)
+const selectedDepts = computed(() => form.selectedDepts || [])
 
 // 部门角色映射 { deptId: [roleId1, roleId2] }
 // 使用字符串作为 key 以避免大整数精度问题
@@ -342,6 +332,13 @@ const onUpdate = async (id: string) => {
     // 兼容旧数据格式
     form.selectedDepts = [data.deptId]
     deptRolesMap[String(data.deptId)] = data.roleIds
+  }
+
+  // 将主部门排在第一位（仅在加载数据时排序）
+  if (form.deptId && form.selectedDepts && form.selectedDepts.length > 1) {
+    const mainDeptId = form.deptId
+    const otherDepts = form.selectedDepts.filter(id => String(id) !== String(mainDeptId))
+    form.selectedDepts = [mainDeptId, ...otherDepts]
   }
 
   visible.value = true
