@@ -176,8 +176,18 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, RoleDO, RoleRes
         userIdList.forEach(userId -> {
             UserContext userContext = UserContextHolder.getContext(userId);
             if (userContext != null) {
-                userContext.setRoles(this.listByUserId(userId));
-                userContext.setPermissions(this.listPermissionByUserId(userId));
+                // 获取用户的当前部门ID
+                Long deptId = userContext.getDeptId();
+                
+                // 使用当前部门ID查询角色和权限
+                if (deptId != null) {
+                    userContext.setRoles(this.listByUserIdAndDeptId(userId, deptId));
+                    userContext.setPermissions(this.listPermissionByUserIdAndDeptId(userId, deptId));
+                } else {
+                    // 如果没有部门，使用所有部门的角色和权限（兼容旧数据）
+                    userContext.setRoles(this.listByUserId(userId));
+                    userContext.setPermissions(this.listPermissionByUserId(userId));
+                }
                 UserContextHolder.setContext(userContext);
             }
         });

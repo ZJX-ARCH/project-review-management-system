@@ -856,8 +856,23 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     private void updateContext(Long id) {
         UserContext userContext = UserContextHolder.getContext(id);
         if (userContext != null) {
-            userContext.setRoles(roleService.listByUserId(id));
-            userContext.setPermissions(roleService.listPermissionByUserId(id));
+            // 获取用户的当前部门ID
+            Long deptId = userContext.getDeptId();
+            if (deptId == null) {
+                // 如果上下文中没有部门ID，从数据库查询
+                UserDO user = this.getById(id);
+                deptId = user.getDeptId();
+            }
+            
+            // 使用当前部门ID查询角色和权限
+            if (deptId != null) {
+                userContext.setRoles(roleService.listByUserIdAndDeptId(id, deptId));
+                userContext.setPermissions(roleService.listPermissionByUserIdAndDeptId(id, deptId));
+            } else {
+                // 如果没有部门，使用所有部门的角色和权限（兼容旧数据）
+                userContext.setRoles(roleService.listByUserId(id));
+                userContext.setPermissions(roleService.listPermissionByUserId(id));
+            }
             UserContextHolder.setContext(userContext);
         }
     }

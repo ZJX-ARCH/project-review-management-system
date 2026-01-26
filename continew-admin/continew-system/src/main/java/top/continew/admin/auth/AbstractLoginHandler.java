@@ -96,21 +96,36 @@ public abstract class AbstractLoginHandler<T extends LoginReq> implements LoginH
     protected LoginResp authenticate(UserDO user, ClientResp client) {
         // 获取权限、角色、密码过期天数
         Long userId = user.getId();
+        Long deptId = user.getDeptId(); // 获取用户的当前部门（主部门）
         Long tenantId = TenantContextHolder.getTenantId();
+
+        // 使用当前部门ID查询权限和角色，实现多部门权限隔离
         CompletableFuture<Set<String>> permissionFuture = CompletableFuture.supplyAsync(() -> {
             Set<String> permissions = new HashSet<>();
             TenantUtils.execute(tenantId, () -> {
-                permissions.addAll(roleService.listPermissionByUserId(userId));
+                if (deptId != null) {
+                    permissions.addAll(roleService.listPermissionByUserIdAndDeptId(userId, deptId));
+                } else {
+                    // 兼容没有部门的用户
+                    permissions.addAll(roleService.listPermissionByUserId(userId));
+                }
             });
             return permissions;
         }, threadPoolTaskExecutor);
+
         CompletableFuture<Set<RoleContext>> roleFuture = CompletableFuture.supplyAsync(() -> {
             Set<RoleContext> roles = new HashSet<>();
             TenantUtils.execute(tenantId, () -> {
-                roles.addAll(roleService.listByUserId(userId));
+                if (deptId != null) {
+                    roles.addAll(roleService.listByUserIdAndDeptId(userId, deptId));
+                } else {
+                    // 兼容没有部门的用户
+                    roles.addAll(roleService.listByUserId(userId));
+                }
             });
             return roles;
         }, threadPoolTaskExecutor);
+
         CompletableFuture<Integer> passwordExpirationDaysFuture = CompletableFuture.supplyAsync(() -> optionService
             .getValueByCode2Int(PASSWORD_EXPIRATION_DAYS.name()), threadPoolTaskExecutor);
         CompletableFuture.allOf(permissionFuture, roleFuture, passwordExpirationDaysFuture);

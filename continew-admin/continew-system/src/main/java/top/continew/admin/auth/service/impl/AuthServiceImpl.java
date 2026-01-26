@@ -98,7 +98,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public List<RouteResp> buildRouteTree(Long userId) {
-        Set<RoleContext> roleSet = roleService.listByUserId(userId);
+        // 获取用户上下文中的当前部门ID
+        UserContext userContext = UserContextHolder.getContext();
+        Long deptId = userContext != null ? userContext.getDeptId() : null;
+        
+        // 使用当前部门ID查询角色，实现菜单按部门隔离
+        Set<RoleContext> roleSet;
+        if (deptId != null) {
+            roleSet = roleService.listByUserIdAndDeptId(userId, deptId);
+        } else {
+            // 兼容没有部门的用户
+            roleSet = roleService.listByUserId(userId);
+        }
+        
         if (CollUtil.isEmpty(roleSet)) {
             return new ArrayList<>(0);
         }
