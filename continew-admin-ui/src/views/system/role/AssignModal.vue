@@ -106,17 +106,12 @@ const onSelectUser = async (value: string[]) => {
 
       userDeptsMap.value[userId] = availableDepts
 
-      // 如果只有一个可用部门,自动选中
-      if (availableDepts.length === 1) {
-        userDeptMap.value[userId] = [availableDepts[0].value as string]
-      } else if (availableDepts.length > 1) {
-        // 有多个可用部门,需要用户选择
-        usersNeedDeptSelect.value.push({
-          userId,
-          username: userInfo.username,
-          nickname: userInfo.nickname,
-        })
-      }
+      // 所有用户都需要手动选择部门，让用户明确看到正在为哪个部门分配角色
+      usersNeedDeptSelect.value.push({
+        userId,
+        username: userInfo.username,
+        nickname: userInfo.nickname,
+      })
     } catch (error) {
       console.error(`查询用户 ${userId} 的部门列表失败:`, error)
     }

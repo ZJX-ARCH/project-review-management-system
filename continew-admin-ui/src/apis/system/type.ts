@@ -77,6 +77,8 @@ export interface RolePermissionResp {
 }
 export interface RoleUserResp {
   id: string
+  roleId: string
+  userId: string
   username: string
   nickname: string
   gender: number
@@ -85,7 +87,7 @@ export interface RoleUserResp {
   isSystem?: boolean
   deptId: string
   deptName: string
-  roleIds: Array<number>
+  roleIds: Array<string>
   roleNames: Array<string>
   disabled: boolean
 }
