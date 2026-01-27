@@ -83,6 +83,7 @@ import top.continew.starter.core.util.validation.CheckUtils;
 import top.continew.starter.encrypt.field.util.EncryptHelper;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.query.SortQuery;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.io.IOException;
@@ -550,6 +551,23 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     @Override
+    public List<LabelValueResp<Long>> listUserDepts(Long userId) {
+        // 查询用户的所有部门ID
+        List<Long> deptIds = userRoleService.listDeptIdByUserId(userId);
+        if (CollUtil.isEmpty(deptIds)) {
+            return Collections.emptyList();
+        }
+
+        // 查询部门信息
+        List<DeptDO> deptList = deptService.listByIds(deptIds);
+
+        // 映射到LabelValueResp格式
+        return CollUtils.mapToList(deptList, dept ->
+            new LabelValueResp<>(dept.getName(), dept.getId())
+        );
+    }
+
+    @Override
     protected <E> List<E> list(UserQuery query, SortQuery sortQuery, Class<E> targetClass) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
         // 设置排序
@@ -887,6 +905,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             return;
         }
 
+        log.debug("开始填充 {} 个用户的部门角色信息", userList.size());
+
         // 收集所有用户ID
         List<Long> userIds = CollUtils.mapToList(userList, UserResp::getId);
 
@@ -894,6 +914,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         List<UserRoleDO> userRoleList = userRoleMapper
             .selectList(Wrappers.<UserRoleDO>lambdaQuery()
                 .in(UserRoleDO::getUserId, userIds));
+
+        log.debug("查询到 {} 条用户角色关联记录", userRoleList.size());
 
         // 按用户ID分组
         Map<Long, List<UserRoleDO>> userRoleMap = userRoleList.stream()
@@ -954,17 +976,38 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
                 String currentDeptName = finalDeptNameMap.get(mainDeptId);
                 user.setCurrentDeptName(currentDeptName);
 
-                // 设置当前部门角色名称列表
-                List<String> currentDeptRoles = roles.stream()
+                log.debug("用户 {} (ID:{}) 当前部门ID: {}, 总角色数: {}",
+                    user.getUsername(), user.getId(), mainDeptId, roles.size());
+
+                // 过滤出当前部门的角色
+                List<UserRoleDO> currentDeptRoles = roles.stream()
                     .filter(r -> Objects.equals(r.getDeptId(), mainDeptId))
+                    .collect(Collectors.toList());
+
+                log.debug("  当前部门角色数: {}", currentDeptRoles.size());
+
+                // 设置当前部门的角色ID列表（覆盖 Crane4j 自动装配的值）
+                List<Long> currentDeptRoleIds = currentDeptRoles.stream()
+                    .map(UserRoleDO::getRoleId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+                if (CollUtil.isNotEmpty(currentDeptRoleIds)) {
+                    user.setRoleIds(currentDeptRoleIds);
+                }
+
+                // 设置当前部门的角色名称列表（覆盖 Crane4j 自动装配的值）
+                List<String> currentDeptRoleNames = currentDeptRoles.stream()
                     .map(UserRoleDO::getRoleId)
                     .map(finalRoleNameMap::get)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
-
-                if (CollUtil.isNotEmpty(currentDeptRoles)) {
-                    user.setCurrentDeptRoleNames(currentDeptRoles);
+                if (CollUtil.isNotEmpty(currentDeptRoleNames)) {
+                    user.setRoleNames(currentDeptRoleNames);
+                    user.setCurrentDeptRoleNames(currentDeptRoleNames);
+                    log.debug("  设置角色列表: {}", currentDeptRoleNames);
                 }
+            } else {
+                log.debug("用户 {} (ID:{}) 没有设置主部门", user.getUsername(), user.getId());
             }
         }
     }

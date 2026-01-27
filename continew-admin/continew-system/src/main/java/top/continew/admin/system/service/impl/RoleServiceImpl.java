@@ -22,6 +22,7 @@ import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.base.service.BaseServiceImpl;
@@ -37,6 +38,7 @@ import top.continew.admin.system.model.entity.RoleDO;
 import top.continew.admin.system.model.query.RoleQuery;
 import top.continew.admin.system.model.req.RolePermissionUpdateReq;
 import top.continew.admin.system.model.req.RoleReq;
+import top.continew.admin.system.model.req.role.RoleAssignReq;
 import top.continew.admin.system.model.resp.MenuResp;
 import top.continew.admin.system.model.resp.role.RoleDetailResp;
 import top.continew.admin.system.model.resp.role.RoleResp;
@@ -57,6 +59,7 @@ import java.util.Set;
  * @author Charles7c
  * @since 2023/2/8 23:17
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, RoleDO, RoleResp, RoleDetailResp, RoleQuery, RoleReq> implements RoleService {
@@ -161,11 +164,13 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, RoleDO, RoleRes
     }
 
     @Override
-    public void assignToUsers(Long id, List<Long> userIds) {
+    public void assignToUsers(Long id, RoleAssignReq req) {
         RoleDO role = super.getById(id);
         CheckUtils.throwIf(Boolean.TRUE.equals(role.getIsSystem()), "[{}] 是系统内置角色，不允许分配角色给其他用户", role.getName());
-        // 保存用户和角色关联
-        userRoleService.assignRoleToUsers(id, userIds);
+
+        // 保存用户和角色关联（支持多部门）
+        userRoleService.assignRoleToUsersWithDept(id, req.getUserDepts());
+
         // 更新用户上下文
         this.updateUserContext(id);
     }

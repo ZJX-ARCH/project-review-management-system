@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +32,11 @@ import top.continew.admin.common.context.RoleContext;
 import top.continew.admin.common.enums.RoleCodeEnum;
 import top.continew.admin.system.constant.SystemConstants;
 import top.continew.admin.system.mapper.UserRoleMapper;
+import top.continew.admin.system.model.entity.RoleDO;
 import top.continew.admin.system.model.entity.UserRoleDO;
 import top.continew.admin.system.model.entity.user.UserDO;
 import top.continew.admin.system.model.query.RoleUserQuery;
+import top.continew.admin.system.model.req.role.RoleAssignReq;
 import top.continew.admin.system.model.resp.role.RoleUserResp;
 import top.continew.admin.system.service.RoleService;
 import top.continew.admin.system.service.UserRoleService;
@@ -44,9 +47,8 @@ import top.continew.starter.data.util.QueryWrapperHelper;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 用户和角色业务实现
@@ -54,6 +56,7 @@ import java.util.Set;
  * @author Charles7c
  * @since 2023/2/20 21:30
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserRoleServiceImpl implements UserRoleService {
@@ -67,7 +70,8 @@ public class UserRoleServiceImpl implements UserRoleService {
     private UserService userService;
 
     @Override
-    @AutoOperate(type = RoleUserResp.class, on = "list")
+    // 移除 @AutoOperate 注解，因为我们手动填充角色信息
+    // @AutoOperate(type = RoleUserResp.class, on = "list")
     public PageResp<RoleUserResp> pageUser(RoleUserQuery query, PageQuery pageQuery) {
         String description = query.getDescription();
         QueryWrapper<UserRoleDO> queryWrapper = new QueryWrapper<UserRoleDO>().eq("t1.role_id", query.getRoleId())
@@ -77,8 +81,15 @@ public class UserRoleServiceImpl implements UserRoleService {
                 .or()
                 .like("t2.description", description));
         QueryWrapperHelper.sort(queryWrapper, pageQuery.getSort());
+
         IPage<RoleUserResp> page = baseMapper.selectUserPage(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
+
+        // 填充每个用户在其部门的所有角色
+        if (CollUtil.isNotEmpty(page.getRecords())) {
+            fillDeptRoles(page.getRecords());
+        }
+
         return PageResp.build(page);
     }
 
@@ -139,6 +150,13 @@ public class UserRoleServiceImpl implements UserRoleService {
     @Override
     public boolean assignRoleToUsers(Long roleId, List<Long> userIds) {
         List<UserRoleDO> userRoleList = CollUtils.mapToList(userIds, userId -> new UserRoleDO(userId, roleId));
+        return baseMapper.insertBatch(userRoleList);
+    }
+
+    @Override
+    public boolean assignRoleToUsersWithDept(Long roleId, List<RoleAssignReq.UserDeptItem> userDepts) {
+        List<UserRoleDO> userRoleList = CollUtils.mapToList(userDepts,
+            item -> new UserRoleDO(item.getUserId(), item.getDeptId(), roleId));
         return baseMapper.insertBatch(userRoleList);
     }
 
@@ -224,5 +242,69 @@ public class UserRoleServiceImpl implements UserRoleService {
             .map(UserRoleDO::getDeptId)
             .distinct()
             .toList();
+    }
+
+    /**
+     * 填充角色用户列表中每条记录的角色信息
+     * 显示该用户在该部门的所有角色
+     *
+     * @param roleUserList 角色用户列表
+     */
+    private void fillDeptRoles(List<RoleUserResp> roleUserList) {
+        if (CollUtil.isEmpty(roleUserList)) {
+            return;
+        }
+
+        // 收集所有用户ID
+        Set<Long> userIds = roleUserList.stream()
+            .map(RoleUserResp::getUserId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        // 查询这些用户的所有角色关联
+        List<UserRoleDO> allUserRoles = baseMapper.lambdaQuery()
+            .in(UserRoleDO::getUserId, userIds)
+            .list();
+
+        // 收集所有角色ID
+        Set<Long> roleIds = allUserRoles.stream()
+            .map(UserRoleDO::getRoleId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        // 查询角色信息，构建角色ID到角色名称的映射
+        Map<Long, String> roleNameMap = new HashMap<>();
+        if (CollUtil.isNotEmpty(roleIds)) {
+            List<RoleDO> roles = roleService.listByIds(roleIds);
+            roleNameMap = roles.stream()
+                .collect(Collectors.toMap(RoleDO::getId, RoleDO::getName));
+        }
+
+        // 构建用户+部门 -> 角色列表的映射
+        Map<String, List<UserRoleDO>> userDeptRolesMap = allUserRoles.stream()
+            .collect(Collectors.groupingBy(ur -> ur.getUserId() + "_" + ur.getDeptId()));
+
+        // 为每个记录填充角色信息
+        for (RoleUserResp roleUser : roleUserList) {
+            String key = roleUser.getUserId() + "_" + roleUser.getDeptId();
+            List<UserRoleDO> deptRoles = userDeptRolesMap.get(key);
+
+            if (CollUtil.isNotEmpty(deptRoles)) {
+                // 设置该用户在该部门的所有角色ID
+                List<Long> deptRoleIds = deptRoles.stream()
+                    .map(UserRoleDO::getRoleId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+                roleUser.setRoleIds(deptRoleIds);
+
+                // 设置该用户在该部门的所有角色名称
+                List<String> deptRoleNames = deptRoleIds.stream()
+                    .map(roleNameMap::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+                roleUser.setRoleNames(deptRoleNames);
+            }
+        }
     }
 }

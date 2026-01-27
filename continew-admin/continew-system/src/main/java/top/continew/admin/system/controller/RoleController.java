@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import top.continew.admin.common.base.controller.BaseController;
@@ -33,6 +34,7 @@ import top.continew.admin.system.model.query.RoleQuery;
 import top.continew.admin.system.model.query.RoleUserQuery;
 import top.continew.admin.system.model.req.RoleReq;
 import top.continew.admin.system.model.req.RolePermissionUpdateReq;
+import top.continew.admin.system.model.req.role.RoleAssignReq;
 import top.continew.admin.system.model.resp.role.RoleDetailResp;
 import top.continew.admin.system.model.resp.role.RolePermissionResp;
 import top.continew.admin.system.model.resp.role.RoleResp;
@@ -53,6 +55,7 @@ import java.util.List;
  * @author Charles7c
  * @since 2023/2/8 23:11
  */
+@Slf4j
 @Tag(name = "角色管理 API")
 @Validated
 @RestController
@@ -90,12 +93,12 @@ public class RoleController extends BaseController<RoleService, RoleResp, RoleDe
         return userRoleService.pageUser(query, pageQuery);
     }
 
-    @Operation(summary = "分配用户", description = "批量分配角色给用户")
+    @Operation(summary = "分配用户", description = "批量分配角色给用户（支持多部门）")
     @SaCheckPermission("system:role:assign")
     @PostMapping("/{id}/user")
     public void assignToUsers(@PathVariable("id") Long id,
-                              @RequestBody @NotEmpty(message = "用户ID列表不能为空") List<Long> userIds) {
-        baseService.assignToUsers(id, userIds);
+                              @RequestBody @Valid RoleAssignReq req) {
+        baseService.assignToUsers(id, req);
     }
 
     @Operation(summary = "取消分配用户", description = "批量取消分配角色给用户")

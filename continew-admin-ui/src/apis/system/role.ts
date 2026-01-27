@@ -47,8 +47,8 @@ export function listRoleUser(id: string, query: T.RoleUserPageQuery) {
 }
 
 /** @desc 分配角色给用户 */
-export function assignToUsers(id: string, userIds: Array<string>) {
-  return http.post(`${BASE_URL}/${id}/user`, userIds)
+export function assignToUsers(id: string, data: T.RoleAssignReq) {
+  return http.post(`${BASE_URL}/${id}/user`, data)
 }
 
 /** @desc 取消分配角色给用户 */

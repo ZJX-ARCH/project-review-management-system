@@ -10,6 +10,36 @@
     @close="reset"
   >
     <UserSelect v-if="visible" ref="UserSelectRef" v-model:value="selectedUsers" :role-id="dataId" @select-user="onSelectUser" />
+
+    <!-- 部门选择区域 -->
+    <template v-if="usersNeedDeptSelect.length > 0">
+      <a-divider>为以下用户选择部门</a-divider>
+      <a-form :model="userDeptMap" layout="vertical">
+        <a-form-item
+          v-for="user in usersNeedDeptSelect"
+          :key="user.userId"
+          :label="`${user.nickname || user.username} 的部门`"
+          :field="user.userId"
+          :rules="[{ required: true, message: '请选择部门' }]"
+        >
+          <a-select
+            v-model="userDeptMap[user.userId]"
+            placeholder="请选择部门(可多选)"
+            allow-search
+            multiple
+          >
+            <a-option
+              v-for="dept in userDeptsMap[user.userId]"
+              :key="dept.value"
+              :value="dept.value"
+              :label="dept.label"
+            >
+              {{ dept.label }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </template>
   </a-modal>
 </template>
 
@@ -17,6 +47,8 @@
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { assignToUsers } from '@/apis/system/role'
+import { getUser, listUserDepts } from '@/apis/system/user'
+import type { LabelValueState } from '@/types/global'
 
 const emit = defineEmits<{
   (e: 'save-success'): void
@@ -28,9 +60,56 @@ const dataId = ref('')
 const visible = ref(false)
 const selectedUsers = ref<string[]>([])
 
+// 用户部门数据
+const userDeptsMap = ref<Record<string, LabelValueState[]>>({}) // 用户ID -> 部门列表
+const userDeptMap = ref<Record<string, string[]>>({}) // 用户ID -> 选中的部门ID数组(支持多选)
+
+// 需要选择部门的用户列表
+interface UserInfo {
+  userId: string
+  username: string
+  nickname?: string
+}
+const usersNeedDeptSelect = ref<UserInfo[]>([])
+
 // 用户选择回调
-const onSelectUser = (value: string[]) => {
+const onSelectUser = async (value: string[]) => {
   selectedUsers.value = value
+
+  // 清空之前的部门选择数据
+  userDeptsMap.value = {}
+  userDeptMap.value = {}
+  usersNeedDeptSelect.value = []
+
+  // 查询每个用户的部门列表
+  for (const userId of value) {
+    try {
+      // 并行查询用户部门列表和用户详情
+      const [deptsRes, userRes] = await Promise.all([
+        listUserDepts(userId),
+        getUser(userId),
+      ])
+
+      const depts = deptsRes.data || []
+      const userInfo = userRes.data
+
+      userDeptsMap.value[userId] = depts
+
+      // 如果只有一个部门,自动选中
+      if (depts.length === 1) {
+        userDeptMap.value[userId] = [depts[0].value as string]
+      } else if (depts.length > 1) {
+        // 有多个部门,需要用户选择
+        usersNeedDeptSelect.value.push({
+          userId,
+          username: userInfo.username,
+          nickname: userInfo.nickname,
+        })
+      }
+    } catch (error) {
+      console.error(`查询用户 ${userId} 的部门列表失败:`, error)
+    }
+  }
 }
 
 const UserSelectRef = ref()
@@ -38,6 +117,9 @@ const UserSelectRef = ref()
 const reset = () => {
   dataId.value = ''
   selectedUsers.value = []
+  userDeptsMap.value = {}
+  userDeptMap.value = {}
+  usersNeedDeptSelect.value = []
   UserSelectRef.value?.onClearSelected()
 }
 
@@ -49,12 +131,45 @@ const save = async () => {
       Message.warning('请选择用户')
       return false
     }
-    await assignToUsers(dataId.value, selectedUsers.value)
-    Message.success('分配成功')
+
+    // 检查是否所有需要选择部门的用户都已选择
+    for (const user of usersNeedDeptSelect.value) {
+      if (!userDeptMap.value[user.userId] || userDeptMap.value[user.userId].length === 0) {
+        Message.warning(`请为 ${user.nickname || user.username} 选择部门`)
+        return false
+      }
+    }
+
+    // 构建请求数据 - 每个用户的每个部门都创建一条记录
+    const userDepts: Array<{ userId: string, deptId?: string }> = []
+
+    for (const userId of selectedUsers.value) {
+      const deptIds = userDeptMap.value[userId] || []
+
+      if (deptIds.length > 0) {
+        // 用户有部门选择，为每个部门创建一条记录
+        deptIds.forEach(deptId => {
+          userDepts.push({
+            userId,  // 保持字符串格式，避免精度丢失
+            deptId,
+          })
+        })
+      } else {
+        // 用户没有部门（全局角色）
+        userDepts.push({
+          userId,  // 保持字符串格式，避免精度丢失
+          deptId: undefined,
+        })
+      }
+    }
+
+    await assignToUsers(dataId.value, { userDepts })
+    Message.success(`分配成功，共为 ${selectedUsers.value.length} 个用户分配了角色`)
     reset()
     emit('save-success')
     return true
   } catch (error) {
+    console.error('保存失败:', error)
     return false
   }
 }
@@ -69,4 +184,9 @@ const onOpen = async (id: string) => {
 defineExpose({ onOpen })
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+:deep(.arco-divider-text) {
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+</style>

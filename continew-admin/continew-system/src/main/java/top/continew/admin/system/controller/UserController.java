@@ -44,8 +44,10 @@ import top.continew.admin.system.service.UserService;
 import top.continew.starter.core.util.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.starter.extension.crud.enums.Api;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * 用户管理 API
@@ -99,5 +101,12 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @PatchMapping("/{id}/role")
     public void updateRole(@RequestBody @Valid UserRoleUpdateReq updateReq, @PathVariable Long id) {
         baseService.updateRole(updateReq, id);
+    }
+
+    @Operation(summary = "查询用户部门列表", description = "查询用户所拥有角色的部门列表")
+    @Parameter(name = "id", description = "用户ID", example = "1", in = ParameterIn.PATH)
+    @GetMapping("/{id}/depts")
+    public List<LabelValueResp<Long>> listUserDepts(@PathVariable Long id) {
+        return baseService.listUserDepts(id);
     }
 }

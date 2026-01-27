@@ -68,3 +68,8 @@ export function updateUserRole(data: { deptId: number | string, deptRoles: Array
 export function listUserDict(query?: { status: number }) {
   return http.get<LabelValueState[]>(`${BASE_URL}/dict`, query)
 }
+
+/** @desc 查询用户部门列表 */
+export function listUserDepts(id: string) {
+  return http.get<LabelValueState[]>(`${BASE_URL}/${id}/depts`)
+}

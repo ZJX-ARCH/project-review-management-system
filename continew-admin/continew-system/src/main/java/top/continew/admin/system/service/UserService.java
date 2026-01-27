@@ -27,6 +27,7 @@ import top.continew.admin.system.model.resp.user.UserImportParseResp;
 import top.continew.admin.system.model.resp.user.UserImportResp;
 import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.starter.data.service.IService;
+import top.continew.starter.extension.crud.model.resp.LabelValueResp;
 
 import java.io.IOException;
 import java.util.List;
@@ -155,4 +156,12 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * @return 用户数量
      */
     Long countByDeptIds(List<Long> deptIds);
+
+    /**
+     * 查询用户部门列表
+     *
+     * @param userId 用户 ID
+     * @return 部门列表
+     */
+    List<LabelValueResp<Long>> listUserDepts(Long userId);
 }

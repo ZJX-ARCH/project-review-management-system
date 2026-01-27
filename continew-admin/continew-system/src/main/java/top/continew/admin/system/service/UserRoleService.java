@@ -18,6 +18,7 @@ package top.continew.admin.system.service;
 
 import top.continew.admin.system.model.entity.UserRoleDO;
 import top.continew.admin.system.model.query.RoleUserQuery;
+import top.continew.admin.system.model.req.role.RoleAssignReq;
 import top.continew.admin.system.model.resp.role.RoleUserResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -68,6 +69,15 @@ public interface UserRoleService {
      * @return 是否成功（true：成功；false：无变更/失败）
      */
     boolean assignRoleToUsers(Long roleId, List<Long> userIds);
+
+    /**
+     * 批量分配角色给用户（支持指定部门）
+     *
+     * @param roleId    角色 ID
+     * @param userDepts 用户部门列表
+     * @return 是否成功（true：成功；false：无变更/失败）
+     */
+    boolean assignRoleToUsersWithDept(Long roleId, List<RoleAssignReq.UserDeptItem> userDepts);
 
     /**
      * 根据 ID 删除

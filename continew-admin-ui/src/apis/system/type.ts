@@ -99,6 +99,17 @@ export interface RoleUserQuery {
 }
 export interface RoleUserPageQuery extends RoleUserQuery, PageQuery {}
 
+/** 用户部门项 */
+export interface UserDeptItem {
+  userId: string | number  // 支持字符串避免精度丢失
+  deptId?: string | number
+}
+
+/** 角色分配请求 */
+export interface RoleAssignReq {
+  userDepts: UserDeptItem[]
+}
+
 /** 菜单类型 */
 export interface MenuResp {
   id: string
