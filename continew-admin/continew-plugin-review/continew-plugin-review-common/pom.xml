@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>top.continew.admin</groupId>
+        <artifactId>continew-plugin-review</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>continew-plugin-review-common</artifactId>
+
+    <name>${project.artifactId}</name>
+    <description>项目评审公共模块（枚举定义、状态流转引擎、超时检查引擎）</description>
+
+    <dependencies>
+        <!-- continew-common 已在父pom中引入 -->
+
+        <!-- MyBatis Plus -->
+        <dependency>
+            <groupId>top.continew.starter</groupId>
+            <artifactId>continew-starter-data-mp</artifactId>
+        </dependency>
+
+        <!-- Redis缓存 -->
+        <dependency>
+            <groupId>top.continew.starter</groupId>
+            <artifactId>continew-starter-cache-redisson</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>
