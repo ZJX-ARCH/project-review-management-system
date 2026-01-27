@@ -29,6 +29,7 @@
         <module>continew-server</module>
         <module>continew-system</module>
         <module>continew-plugin</module>
+        <module>continew-plugin-review</module>
         <module>continew-common</module>
         <module>continew-extension</module>
     </modules>
@@ -87,6 +88,13 @@
             <dependency>
                 <groupId>top.continew.admin</groupId>
                 <artifactId>continew-plugin-generator</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+            <!-- 项目评审管理插件 -->
+            <dependency>
+                <groupId>top.continew.admin</groupId>
+                <artifactId>continew-plugin-review-common</artifactId>
                 <version>${revision}</version>
             </dependency>
         </dependencies>
