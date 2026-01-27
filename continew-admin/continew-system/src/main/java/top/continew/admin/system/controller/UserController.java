@@ -109,4 +109,12 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     public List<LabelValueResp<Long>> listUserDepts(@PathVariable Long id) {
         return baseService.listUserDepts(id);
     }
+
+    @Operation(summary = "查询用户已分配角色的部门列表", description = "查询用户在哪些部门已拥有指定角色")
+    @Parameter(name = "userId", description = "用户ID", example = "1", in = ParameterIn.QUERY)
+    @Parameter(name = "roleId", description = "角色ID", example = "1", in = ParameterIn.QUERY)
+    @GetMapping("/assigned-depts")
+    public List<Long> listAssignedDepts(@RequestParam Long userId, @RequestParam Long roleId) {
+        return baseService.listAssignedDepts(userId, roleId);
+    }
 }

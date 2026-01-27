@@ -100,7 +100,8 @@ interface Props {
 // 查询表单
 const queryForm = reactive<UserQuery>({
   sort: ['t1.createTime,desc', 't1.id,desc'],
-  roleId: props.roleId,
+  // 不再传递 roleId 用于过滤，允许重复选择用户
+  // roleId: props.roleId,
 })
 
 // 用户列表

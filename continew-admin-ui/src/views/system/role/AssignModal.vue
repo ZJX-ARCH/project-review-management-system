@@ -47,7 +47,7 @@
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { assignToUsers } from '@/apis/system/role'
-import { getUser, listUserDepts } from '@/apis/system/user'
+import { getUser, listUserDepts, listAssignedDepts } from '@/apis/system/user'
 import type { LabelValueState } from '@/types/global'
 
 const emit = defineEmits<{
@@ -84,22 +84,33 @@ const onSelectUser = async (value: string[]) => {
   // 查询每个用户的部门列表
   for (const userId of value) {
     try {
-      // 并行查询用户部门列表和用户详情
-      const [deptsRes, userRes] = await Promise.all([
+      // 并行查询用户部门列表、用户详情、已分配的部门
+      const [deptsRes, userRes, assignedDeptsRes] = await Promise.all([
         listUserDepts(userId),
         getUser(userId),
+        listAssignedDepts(userId, dataId.value),
       ])
 
-      const depts = deptsRes.data || []
+      const allDepts = deptsRes.data || []
       const userInfo = userRes.data
+      const assignedDeptIds = assignedDeptsRes.data || []
 
-      userDeptsMap.value[userId] = depts
+      // 过滤掉已分配该角色的部门
+      const availableDepts = allDepts.filter(dept => !assignedDeptIds.includes(String(dept.value)))
 
-      // 如果只有一个部门,自动选中
-      if (depts.length === 1) {
-        userDeptMap.value[userId] = [depts[0].value as string]
-      } else if (depts.length > 1) {
-        // 有多个部门,需要用户选择
+      // 如果没有可用部门，跳过该用户
+      if (availableDepts.length === 0) {
+        Message.warning(`用户 ${userInfo.nickname || userInfo.username} 在所有部门都已拥有该角色`)
+        continue
+      }
+
+      userDeptsMap.value[userId] = availableDepts
+
+      // 如果只有一个可用部门,自动选中
+      if (availableDepts.length === 1) {
+        userDeptMap.value[userId] = [availableDepts[0].value as string]
+      } else if (availableDepts.length > 1) {
+        // 有多个可用部门,需要用户选择
         usersNeedDeptSelect.value.push({
           userId,
           username: userInfo.username,

@@ -148,4 +148,13 @@ public interface UserRoleService {
      * @return 是否已关联（true：已关联；false：未关联）
      */
     boolean isRoleIdExists(List<Long> roleIds);
+
+    /**
+     * 查询用户在哪些部门已拥有指定角色
+     *
+     * @param userId 用户 ID
+     * @param roleId 角色 ID
+     * @return 部门 ID 列表
+     */
+    List<Long> listDeptIdByUserIdAndRoleId(Long userId, Long roleId);
 }

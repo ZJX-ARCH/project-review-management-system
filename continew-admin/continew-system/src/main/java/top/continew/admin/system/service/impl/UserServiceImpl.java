@@ -568,6 +568,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     @Override
+    public List<Long> listAssignedDepts(Long userId, Long roleId) {
+        return userRoleService.listDeptIdByUserIdAndRoleId(userId, roleId);
+    }
+
+    @Override
     protected <E> List<E> list(UserQuery query, SortQuery sortQuery, Class<E> targetClass) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
         // 设置排序

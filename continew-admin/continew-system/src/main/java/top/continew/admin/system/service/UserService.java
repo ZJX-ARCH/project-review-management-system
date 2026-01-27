@@ -164,4 +164,13 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * @return 部门列表
      */
     List<LabelValueResp<Long>> listUserDepts(Long userId);
+
+    /**
+     * 查询用户已分配角色的部门列表
+     *
+     * @param userId 用户 ID
+     * @param roleId 角色 ID
+     * @return 部门 ID 列表
+     */
+    List<Long> listAssignedDepts(Long userId, Long roleId);
 }

@@ -73,3 +73,8 @@ export function listUserDict(query?: { status: number }) {
 export function listUserDepts(id: string) {
   return http.get<LabelValueState[]>(`${BASE_URL}/${id}/depts`)
 }
+
+/** @desc 查询用户已分配角色的部门列表 */
+export function listAssignedDepts(userId: string, roleId: string) {
+  return http.get<string[]>(`${BASE_URL}/assigned-depts`, { userId, roleId })
+}

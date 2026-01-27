@@ -216,6 +216,20 @@ public class UserRoleServiceImpl implements UserRoleService {
     }
 
     @Override
+    public List<Long> listDeptIdByUserIdAndRoleId(Long userId, Long roleId) {
+        return baseMapper.lambdaQuery()
+            .select(UserRoleDO::getDeptId)
+            .eq(UserRoleDO::getUserId, userId)
+            .eq(UserRoleDO::getRoleId, roleId)
+            .isNotNull(UserRoleDO::getDeptId)
+            .list()
+            .stream()
+            .map(UserRoleDO::getDeptId)
+            .distinct()
+            .toList();
+    }
+
+    @Override
     public List<Long> listRoleIdByUserIdAndDeptId(Long userId, Long deptId) {
         return baseMapper.lambdaQuery()
             .select(UserRoleDO::getRoleId)
