@@ -24,6 +24,10 @@ venv/
 .spec-workflow/
 .zcf/
 
+# Git worktrees
+.worktrees/
+worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
