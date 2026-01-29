@@ -73,4 +73,11 @@ public interface ManagementTemplateService extends IService<ManagementTemplateDO
      * @return 模板信息，不存在则返回null
      */
     ManagementTemplateDO getByCode(String templateCode);
+
+    /**
+     * 生成模板编码
+     *
+     * @return 模板编码（格式：MGMT_ + 时间戳）
+     */
+    String generateCode();
 }

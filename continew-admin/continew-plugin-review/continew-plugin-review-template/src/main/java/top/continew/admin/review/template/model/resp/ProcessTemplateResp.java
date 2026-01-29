@@ -9,6 +9,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.starter.excel.converter.ExcelBaseEnumConverter;
 
 import java.io.Serial;
+import java.util.List;
 
 /**
  * 评审流程模板响应参数
@@ -79,4 +80,10 @@ public class ProcessTemplateResp extends BaseDetailResp {
     @Schema(description = "排序", example = "1")
     @ExcelProperty(value = "排序", order = 9)
     private Integer sort;
+
+    /**
+     * 轮次名称配置
+     */
+    @Schema(description = "轮次名称配置")
+    private List<RoundNameResp> roundNames;
 }

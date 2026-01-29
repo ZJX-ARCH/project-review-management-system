@@ -98,4 +98,15 @@ public class ManagementTemplateController {
         managementTemplateService.updateStatus(id, status);
         return R.ok();
     }
+
+    /**
+     * 生成模板编码
+     */
+    @GetMapping("/generate-code")
+    @Operation(summary = "生成模板编码")
+    @SaCheckRole("FLOW_ADMIN")
+    public R<String> generateCode() {
+        String code = managementTemplateService.generateCode();
+        return R.ok(code);
+    }
 }

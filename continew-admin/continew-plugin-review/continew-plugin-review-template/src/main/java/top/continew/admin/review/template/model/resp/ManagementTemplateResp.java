@@ -9,6 +9,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.starter.excel.converter.ExcelBaseEnumConverter;
 
 import java.io.Serial;
+import java.util.List;
 
 /**
  * 管理流程模板响应参数
@@ -58,4 +59,10 @@ public class ManagementTemplateResp extends BaseDetailResp {
     @Schema(description = "排序", example = "1")
     @ExcelProperty(value = "排序", order = 6)
     private Integer sort;
+
+    /**
+     * 阶段配置
+     */
+    @Schema(description = "阶段配置")
+    private List<ManagementStageResp> stages;
 }

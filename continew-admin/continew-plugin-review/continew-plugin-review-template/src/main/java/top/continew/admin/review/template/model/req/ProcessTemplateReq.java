@@ -1,6 +1,7 @@
 package top.continew.admin.review.template.model.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -10,6 +11,7 @@ import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 评审流程模板创建或修改请求参数
@@ -70,4 +72,11 @@ public class ProcessTemplateReq implements Serializable {
     @Min(value = 1, message = "决策轮次最小值为 {value}")
     @Max(value = 10, message = "决策轮次最大值为 {value}")
     private Integer decisionRounds;
+
+    /**
+     * 轮次名称配置
+     */
+    @Schema(description = "轮次名称配置")
+    @Valid
+    private List<RoundNameReq> roundNames;
 }

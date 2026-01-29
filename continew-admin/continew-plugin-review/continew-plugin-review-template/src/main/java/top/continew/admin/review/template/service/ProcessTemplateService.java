@@ -67,4 +67,11 @@ public interface ProcessTemplateService extends IService<ProcessTemplateDO> {
      * @return 模板信息，不存在则返回null
      */
     ProcessTemplateDO getByCode(String templateCode);
+
+    /**
+     * 生成模板编码
+     *
+     * @return 模板编码（格式：PROCESS_ + 时间戳）
+     */
+    String generateCode();
 }
