@@ -45,7 +45,7 @@
             <!-- API 模块（存放 Controller 层代码，打包部署的模块） -->
             <dependency>
                 <groupId>top.continew.admin</groupId>
-                <artifactId>continew-server</artifactId>
+                <artifactId>continew-plugin-review</artifactId>
                 <version>${revision}</version>
             </dependency>
 

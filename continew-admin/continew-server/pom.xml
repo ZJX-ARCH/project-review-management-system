@@ -46,6 +46,12 @@
             <artifactId>continew-plugin-generator</artifactId>
         </dependency>
 
+        <!-- 项目评审模板插件 -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review</artifactId>
+        </dependency>
+
         <!-- ContiNew Starter 链路追踪模块 -->
         <dependency>
             <groupId>top.continew.starter</groupId>
