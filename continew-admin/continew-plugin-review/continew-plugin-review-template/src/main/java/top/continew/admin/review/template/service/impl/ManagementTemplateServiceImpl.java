@@ -1,21 +1,36 @@
 package top.continew.admin.review.template.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.review.template.mapper.ManagementStageMapper;
 import top.continew.admin.review.template.mapper.ManagementTemplateMapper;
+import top.continew.admin.review.template.model.entity.ManagementStageDO;
 import top.continew.admin.review.template.model.entity.ManagementTemplateDO;
 import top.continew.admin.review.template.model.query.ManagementTemplateQuery;
+import top.continew.admin.review.template.model.req.ManagementStageReq;
 import top.continew.admin.review.template.model.req.ManagementTemplateReq;
+import top.continew.admin.review.template.model.resp.ManagementStageResp;
 import top.continew.admin.review.template.model.resp.ManagementTemplateResp;
 import top.continew.admin.review.template.service.ManagementTemplateService;
+import top.continew.starter.core.exception.BadRequestException;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.data.service.impl.ServiceImpl;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 管理流程模板业务实现
@@ -28,264 +43,265 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplateMapper, ManagementTemplateDO> implements ManagementTemplateService {
 
+    private final ManagementStageMapper stageMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(ManagementTemplateReq req) {
-        // TODO 步骤1: 模板编码处理
-        //  1.1 如果req.getTemplateCode()为空，调用generateCode()方法自动生成编码
-        //  1.2 生成格式：MGMT_ + System.currentTimeMillis()
-        //  1.3 循环检查生成的编码是否唯一，如果重复则重新生成（极少发生）
+        // 步骤1: 模板编码处理 - 如果未提供编码则自动生成
+        String templateCode = req.getTemplateCode();
+        if (StrUtil.isBlank(templateCode)) {
+            templateCode = this.generateCode();
+            log.debug("自动生成模板编码: {}", templateCode);
+        }
 
-        // TODO 步骤2: 数据唯一性校验
-        //  2.1 根据templateCode查询是否已存在（调用getByCode方法）
-        //  2.2 如果存在，抛出BusinessException("模板编码已存在")
-        //  2.3 根据templateName查询是否已存在同名模板
-        //  2.4 如果存在，抛出BusinessException("模板名称已存在")
-        //  2.5 注意：查询条件需要加上逻辑删除条件（deleted=0）
+        // 步骤2: 数据唯一性校验
+        // 2.1 校验模板编码是否已存在
+        ManagementTemplateDO existingByCode = this.getByCode(templateCode);
+        if (ObjectUtil.isNotNull(existingByCode)) {
+            throw new BusinessException("模板编码已存在");
+        }
 
-        // TODO 步骤3: 阶段配置验证（重要业务规则）
-        //  3.1 获取req.getStages()集合
-        //  3.2 如果stages不为空，进行以下验证：
-        //      3.2.1 验证阶段顺序连续性：
-        //            - 提取所有stageOrder值并排序
-        //            - 验证序号必须从1开始（最小值=1）
-        //            - 验证序号连续（1,2,3,4...），不能跳号（如1,2,4是错误的）
-        //            - 验证没有重复序号（使用Set检查）
-        //            - 如果不连续，抛出BusinessException("阶段顺序必须从1开始连续，不能有重复或跳号")
-        //      3.2.2 验证阶段名称不为空（已在Req层面通过@NotBlank验证）
-        //      3.2.3 验证阶段类型（StageType）合法性（已在Req层面通过枚举验证）
-        //  3.3 如果stages为空或空列表，也允许创建（表示尚未配置阶段）
+        // 2.2 校验模板名称是否已存在
+        QueryWrapper<ManagementTemplateDO> nameWrapper = new QueryWrapper<>();
+        nameWrapper.eq("template_name", req.getTemplateName());
+        nameWrapper.eq("deleted", 0);
+        ManagementTemplateDO existingByName = baseMapper.selectOne(nameWrapper);
+        if (ObjectUtil.isNotNull(existingByName)) {
+            throw new BusinessException("模板名称已存在");
+        }
 
-        // TODO 步骤4: 保存主表数据
-        //  4.1 创建ManagementTemplateDO实体
-        //  4.2 使用BeanUtil.copyProperties(req, entity)复制基本字段
-        //  4.3 设置templateCode（处理后的编码）
-        //  4.4 设置status=1（默认启用）
-        //  4.5 设置createUser、createTime（框架自动填充）
-        //  4.6 调用baseMapper.insert(entity)插入数据
-        //  4.7 获取生成的主键ID
+        // 步骤3: 阶段配置验证（重要业务规则）
+        List<ManagementStageReq> stages = req.getStages();
+        if (CollUtil.isNotEmpty(stages)) {
+            this.validateStageOrder(stages);
+        }
 
-        // TODO 步骤5: 保存阶段配置子表数据（如果有子表设计）
-        //  5.1 如果系统设计了独立的阶段配置表（review_management_stage），则：
-        //      5.1.1 遍历req.getStages()
-        //      5.1.2 为每条记录创建ManagementStageDO实体
-        //      5.1.3 设置templateId为主表ID
-        //      5.1.4 复制stageName、stageType、stageOrder、isRequired字段
-        //      5.1.5 批量插入（使用stageMapper.insertBatch或循环insert）
-        //  5.2 如果阶段配置存储在主表JSON字段中，则：
-        //      5.2.1 将req.getStages()转换为JSON字符串
-        //      5.2.2 更新主表的stagesJson字段
-        //  5.3 注意：需要根据实际数据库表设计选择上述方案之一
+        // 步骤4: 保存主表数据
+        ManagementTemplateDO entity = BeanUtil.toBean(req, ManagementTemplateDO.class);
+        entity.setTemplateCode(templateCode);
+        entity.setStatus(1); // 默认启用
+        // createUser、createTime由框架自动填充
+        baseMapper.insert(entity);
+        Long templateId = entity.getId();
 
-        // TODO 步骤6: 返回结果
-        //  6.1 返回生成的模板ID
-        //  6.2 记录操作日志（可选）：log.info("创建管理流程模板成功，ID={}, 编码={}", id, templateCode)
+        // 步骤5: 保存阶段配置子表数据
+        if (CollUtil.isNotEmpty(stages)) {
+            List<ManagementStageDO> stageEntities = new ArrayList<>(stages.size());
+            for (ManagementStageReq stageReq : stages) {
+                ManagementStageDO stageEntity = BeanUtil.toBean(stageReq, ManagementStageDO.class);
+                stageEntity.setTemplateId(templateId);
+                stageEntities.add(stageEntity);
+            }
+            // 批量插入阶段配置
+            stageMapper.insertBatch(stageEntities);
+        }
 
-        return null;
+        // 步骤6: 记录日志并返回ID
+        log.info("创建管理流程模板成功，ID={}, 编码={}, 名称={}", templateId, templateCode,
+            req.getTemplateName());
+        return templateId;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, ManagementTemplateReq req) {
-        // TODO 步骤1: 验证模板存在性
-        //  1.1 根据id查询现有模板（baseMapper.selectById(id)）
-        //  1.2 如果为null，抛出BusinessException("模板不存在")
-        //  1.3 获取旧的templateCode备用
+        // 步骤1: 验证模板存在性
+        ManagementTemplateDO existingEntity = baseMapper.selectById(id);
+        if (ObjectUtil.isNull(existingEntity)) {
+            throw new BusinessException("模板不存在");
+        }
+        String oldTemplateCode = existingEntity.getTemplateCode();
 
-        // TODO 步骤2: 检查模板是否被项目类型引用（重要业务规则）
-        //  2.1 如果阶段配置发生变化（阶段数量、顺序、类型改变）：
-        //      2.1.1 查询project_type表，检查是否有记录的management_template_id=当前模板ID
-        //      2.1.2 如果存在引用，抛出BusinessException("模板已被项目类型引用，不允许修改阶段配置")
-        //      2.1.3 说明：阶段配置改变会影响已配置的项目类型，因此不允许修改
-        //  2.2 如果只是修改模板名称、描述、阶段名称，则允许修改
+        // 步骤2: 检查模板是否被项目类型引用（如果阶段配置发生变化）
+        // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
+        // 如果阶段数量、顺序或类型发生变化且被引用，应抛出异常
+        log.warn("模板ID={} 正在更新，TODO: 需要检查项目类型引用关系", id);
 
-        // TODO 步骤3: 模板编码唯一性校验
-        //  3.1 如果req.getTemplateCode()不为空且与旧编码不同：
-        //      3.1.1 调用getByCode(req.getTemplateCode())查询是否已存在
-        //      3.1.2 如果存在且ID不是当前ID，抛出BusinessException("模板编码已存在")
-        //  3.2 如果req.getTemplateCode()为空：
-        //      3.2.1 使用旧的templateCode（不允许清空编码）
+        // 步骤3: 模板编码唯一性校验
+        String newTemplateCode = req.getTemplateCode();
+        if (StrUtil.isNotBlank(newTemplateCode) && !newTemplateCode.equals(oldTemplateCode)) {
+            ManagementTemplateDO existingByCode = this.getByCode(newTemplateCode);
+            if (ObjectUtil.isNotNull(existingByCode) && !existingByCode.getId().equals(id)) {
+                throw new BusinessException("模板编码已存在");
+            }
+        } else if (StrUtil.isBlank(newTemplateCode)) {
+            newTemplateCode = oldTemplateCode;
+        }
 
-        // TODO 步骤4: 模板名称唯一性校验
-        //  4.1 如果templateName发生变化：
-        //      4.1.1 根据templateName查询是否已存在同名模板
-        //      4.1.2 如果存在且ID不是当前ID，抛出BusinessException("模板名称已存在")
-        //  4.2 注意：查询条件需要加上逻辑删除条件
+        // 步骤4: 模板名称唯一性校验
+        if (!existingEntity.getTemplateName().equals(req.getTemplateName())) {
+            QueryWrapper<ManagementTemplateDO> nameWrapper = new QueryWrapper<>();
+            nameWrapper.eq("template_name", req.getTemplateName());
+            nameWrapper.eq("deleted", 0);
+            ManagementTemplateDO existingByName = baseMapper.selectOne(nameWrapper);
+            if (ObjectUtil.isNotNull(existingByName) && !existingByName.getId().equals(id)) {
+                throw new BusinessException("模板名称已存在");
+            }
+        }
 
-        // TODO 步骤5: 阶段配置验证（与create方法相同的验证逻辑）
-        //  5.1 获取req.getStages()集合
-        //  5.2 如果stages不为空，执行与create方法相同的验证：
-        //      5.2.1 验证阶段顺序连续性（从1开始，无跳号，无重复）
-        //      5.2.2 验证阶段名称和类型合法性
-        //  5.3 如果验证失败，抛出详细的异常信息
+        // 步骤5: 阶段配置验证
+        List<ManagementStageReq> stages = req.getStages();
+        if (CollUtil.isNotEmpty(stages)) {
+            this.validateStageOrder(stages);
+        }
 
-        // TODO 步骤6: 更新主表数据
-        //  6.1 使用BeanUtil.copyProperties(req, existingEntity)更新字段
-        //  6.2 保留原有的id、createUser、createTime等字段
-        //  6.3 设置updateUser、updateTime（框架自动填充）
-        //  6.4 调用baseMapper.updateById(existingEntity)更新数据
+        // 步骤6: 更新主表数据
+        BeanUtil.copyProperties(req, existingEntity, "id", "createUser", "createTime",
+            "deleted");
+        existingEntity.setTemplateCode(newTemplateCode);
+        baseMapper.updateById(existingEntity);
 
-        // TODO 步骤7: 更新阶段配置子表数据（子表同步策略：DELETE + INSERT）
-        //  7.1 如果系统设计了独立的阶段配置表：
-        //      7.1.1 删除旧数据：stageMapper.delete(new QueryWrapper<>().eq("template_id", id))
-        //      7.1.2 插入新数据：遍历req.getStages()，创建新的ManagementStageDO实体并插入
-        //      7.1.3 注意：删除和插入必须在同一个事务中
-        //  7.2 如果阶段配置存储在主表JSON字段中：
-        //      7.2.1 将req.getStages()转换为JSON字符串
-        //      7.2.2 更新主表的stagesJson字段
+        // 步骤7: 更新阶段配置子表数据（DELETE + INSERT策略）
+        QueryWrapper<ManagementStageDO> deleteWrapper = new QueryWrapper<>();
+        deleteWrapper.eq("template_id", id);
+        stageMapper.delete(deleteWrapper);
 
-        // TODO 步骤8: 完成更新
-        //  8.1 记录操作日志（可选）：log.info("更新管理流程模板成功，ID={}", id)
+        if (CollUtil.isNotEmpty(stages)) {
+            List<ManagementStageDO> stageEntities = new ArrayList<>(stages.size());
+            for (ManagementStageReq stageReq : stages) {
+                ManagementStageDO stageEntity = BeanUtil.toBean(stageReq, ManagementStageDO.class);
+                stageEntity.setTemplateId(id);
+                stageEntities.add(stageEntity);
+            }
+            stageMapper.insertBatch(stageEntities);
+        }
+
+        // 步骤8: 记录日志
+        log.info("更新管理流程模板成功，ID={}, 编码={}, 名称={}", id, newTemplateCode,
+            req.getTemplateName());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> ids) {
-        // TODO 步骤1: 参数验证
-        //  1.1 检查ids是否为空或空列表
-        //  1.2 如果为空，抛出BadRequestException("删除ID列表不能为空")
+        // 步骤1: 参数验证
+        if (CollUtil.isEmpty(ids)) {
+            throw new BadRequestException("删除ID列表不能为空");
+        }
 
-        // TODO 步骤2: 逐个验证模板是否存在
-        //  2.1 遍历ids列表
-        //  2.2 对每个id调用baseMapper.selectById(id)
-        //  2.3 如果任一模板不存在，抛出BusinessException("模板ID={} 不存在", id)
+        // 步骤2: 逐个验证模板是否存在
+        for (Long id : ids) {
+            ManagementTemplateDO entity = baseMapper.selectById(id);
+            if (ObjectUtil.isNull(entity)) {
+                throw new BusinessException(StrUtil.format("模板ID={} 不存在", id));
+            }
+        }
 
-        // TODO 步骤3: 检查模板是否被项目类型引用（重要业务规则）
-        //  3.1 对每个模板ID，查询project_type表：
-        //      SELECT COUNT(*) FROM project_type WHERE management_template_id = ? AND deleted = 0
-        //  3.2 如果count > 0，抛出BusinessException("模板已被项目类型引用，不允许删除")
-        //  3.3 提示用户：需要先删除或修改引用该模板的项目类型配置
-        //  3.4 注意：type模块尚未实现，此步骤可先标记为TODO或跳过
+        // 步骤3: 检查模板是否被项目类型引用
+        // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
+        log.debug("删除管理流程模板，IDs={}，TODO: 需要检查项目类型引用关系", ids);
 
-        // TODO 步骤4: 逻辑删除主表数据（采用逻辑删除而非物理删除）
-        //  4.1 调用baseMapper.deleteBatchIds(ids)进行逻辑删除
-        //  4.2 ContiNew框架会自动将deleted字段设置为主键ID（逻辑删除标记）
-        //  4.3 注意：不是设置deleted=1，而是设置deleted=id（支持唯一索引）
+        // 步骤4: 逻辑删除主表数据
+        baseMapper.deleteBatchIds(ids);
 
-        // TODO 步骤5: 逻辑删除阶段配置子表数据（如果有子表）
-        //  5.1 如果系统设计了独立的阶段配置表：
-        //      5.1.1 构建删除条件：new QueryWrapper<>().in("template_id", ids)
-        //      5.1.2 调用stageMapper.delete(wrapper)进行逻辑删除
-        //      5.1.3 注意：子表也采用逻辑删除，deleted字段设置规则同主表
-        //  5.2 如果阶段配置存储在主表JSON字段中，则无需额外操作
+        // 步骤5: 逻辑删除阶段配置子表数据
+        QueryWrapper<ManagementStageDO> deleteWrapper = new QueryWrapper<>();
+        deleteWrapper.in("template_id", ids);
+        stageMapper.delete(deleteWrapper);
 
-        // TODO 步骤6: 完成删除
-        //  6.1 记录操作日志（可选）：log.info("删除管理流程模板成功，IDs={}", ids)
+        // 步骤6: 记录日志
+        log.info("删除管理流程模板成功，IDs={}", ids);
     }
 
     @Override
     public ManagementTemplateResp getDetail(Long id) {
-        // TODO 步骤1: 查询主表数据
-        //  1.1 根据id查询模板实体（baseMapper.selectById(id)）
-        //  1.2 如果为null，抛出BusinessException("模板不存在")
+        // 步骤1: 查询主表数据
+        ManagementTemplateDO entity = baseMapper.selectById(id);
+        if (ObjectUtil.isNull(entity)) {
+            throw new BusinessException("模板不存在");
+        }
 
-        // TODO 步骤2: 查询阶段配置数据
-        //  2.1 如果系统设计了独立的阶段配置表：
-        //      2.1.1 查询条件：template_id = ? AND deleted = 0
-        //      2.1.2 按stageOrder排序
-        //      2.1.3 调用stageMapper.selectList(wrapper)获取列表
-        //      2.1.4 将查询结果转换为List<ManagementStageResp>
-        //  2.2 如果阶段配置存储在主表JSON字段中：
-        //      2.2.1 从entity.getStagesJson()获取JSON字符串
-        //      2.2.2 使用Jackson或Fastjson解析为List<ManagementStageResp>
+        // 步骤2: 查询阶段配置数据
+        QueryWrapper<ManagementStageDO> stageWrapper = new QueryWrapper<>();
+        stageWrapper.eq("template_id", id);
+        stageWrapper.eq("deleted", 0);
+        // 按阶段顺序排序
+        stageWrapper.orderByAsc("stage_order");
+        List<ManagementStageDO> stageEntities = stageMapper.selectList(stageWrapper);
 
-        // TODO 步骤3: 组装响应对象
-        //  3.1 创建ManagementTemplateResp对象
-        //  3.2 使用BeanUtil.copyProperties(entity, resp)复制基本字段
-        //  3.3 设置resp.setStages(stageList)
-        //  3.4 格式化时间字段（createTime、updateTime）为指定格式
+        // 将阶段实体转换为响应对象
+        List<ManagementStageResp> stageList = BeanUtil.copyToList(stageEntities,
+            ManagementStageResp.class);
 
-        // TODO 步骤4: 返回结果
-        //  4.1 返回组装好的响应对象
+        // 步骤3: 组装响应对象
+        ManagementTemplateResp resp = BeanUtil.toBean(entity, ManagementTemplateResp.class);
+        resp.setStages(stageList);
 
-        return null;
+        // 步骤4: 返回结果
+        return resp;
     }
 
     @Override
     public PageResp<ManagementTemplateResp> page(ManagementTemplateQuery query, PageQuery pageQuery) {
-        // TODO 步骤1: 构建查询条件
-        //  1.1 创建QueryWrapper<ManagementTemplateDO>
-        //  1.2 如果query.getTemplateName()不为空：
-        //      wrapper.like("template_name", query.getTemplateName())
-        //  1.3 如果query.getTemplateCode()不为空：
-        //      wrapper.like("template_code", query.getTemplateCode())
-        //  1.4 如果query.getStatus()不为空：
-        //      wrapper.eq("status", query.getStatus())
-        //  1.5 添加逻辑删除条件：wrapper.eq("deleted", 0)（框架可能自动处理）
-        //  1.6 设置排序：wrapper.orderByDesc("create_time")（最新创建的排在前面）
+        // 步骤1: 构建查询条件
+        QueryWrapper<ManagementTemplateDO> wrapper = new QueryWrapper<>();
 
-        // TODO 步骤2: 应用数据权限过滤（重要权限控制）
-        //  2.1 获取当前登录用户的角色
-        //  2.2 如果是FLOW_ADMIN（流程管理员）：
-        //      2.2.1 获取当前用户的职务角色（PositionRole）
-        //      2.2.2 获取职务角色的数据范围配置（DataScopeConfig）
-        //      2.2.3 根据数据范围类型添加过滤条件：
-        //            - DEPT_AND_SUB: 查询create_user所属部门为当前部门及子部门的记录
-        //            - DEPT: 查询create_user所属部门为当前部门的记录
-        //            - USER_BASED: 查询create_user在指定人员列表中的记录
-        //            - ROLE_BASED: 根据业务角色过滤
-        //            - COMBINED: 自定义组合条件
-        //      2.2.4 添加过滤条件到wrapper
-        //  2.3 如果是SUPER_ADMIN（超级管理员）：
-        //      2.3.1 不添加额外过滤条件（可查看所有数据）
-        //  2.4 如果是其他角色：
-        //      2.4.1 只能查看自己创建的模板：wrapper.eq("create_user", 当前用户ID)
-        //  2.5 注意：此步骤涉及复杂的权限逻辑，可先标记为TODO，待权限模块完善后实现
+        if (StrUtil.isNotBlank(query.getTemplateName())) {
+            wrapper.like("template_name", query.getTemplateName());
+        }
 
-        // TODO 步骤3: 执行分页查询
-        //  3.1 创建Page对象：new Page<>(pageQuery.getCurrent(), pageQuery.getSize())
-        //  3.2 调用baseMapper.selectPage(page, wrapper)执行查询
-        //  3.3 获取分页结果：page.getRecords()和page.getTotal()
+        if (StrUtil.isNotBlank(query.getTemplateCode())) {
+            wrapper.like("template_code", query.getTemplateCode());
+        }
 
-        // TODO 步骤4: 转换为响应对象列表
-        //  4.1 遍历page.getRecords()
-        //  4.2 对每个entity：
-        //      4.2.1 创建ManagementTemplateResp对象
-        //      4.2.2 使用BeanUtil.copyProperties(entity, resp)复制基本字段
-        //      4.2.3 注意：分页列表通常不需要查询阶段配置详情（性能考虑）
-        //      4.2.4 如果需要显示阶段统计信息，可添加：
-        //            resp.setStageCount(阶段数量)
-        //  4.3 收集所有响应对象到List<ManagementTemplateResp>
+        if (ObjectUtil.isNotNull(query.getStatus())) {
+            wrapper.eq("status", query.getStatus());
+        }
 
-        // TODO 步骤5: 组装分页响应对象
-        //  5.1 创建PageResp<ManagementTemplateResp>对象
-        //  5.2 设置records（转换后的响应对象列表）
-        //  5.3 设置total（总记录数）
-        //  5.4 设置current和size（当前页和页大小）
+        wrapper.eq("deleted", 0);
+        wrapper.orderByDesc("create_time");
 
-        // TODO 步骤6: 返回结果
-        //  6.1 返回PageResp对象
+        // 步骤2: 应用数据权限过滤
+        // TODO: 等权限模块完善后实现数据权限过滤逻辑
+        log.debug("执行管理流程模板分页查询，TODO: 需要实现数据权限过滤");
 
-        return null;
+        // 步骤3: 执行分页查询
+        Page<ManagementTemplateDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
+        Page<ManagementTemplateDO> resultPage = baseMapper.selectPage(page, wrapper);
+
+        // 步骤4: 转换为响应对象列表
+        List<ManagementTemplateResp> respList = BeanUtil.copyToList(resultPage.getRecords(),
+            ManagementTemplateResp.class);
+
+        // 步骤5: 组装分页响应对象
+        PageResp<ManagementTemplateResp> pageResp = new PageResp<>();
+        pageResp.setList(respList);
+        pageResp.setTotal(resultPage.getTotal());
+
+        // 步骤6: 返回结果
+        return pageResp;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status) {
-        // TODO 步骤1: 参数验证
-        //  1.1 检查status是否为合法值（1=启用，2=禁用）
-        //  1.2 如果status不是1或2，抛出BadRequestException("状态值不合法")
+        // 步骤1: 参数验证
+        if (status != 1 && status != 2) {
+            throw new BadRequestException("状态值不合法，必须为1(启用)或2(禁用)");
+        }
 
-        // TODO 步骤2: 验证模板存在性
-        //  2.1 根据id查询现有模板（baseMapper.selectById(id)）
-        //  2.2 如果为null，抛出BusinessException("模板不存在")
+        // 步骤2: 验证模板存在性
+        ManagementTemplateDO existingEntity = baseMapper.selectById(id);
+        if (ObjectUtil.isNull(existingEntity)) {
+            throw new BusinessException("模板不存在");
+        }
 
-        // TODO 步骤3: 检查是否被项目类型使用（业务提示，不阻止操作）
-        //  3.1 如果status=2（禁用）：
-        //      3.1.1 查询project_type表，检查是否有记录的management_template_id=当前模板ID
-        //      3.1.2 如果存在使用记录，记录警告日志：
-        //            log.warn("模板ID={} 正在被项目类型使用，禁用后可能影响相关功能", id)
-        //      3.1.3 注意：禁用操作不阻止，但应提供警告信息
-        //  3.2 如果status=1（启用），无需检查
+        // 步骤3: 检查是否被项目类型使用
+        if (status == 2) {
+            // TODO: 等type模块实现后，查询project_type表检查引用关系
+            log.warn("模板ID={} 被设置为禁用状态，TODO: 需要检查项目类型引用关系", id);
+        }
 
-        // TODO 步骤4: 更新状态字段
-        //  4.1 创建更新实体：new ManagementTemplateDO()
-        //  4.2 设置id和status
-        //  4.3 设置updateUser、updateTime（框架自动填充）
-        //  4.4 调用baseMapper.updateById(updateEntity)
+        // 步骤4: 更新状态字段
+        ManagementTemplateDO updateEntity = new ManagementTemplateDO();
+        updateEntity.setId(id);
+        updateEntity.setStatus(status);
+        baseMapper.updateById(updateEntity);
 
-        // TODO 步骤5: 完成更新
-        //  5.1 记录操作日志（可选）：log.info("更新模板状态成功，ID={}，状态={}", id, status)
+        // 步骤5: 记录日志
+        String statusText = (status == 1) ? "启用" : "禁用";
+        log.info("更新管理流程模板状态成功，ID={}，状态={}", id, statusText);
     }
 
     @Override
@@ -300,22 +316,62 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
 
     @Override
     public String generateCode() {
-        // TODO 步骤1: 生成基础编码
-        //  1.1 获取当前时间戳：System.currentTimeMillis()
-        //  1.2 拼接前缀：String code = "MGMT_" + timestamp
+        // 步骤1: 生成基础编码
+        String code;
+        int retryCount = 0;
+        final int maxRetries = 3;
 
-        // TODO 步骤2: 检查编码唯一性（防止极少数情况下的时间戳重复）
-        //  2.1 调用getByCode(code)查询是否已存在
-        //  2.2 如果存在（极少发生）：
-        //      2.2.1 等待1毫秒：Thread.sleep(1)
-        //      2.2.2 重新生成时间戳
-        //      2.2.3 重新检查，最多重试3次
-        //  2.3 如果3次后仍然重复，抛出BusinessException("生成编码失败，请重试")
+        // 步骤2: 循环检查编码唯一性
+        while (retryCount < maxRetries) {
+            code = "MGMT_" + System.currentTimeMillis();
 
-        // TODO 步骤3: 返回生成的编码
-        //  3.1 返回唯一的templateCode
-        //  3.2 记录日志（可选）：log.debug("生成模板编码：{}", code)
+            ManagementTemplateDO existing = this.getByCode(code);
+            if (ObjectUtil.isNull(existing)) {
+                log.debug("生成模板编码成功: {}", code);
+                return code;
+            }
 
-        return "";
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new BusinessException("生成编码过程中断");
+            }
+            retryCount++;
+        }
+
+        // 步骤3: 重试次数用尽
+        throw new BusinessException("生成模板编码失败，请重试");
+    }
+
+    /**
+     * 验证阶段顺序的连续性
+     *
+     * @param stages 阶段配置列表
+     */
+    private void validateStageOrder(List<ManagementStageReq> stages) {
+        // 提取所有阶段顺序并排序
+        List<Integer> orders = stages.stream()
+            .map(ManagementStageReq::getStageOrder)
+            .sorted()
+            .collect(Collectors.toList());
+
+        // 使用Set检查是否有重复序号
+        Set<Integer> orderSet = new HashSet<>(orders);
+        if (orderSet.size() != orders.size()) {
+            throw new BusinessException("阶段顺序不能有重复");
+        }
+
+        // 验证序号从1开始且连续
+        if (orders.get(0) != 1) {
+            throw new BusinessException("阶段顺序必须从1开始");
+        }
+
+        for (int i = 0; i < orders.size(); i++) {
+            int expectedOrder = i + 1;
+            if (!orders.get(i).equals(expectedOrder)) {
+                throw new BusinessException("阶段顺序必须连续，不能跳号");
+            }
+        }
     }
 }
