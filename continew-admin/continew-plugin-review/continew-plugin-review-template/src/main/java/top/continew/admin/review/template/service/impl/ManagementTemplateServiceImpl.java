@@ -311,12 +311,11 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
 
     @Override
     public ManagementTemplateDO getByCode(String templateCode) {
-        // TODO: 根据编码查询模板
-        //  1. 构建查询条件：eq("template_code", templateCode)
-        //  2. 添加逻辑删除条件：eq("deleted", 0)
-        //  3. 调用baseMapper.selectOne(wrapper)
-        //  4. 返回查询结果（可能为null）
-        return baseMapper.selectOne(new QueryWrapper<ManagementTemplateDO>().eq("template_code", templateCode));
+        // 根据编码查询模板（包含逻辑删除条件）
+        QueryWrapper<ManagementTemplateDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("template_code", templateCode);
+        wrapper.eq("deleted", 0);
+        return baseMapper.selectOne(wrapper);
     }
 
     @Override
