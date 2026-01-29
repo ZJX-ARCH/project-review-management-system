@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.template.enums.RoundType;
 import top.continew.admin.review.template.mapper.ProcessTemplateMapper;
 import top.continew.admin.review.template.mapper.ProcessTemplateRoundNameMapper;
@@ -102,7 +103,7 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         // 步骤4: 保存主表数据
         ProcessTemplateDO entity = BeanUtil.toBean(req, ProcessTemplateDO.class);
         entity.setTemplateCode(templateCode);
-        entity.setStatus(1); // 默认启用
+        entity.setStatus(DisEnableStatusEnum.ENABLE); // 默认启用
         // createUser、createTime由框架自动填充
         baseMapper.insert(entity);
         Long templateId = entity.getId();
@@ -357,8 +358,13 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status) {
-        // 步骤1: 参数验证
-        if (status != 1 && status != 2) {
+        // 步骤1: 参数验证 - 转换为枚举
+        DisEnableStatusEnum statusEnum;
+        if (status == 1) {
+            statusEnum = DisEnableStatusEnum.ENABLE;
+        } else if (status == 2) {
+            statusEnum = DisEnableStatusEnum.DISABLE;
+        } else {
             throw new BadRequestException("状态值不合法，必须为1(启用)或2(禁用)");
         }
 
@@ -369,7 +375,7 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         }
 
         // 步骤3: 检查是否被项目类型使用（业务提示，不阻止操作）
-        if (status == 2) {
+        if (statusEnum == DisEnableStatusEnum.DISABLE) {
             // 禁用操作，检查是否被使用
             // TODO: 等type模块实现后，查询project_type表检查引用关系
             // 示例代码：
@@ -386,13 +392,12 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         // 步骤4: 更新状态字段
         ProcessTemplateDO updateEntity = new ProcessTemplateDO();
         updateEntity.setId(id);
-        updateEntity.setStatus(status);
+        updateEntity.setStatus(statusEnum);
         // updateUser、updateTime由框架自动填充
         baseMapper.updateById(updateEntity);
 
         // 步骤5: 记录日志
-        String statusText = (status == 1) ? "启用" : "禁用";
-        log.info("更新评审流程模板状态成功，ID={}，状态={}", id, statusText);
+        log.info("更新评审流程模板状态成功，ID={}，状态={}", id, statusEnum.getDescription());
     }
 
     @Override
