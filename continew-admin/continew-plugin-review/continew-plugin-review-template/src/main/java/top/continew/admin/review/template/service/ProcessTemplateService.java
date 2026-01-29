@@ -53,13 +53,6 @@ public interface ProcessTemplateService extends IService<ProcessTemplateDO> {
     PageResp<ProcessTemplateResp> page(ProcessTemplateQuery query, PageQuery pageQuery);
 
     /**
-     * 查询可见模板列表
-     *
-     * @return 可见模板列表
-     */
-    List<ProcessTemplateResp> listVisible();
-
-    /**
      * 启用/禁用模板
      *
      * @param id     模板ID

@@ -74,15 +74,6 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
     }
 
     @Override
-    public List<ProcessTemplateResp> listVisible() {
-        // TODO: 实现可见列表查询逻辑
-        // 1. 查询启用状态的模板
-        // 2. 根据当前用户权限过滤（isPublic或deptIds/roleIds匹配）
-        // 3. 转换为响应对象
-        return null;
-    }
-
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status) {
         // TODO: 实现状态更新逻辑

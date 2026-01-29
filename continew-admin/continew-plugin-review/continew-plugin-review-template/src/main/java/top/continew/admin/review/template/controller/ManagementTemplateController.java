@@ -87,16 +87,6 @@ public class ManagementTemplateController {
     }
 
     /**
-     * 查询可见模板列表（供项目类型配置使用）
-     */
-    @GetMapping("/visible")
-    @Operation(summary = "查询可见模板列表")
-    public R<List<ManagementTemplateResp>> listVisible() {
-        List<ManagementTemplateResp> list = managementTemplateService.listVisible();
-        return R.ok(list);
-    }
-
-    /**
      * 启用/禁用模板
      */
     @PutMapping("/{id}/status")

@@ -87,16 +87,6 @@ public class ProcessTemplateController {
     }
 
     /**
-     * 查询可见模板列表（供项目类型配置使用）
-     */
-    @GetMapping("/visible")
-    @Operation(summary = "查询可见模板列表")
-    public R<List<ProcessTemplateResp>> listVisible() {
-        List<ProcessTemplateResp> list = processTemplateService.listVisible();
-        return R.ok(list);
-    }
-
-    /**
      * 启用/禁用模板
      */
     @PutMapping("/{id}/status")
