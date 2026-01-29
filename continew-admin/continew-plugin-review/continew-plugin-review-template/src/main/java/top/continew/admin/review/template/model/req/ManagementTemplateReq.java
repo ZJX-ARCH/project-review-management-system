@@ -36,7 +36,7 @@ public class ManagementTemplateReq implements Serializable {
      * 模板编码（不填写则自动生成：MGMT_ + 时间戳）
      */
     @Schema(description = "模板编码（可选，不填自动生成，格式：MGMT_开头）", example = "MGMT_STANDARD")
-    @Pattern(regexp = "^MGMT_[A-Z_]*$", message = "模板编码必须以MGMT_开头，后续只能包含大写字母和下划线")
+    @Pattern(regexp = "^MGMT_[A-Z0-9_]*$", message = "模板编码必须以MGMT_开头，后续只能包含大写字母、数字和下划线")
     @Length(max = 20, message = "模板编码长度不能超过 {max} 个字符")
     private String templateCode;
 
