@@ -69,6 +69,7 @@ public class ManagementTemplateController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询模板详情")
+    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
     public R<ManagementTemplateResp> getDetail(@PathVariable Long id) {
         ManagementTemplateResp detail = managementTemplateService.getDetail(id);
         return R.ok(detail);
@@ -79,7 +80,7 @@ public class ManagementTemplateController {
      */
     @GetMapping
     @Operation(summary = "分页查询模板列表")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
     public R<PageResp<ManagementTemplateResp>> page(@Valid ManagementTemplateQuery query,
                                                       @Valid PageQuery pageQuery) {
         PageResp<ManagementTemplateResp> page = managementTemplateService.page(query, pageQuery);

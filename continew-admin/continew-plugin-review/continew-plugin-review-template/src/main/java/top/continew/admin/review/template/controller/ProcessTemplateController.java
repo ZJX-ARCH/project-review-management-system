@@ -69,6 +69,7 @@ public class ProcessTemplateController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询模板详情")
+    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
     public R<ProcessTemplateResp> getDetail(@PathVariable Long id) {
         ProcessTemplateResp detail = processTemplateService.getDetail(id);
         return R.ok(detail);
@@ -79,7 +80,7 @@ public class ProcessTemplateController {
      */
     @GetMapping
     @Operation(summary = "分页查询模板列表")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
     public R<PageResp<ProcessTemplateResp>> page(@Valid ProcessTemplateQuery query,
                                                    @Valid PageQuery pageQuery) {
         PageResp<ProcessTemplateResp> page = processTemplateService.page(query, pageQuery);

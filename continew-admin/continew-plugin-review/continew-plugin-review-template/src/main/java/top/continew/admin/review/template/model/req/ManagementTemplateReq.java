@@ -5,11 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
-import top.continew.admin.common.enums.DisEnableStatusEnum;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * 管理流程模板创建或修改请求参数
@@ -46,34 +44,4 @@ public class ManagementTemplateReq implements Serializable {
     @Schema(description = "模板描述", example = "适用于标准项目的管理流程")
     @Length(max = 500, message = "模板描述长度不能超过 {max} 个字符")
     private String description;
-
-    /**
-     * 可见部门ID列表
-     */
-    @Schema(description = "可见部门ID列表", example = "[1, 2, 3]")
-    private List<Long> deptIds;
-
-    /**
-     * 可见角色ID列表
-     */
-    @Schema(description = "可见角色ID列表", example = "[1, 2, 3]")
-    private List<Long> roleIds;
-
-    /**
-     * 是否公开（true=公开，所有人可见；false=限制可见）
-     */
-    @Schema(description = "是否公开", example = "true")
-    private Boolean isPublic;
-
-    /**
-     * 状态（1=启用，2=禁用）
-     */
-    @Schema(description = "状态", example = "1")
-    private DisEnableStatusEnum status;
-
-    /**
-     * 排序
-     */
-    @Schema(description = "排序", example = "1")
-    private Integer sort;
 }

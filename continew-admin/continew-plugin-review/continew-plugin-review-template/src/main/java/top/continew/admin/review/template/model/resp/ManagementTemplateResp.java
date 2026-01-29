@@ -9,7 +9,6 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.starter.excel.converter.ExcelBaseEnumConverter;
 
 import java.io.Serial;
-import java.util.List;
 
 /**
  * 管理流程模板响应参数
@@ -47,35 +46,16 @@ public class ManagementTemplateResp extends BaseDetailResp {
     private String description;
 
     /**
-     * 可见部门ID列表
-     */
-    @Schema(description = "可见部门ID列表", example = "[1, 2, 3]")
-    private List<Long> deptIds;
-
-    /**
-     * 可见角色ID列表
-     */
-    @Schema(description = "可见角色ID列表", example = "[1, 2, 3]")
-    private List<Long> roleIds;
-
-    /**
-     * 是否公开
-     */
-    @Schema(description = "是否公开", example = "true")
-    @ExcelProperty(value = "是否公开", order = 5)
-    private Boolean isPublic;
-
-    /**
      * 状态
      */
     @Schema(description = "状态", example = "1")
-    @ExcelProperty(value = "状态", converter = ExcelBaseEnumConverter.class, order = 6)
+    @ExcelProperty(value = "状态", converter = ExcelBaseEnumConverter.class, order = 5)
     private DisEnableStatusEnum status;
 
     /**
      * 排序
      */
     @Schema(description = "排序", example = "1")
-    @ExcelProperty(value = "排序", order = 7)
+    @ExcelProperty(value = "排序", order = 6)
     private Integer sort;
 }
