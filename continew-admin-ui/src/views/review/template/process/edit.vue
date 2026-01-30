@@ -36,7 +36,7 @@
               </a-col>
               <a-col :span="12">
                 <a-form-item label="模板编码" field="templateCode">
-                  <a-input-group>
+                  <a-input-group v-if="isCreate">
                     <a-input
                       v-model="formData.templateCode"
                       placeholder="请输入模板编码或点击自动生成"
@@ -50,6 +50,12 @@
                       {{ generateCodeText }}
                     </a-button>
                   </a-input-group>
+                  <a-input
+                    v-else
+                    v-model="formData.templateCode"
+                    disabled
+                    placeholder="模板编码（自动生成）"
+                  />
                 </a-form-item>
               </a-col>
             </a-row>
