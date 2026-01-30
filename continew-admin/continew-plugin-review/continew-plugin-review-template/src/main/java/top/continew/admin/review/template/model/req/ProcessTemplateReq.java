@@ -36,10 +36,10 @@ public class ProcessTemplateReq implements Serializable {
     private String templateName;
 
     /**
-     * 模板编码（不填写则自动生成：PROCESS_ + 时间戳）
+     * 模板编码（不填写则自动生成：PROC_ + 时间戳）
      */
-    @Schema(description = "模板编码（可选，不填自动生成）", example = "PROCESS_STANDARD")
-    @Pattern(regexp = "^PROCESS_[A-Z0-9_]*$", message = "模板编码必须以PROCESS_开头，后续只能包含大写字母、数字和下划线")
+    @Schema(description = "模板编码（可选，不填自动生成）", example = "PROC_STANDARD")
+    @Pattern(regexp = "^PROC_[A-Z0-9_]*$", message = "模板编码必须以PROC_开头，后续只能包含大写字母、数字和下划线")
     @Length(max = 20, message = "模板编码长度不能超过 {max} 个字符")
     private String templateCode;
 

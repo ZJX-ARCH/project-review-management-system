@@ -160,6 +160,22 @@ const formRules = {
     { required: true, message: '请输入模板名称' },
     { minLength: 2, maxLength: 100, message: '模板名称长度为2-100个字符' },
   ],
+  templateCode: [
+    {
+      validator: (value: string, callback: (error?: string) => void) => {
+        if (!value) {
+          callback()
+          return
+        }
+        const pattern = /^MGMT_[A-Z0-9_]+$/
+        if (!pattern.test(value)) {
+          callback('模板编码必须以MGMT_开头，后续只能包含大写字母、数字和下划线')
+          return
+        }
+        callback()
+      },
+    },
+  ],
 }
 
 // 阶段列表
@@ -304,8 +320,11 @@ const handleGenerateCode = async () => {
 
 /** 保存 */
 const handleSave = async () => {
-  const valid = await formRef.value?.validate()
-  if (!valid) {
+  try {
+    // validate() 验证通过时返回 undefined，验证失败时会抛出异常
+    await formRef.value?.validate()
+  }
+  catch {
     Message.warning('请检查表单填写是否完整')
     return
   }
