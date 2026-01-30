@@ -411,14 +411,14 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
 
     @Override
     public String generateCode() {
-        // 步骤1: 生成基础编码
+        // 步骤1: 生成基础编码（PROC_前缀 + 时间戳 = 18位，符合20位限制）
         String code;
         int retryCount = 0;
         final int maxRetries = 3;
 
         // 步骤2: 循环检查编码唯一性（防止极少数情况下的时间戳重复）
         while (retryCount < maxRetries) {
-            code = "PROCESS_" + System.currentTimeMillis();
+            code = "PROC_" + System.currentTimeMillis();
 
             // 检查编码是否已存在
             ProcessTemplateDO existing = this.getByCode(code);

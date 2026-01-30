@@ -14,7 +14,7 @@
       </template>
     </a-page-header>
 
-    <a-spin :loading="loading" style="width: 100%;">
+    <a-spin :loading="loading" class="spin-container">
       <div class="edit-container">
         <!-- 基本信息 -->
         <a-card title="基本信息" :bordered="false" class="form-card">
@@ -24,35 +24,30 @@
             :rules="formRules"
             layout="vertical"
           >
-            <a-row :gutter="16">
-              <a-col :span="12">
-                <a-form-item label="模板名称" field="templateName" required>
-                  <a-input
-                    v-model="formData.templateName"
-                    placeholder="请输入模板名称"
-                    :max-length="100"
-                  />
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item label="模板编码" field="templateCode">
-                  <a-input-group>
-                    <a-input
-                      v-model="formData.templateCode"
-                      placeholder="请输入模板编码或点击自动生成"
-                      :max-length="20"
-                      show-word-limit
-                    />
-                    <a-button
-                      :disabled="generateCodeDisabled"
-                      @click="handleGenerateCode"
-                    >
-                      {{ generateCodeText }}
-                    </a-button>
-                  </a-input-group>
-                </a-form-item>
-              </a-col>
-            </a-row>
+            <a-form-item label="模板名称" field="templateName" required>
+              <a-input
+                v-model="formData.templateName"
+                placeholder="请输入模板名称"
+                :max-length="100"
+              />
+            </a-form-item>
+
+            <a-form-item label="模板编码" field="templateCode">
+              <a-input-group>
+                <a-input
+                  v-model="formData.templateCode"
+                  placeholder="请输入模板编码或点击自动生成"
+                  :max-length="20"
+                  show-word-limit
+                />
+                <a-button
+                  :disabled="generateCodeDisabled"
+                  @click="handleGenerateCode"
+                >
+                  {{ generateCodeText }}
+                </a-button>
+              </a-input-group>
+            </a-form-item>
 
             <a-form-item label="模板描述" field="description">
               <a-textarea
@@ -96,7 +91,7 @@
               @delete="handlePhaseDelete(index)"
             />
           </div>
-          <a-empty v-else description="暂无阶段配置，请点击"添加阶段"按钮开始配置" />
+          <a-empty v-else description="暂无阶段配置，请点击【添加阶段】按钮开始配置" />
         </a-card>
 
         <!-- 流程预览 -->
@@ -355,12 +350,26 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.spin-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.spin-container :deep(.arco-spin) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .edit-container {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
