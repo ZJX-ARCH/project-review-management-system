@@ -16,8 +16,7 @@
         >
           <template #icon>
             <div class="step-icon" :class="getPhaseIconClass(phase)">
-              <icon-check-circle v-if="phase.isRequired" />
-              <icon-minus-circle v-else />
+              {{ index + 1 }}
             </div>
           </template>
         </a-step>
@@ -120,14 +119,57 @@ const getPhaseIconClass = (phase: StageResp): string => {
   width: 100%;
 }
 
-/* 隐藏 Arco Steps 默认图标样式 */
-:deep(.arco-steps-item-icon) {
-  background: transparent !important;
+/* 完全清除 Arco Steps 默认图标样式 - 使用更激进的策略 */
+:deep(.arco-steps-item-icon),
+:deep(.arco-steps-icon) {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: none !important;
   border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
-:deep(.arco-steps-item-icon .arco-icon) {
-  display: none;
+/* 清除所有伪元素 */
+:deep(.arco-steps-item-icon::before),
+:deep(.arco-steps-item-icon::after),
+:deep(.arco-steps-icon::before),
+:deep(.arco-steps-icon::after) {
+  content: none !important;
+  display: none !important;
+}
+
+/* 隐藏所有默认的内部图标元素 */
+:deep(.arco-steps-item-icon .arco-icon),
+:deep(.arco-steps-icon .arco-icon),
+:deep(.arco-steps-item-icon > *:not(.step-icon)),
+:deep(.arco-steps-icon > *:not(.step-icon)) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* 覆盖所有状态下的默认样式 */
+:deep(.arco-steps-item-process .arco-steps-item-icon),
+:deep(.arco-steps-item-process .arco-steps-icon),
+:deep(.arco-steps-item-finish .arco-steps-item-icon),
+:deep(.arco-steps-item-finish .arco-steps-icon),
+:deep(.arco-steps-item-wait .arco-steps-item-icon),
+:deep(.arco-steps-item-wait .arco-steps-icon),
+:deep(.arco-steps-item-error .arco-steps-item-icon),
+:deep(.arco-steps-item-error .arco-steps-icon) {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
 }
 
 :deep(.arco-steps-item-title) {

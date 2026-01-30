@@ -9,7 +9,7 @@
         :status="getRoundStatus(round.roundType)"
       >
         <template #icon>
-          <div class="step-icon">
+          <div class="step-icon" :class="getRoundIconClass(round.roundType)">
             {{ index + 1 }}
           </div>
         </template>
@@ -71,6 +71,16 @@ const getRoundStatus = (type: RoundType): string => {
   }
   return statusMap[type] || 'process'
 }
+
+/** 获取图标样式类 */
+const getRoundIconClass = (type: RoundType): string => {
+  const classMap = {
+    [RoundType.AUDIT]: 'icon-green',
+    [RoundType.REVIEW]: 'icon-blue',
+    [RoundType.DECISION]: 'icon-orange',
+  }
+  return classMap[type] || 'icon-blue'
+}
 </script>
 
 <style scoped>
@@ -82,6 +92,59 @@ const getRoundStatus = (type: RoundType): string => {
   padding: 40px 20px;
   background: linear-gradient(90deg, #f0f7ff 0%, #e8f4ff 100%);
   border-radius: 8px;
+}
+
+/* 完全清除 Arco Steps 默认图标样式 - 使用更激进的策略 */
+:deep(.arco-steps-item-icon),
+:deep(.arco-steps-icon) {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* 清除所有伪元素 */
+:deep(.arco-steps-item-icon::before),
+:deep(.arco-steps-item-icon::after),
+:deep(.arco-steps-icon::before),
+:deep(.arco-steps-icon::after) {
+  content: none !important;
+  display: none !important;
+}
+
+/* 隐藏所有默认的内部图标元素 */
+:deep(.arco-steps-item-icon .arco-icon),
+:deep(.arco-steps-icon .arco-icon),
+:deep(.arco-steps-item-icon > *:not(.step-icon)),
+:deep(.arco-steps-icon > *:not(.step-icon)) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* 覆盖所有状态下的默认样式 */
+:deep(.arco-steps-item-process .arco-steps-item-icon),
+:deep(.arco-steps-item-process .arco-steps-icon),
+:deep(.arco-steps-item-finish .arco-steps-item-icon),
+:deep(.arco-steps-item-finish .arco-steps-icon),
+:deep(.arco-steps-item-wait .arco-steps-item-icon),
+:deep(.arco-steps-item-wait .arco-steps-icon),
+:deep(.arco-steps-item-error .arco-steps-item-icon),
+:deep(.arco-steps-item-error .arco-steps-icon) {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
 }
 
 :deep(.arco-steps-item-title) {
@@ -99,11 +162,33 @@ const getRoundStatus = (type: RoundType): string => {
   height: 32px;
   line-height: 32px;
   text-align: center;
-  background: linear-gradient(135deg, #3370ff 0%, #3491fa 100%);
   color: white;
   border-radius: 50%;
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(51, 112, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* 审核阶段 - 绿色 */
+.step-icon.icon-green {
+  background: linear-gradient(135deg, #00b42a 0%, #23c343 100%);
+  box-shadow: 0 2px 8px rgba(0, 180, 42, 0.3);
+}
+
+/* 评审阶段 - 蓝色 */
+.step-icon.icon-blue {
+  background: linear-gradient(135deg, #3370ff 0%, #3491fa 100%);
+  box-shadow: 0 2px 8px rgba(51, 112, 255, 0.3);
+}
+
+/* 决策阶段 - 橙色 */
+.step-icon.icon-orange {
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  box-shadow: 0 2px 8px rgba(255, 125, 0, 0.3);
 }
 
 .empty-flow {
