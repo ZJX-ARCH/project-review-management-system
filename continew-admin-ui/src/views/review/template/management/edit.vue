@@ -36,11 +36,20 @@
               </a-col>
               <a-col :span="12">
                 <a-form-item label="模板编码" field="templateCode">
-                  <a-input
-                    v-model="formData.templateCode"
-                    placeholder="自动生成"
-                    disabled
-                  />
+                  <a-input-group>
+                    <a-input
+                      v-model="formData.templateCode"
+                      placeholder="请输入模板编码或点击自动生成"
+                      :max-length="20"
+                      show-word-limit
+                    />
+                    <a-button
+                      :disabled="generateCodeDisabled"
+                      @click="handleGenerateCode"
+                    >
+                      {{ generateCodeText }}
+                    </a-button>
+                  </a-input-group>
                 </a-form-item>
               </a-col>
             </a-row>
@@ -126,6 +135,13 @@ const isCreate = computed(() => !route.params.id)
 // 加载状态
 const loading = ref(false)
 const saveLoading = ref(false)
+
+// 自动生成编码按钮状态
+const generateCodeDisabled = ref(false)
+const generateCodeCooldown = ref(0)
+const generateCodeText = computed(() => {
+  return generateCodeCooldown.value > 0 ? `${generateCodeCooldown.value}s` : '自动生成'
+})
 
 // 表单引用
 const formRef = ref<FormInstance>()
@@ -266,6 +282,26 @@ const generateCode = async () => {
   }
 }
 
+/** 处理自动生成编码 */
+const handleGenerateCode = async () => {
+  if (generateCodeDisabled.value)
+    return
+
+  await generateCode()
+
+  // 开始5秒冷却
+  generateCodeDisabled.value = true
+  generateCodeCooldown.value = 5
+
+  const timer = setInterval(() => {
+    generateCodeCooldown.value--
+    if (generateCodeCooldown.value <= 0) {
+      clearInterval(timer)
+      generateCodeDisabled.value = false
+    }
+  }, 1000)
+}
+
 /** 保存 */
 const handleSave = async () => {
   const valid = await formRef.value?.validate()
@@ -324,6 +360,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 16px;
   padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .form-card,
