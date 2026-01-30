@@ -126,6 +126,7 @@ export interface MenuResp {
   isExternal: boolean
   isCache: boolean
   isHidden: boolean
+  showInTabs: boolean
   permission: string
   sort: number
   status: 1 | 2

@@ -123,6 +123,12 @@ public class RouteResp implements Serializable {
     private Integer sort;
 
     /**
+     * 是否在页签中显示
+     */
+    @Schema(description = "是否在页签中显示", example = "true")
+    private Boolean showInTabs;
+
+    /**
      * 子路由列表
      */
     @Schema(description = "子路由列表")

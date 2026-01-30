@@ -151,6 +151,7 @@ public class AuthServiceImpl implements AuthService {
             tree.putExtra("isCache", m.getIsCache());
             tree.putExtra("isHidden", m.getIsHidden());
             tree.putExtra("permission", m.getPermission());
+            tree.putExtra("showInTabs", m.getShowInTabs());
         });
         return BeanUtil.copyToList(treeList, RouteResp.class);
     }

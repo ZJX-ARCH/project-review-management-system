@@ -122,4 +122,10 @@ public class MenuResp extends BaseResp {
      */
     @Schema(description = "状态", example = "1")
     private DisEnableStatusEnum status;
+
+    /**
+     * 是否在页签中显示
+     */
+    @Schema(description = "是否在页签中显示", example = "true")
+    private Boolean showInTabs;
 }

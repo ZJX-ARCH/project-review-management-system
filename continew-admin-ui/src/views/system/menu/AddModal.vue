@@ -121,6 +121,18 @@
             />
           </a-form-item>
         </a-col>
+        <a-col :xs="12" :sm="12" :md="8" :lg="8" :xl="8" :xxl="8">
+          <a-form-item v-if="form.type === 2" label="页签显示" field="showInTabs">
+            <a-switch
+              v-model="form.showInTabs"
+              :checked-value="true"
+              :unchecked-value="false"
+              checked-text="是"
+              unchecked-text="否"
+              type="round"
+            />
+          </a-form-item>
+        </a-col>
       </a-row>
       <a-form-item label="菜单排序" field="sort">
         <a-input-number v-model="form.sort" placeholder="请输入菜单排序" :min="1" mode="button" style="width: 150px" />
@@ -140,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import { type ColProps, type FormInstance, Message, type TreeNodeData } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { mapTree } from 'xe-utils'
@@ -175,6 +188,7 @@ const [form, resetForm] = useResetReactive({
   isExternal: false,
   isCache: false,
   isHidden: false,
+  showInTabs: true,
   status: 1,
 })
 
@@ -217,6 +231,17 @@ const inputComponentName = () => {
 const onChangeType = () => {
   formRef.value?.clearValidate()
 }
+
+// 监听路径变化，智能设置页签显示
+watch(() => form.path, (newPath: string | undefined) => {
+  if (form.type === 2 && newPath) {
+    // 如果路径包含 edit/add/detail/form 等关键词，默认不显示页签
+    const shouldHideTabs = /\/(edit|add|detail|form|create|update)($|\/)/.test(newPath)
+    if (shouldHideTabs && form.showInTabs !== false) {
+      form.showInTabs = false
+    }
+  }
+})
 
 // 转换为菜单树
 const menuSelectTree = computed(() => {

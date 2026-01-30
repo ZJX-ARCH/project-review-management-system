@@ -106,4 +106,9 @@ public class MenuDO extends BaseDO {
      * 状态
      */
     private DisEnableStatusEnum status;
+
+    /**
+     * 是否在页签中显示
+     */
+    private Boolean showInTabs;
 }
