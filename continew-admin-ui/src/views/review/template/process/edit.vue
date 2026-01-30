@@ -24,30 +24,35 @@
             :rules="formRules"
             layout="vertical"
           >
-            <a-form-item label="模板名称" field="templateName" required>
-              <a-input
-                v-model="formData.templateName"
-                placeholder="请输入模板名称"
-                :max-length="100"
-              />
-            </a-form-item>
-
-            <a-form-item label="模板编码" field="templateCode">
-              <a-input-group>
-                <a-input
-                  v-model="formData.templateCode"
-                  placeholder="请输入模板编码或点击自动生成"
-                  :max-length="20"
-                  show-word-limit
-                />
-                <a-button
-                  :disabled="generateCodeDisabled"
-                  @click="handleGenerateCode"
-                >
-                  {{ generateCodeText }}
-                </a-button>
-              </a-input-group>
-            </a-form-item>
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="模板名称" field="templateName" required>
+                  <a-input
+                    v-model="formData.templateName"
+                    placeholder="请输入模板名称"
+                    :max-length="100"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="模板编码" field="templateCode">
+                  <a-input-group>
+                    <a-input
+                      v-model="formData.templateCode"
+                      placeholder="请输入模板编码或点击自动生成"
+                      :max-length="20"
+                      show-word-limit
+                    />
+                    <a-button
+                      :disabled="generateCodeDisabled"
+                      @click="handleGenerateCode"
+                    >
+                      {{ generateCodeText }}
+                    </a-button>
+                  </a-input-group>
+                </a-form-item>
+              </a-col>
+            </a-row>
 
             <a-row :gutter="16">
               <a-col :span="8">
