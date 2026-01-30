@@ -2,6 +2,7 @@
   <a-card class="phase-config-card" :bordered="true">
     <template #title>
       <a-space>
+        <a-tag color="arcoblue" size="small">阶段{{ phase.stageOrder }}</a-tag>
         <span>{{ phase.stageName || '未命名阶段' }}</span>
         <a-tag :color="getPhaseColor(phase.stageType)" size="small">
           {{ getPhaseTypeName(phase.stageType) }}
@@ -10,65 +11,26 @@
     </template>
     <template #extra>
       <a-space>
-        <a-button v-if="!isFirst" size="small" @click="$emit('move-up')">
+        <a-button v-if="canMoveUp" size="small" @click="$emit('move-up')">
           <template #icon><icon-arrow-up /></template>
         </a-button>
-        <a-button v-if="!isLast" size="small" @click="$emit('move-down')">
+        <a-button v-if="canMoveDown" size="small" @click="$emit('move-down')">
           <template #icon><icon-arrow-down /></template>
         </a-button>
-        <a-button size="small" status="danger" @click="handleDelete">
+        <a-button v-if="canDelete" size="small" status="danger" @click="handleDelete">
           <template #icon><icon-delete /></template>
         </a-button>
       </a-space>
     </template>
 
     <a-form :model="localPhase" layout="vertical">
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="阶段名称" required>
-            <a-input
-              v-model="localPhase.stageName"
-              placeholder="请输入阶段名称"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="阶段类型" required>
-            <a-select
-              v-model="localPhase.stageType"
-              placeholder="请选择阶段类型"
-              @change="handleUpdate"
-            >
-              <a-option :value="StageType.KICKOFF">立项</a-option>
-              <a-option :value="StageType.EXECUTION">执行</a-option>
-              <a-option :value="StageType.ACCEPTANCE">验收</a-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="阶段顺序">
-            <a-input-number
-              v-model="localPhase.stageOrder"
-              :min="1"
-              :style="{ width: '100%' }"
-              disabled
-            />
-            <template #extra>
-              <span class="form-tip">顺序自动管理，可通过拖拽调整</span>
-            </template>
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="是否必须">
-            <a-checkbox v-model="localPhase.isRequired" @change="handleUpdate">
-              必须阶段
-            </a-checkbox>
-          </a-form-item>
-        </a-col>
-      </a-row>
+      <a-form-item label="阶段名称" required>
+        <a-input
+          v-model="localPhase.stageName"
+          placeholder="请输入阶段名称"
+          @change="handleUpdate"
+        />
+      </a-form-item>
     </a-form>
   </a-card>
 </template>
@@ -104,6 +66,34 @@ const localPhase = ref<StageReq>({ ...props.phase })
 watch(() => props.phase, (newVal) => {
   localPhase.value = { ...newVal }
 }, { deep: true })
+
+/** 是否可以上移 */
+const canMoveUp = computed(() => {
+  // 立项阶段不能上移（第一个）
+  if (props.phase.stageType === StageType.KICKOFF)
+    return false
+  // 执行阶段如果在第二个位置（立项后面）不能上移
+  if (props.isFirst)
+    return false
+  return true
+})
+
+/** 是否可以下移 */
+const canMoveDown = computed(() => {
+  // 验收阶段不能下移（最后一个）
+  if (props.phase.stageType === StageType.ACCEPTANCE)
+    return false
+  // 执行阶段如果在倒数第二个位置（验收前面）不能下移
+  if (props.isLast)
+    return false
+  return true
+})
+
+/** 是否可以删除 */
+const canDelete = computed(() => {
+  // 立项和验收阶段不能删除
+  return props.phase.stageType === StageType.EXECUTION
+})
 
 /** 获取阶段类型名称 */
 const getPhaseTypeName = (type: StageType): string => {

@@ -77,15 +77,15 @@
           <template #extra>
             <a-button type="primary" @click="handleAddPhase">
               <template #icon><icon-plus /></template>
-              添加阶段
+              添加执行阶段
             </a-button>
           </template>
 
           <a-alert type="info" style="margin-bottom: 16px;">
             <ul style="margin: 0; padding-left: 20px;">
-              <li>阶段顺序必须从1开始连续，不能跳号</li>
-              <li>建议至少包含立项阶段和验收阶段</li>
-              <li>可以添加多个执行阶段</li>
+              <li>立项和验收阶段为固定阶段，不可删除</li>
+              <li>可在立项和验收之间添加多个执行阶段</li>
+              <li>阶段顺序可通过上移/下移按钮调整</li>
             </ul>
           </a-alert>
 
@@ -187,15 +187,36 @@ const formRules = {
 // 阶段列表
 const phases = ref<StageReq[]>([])
 
-/** 添加阶段 */
+/** 初始化默认阶段（立项和验收） */
+const initDefaultPhases = () => {
+  phases.value = [
+    {
+      stageName: '立项阶段',
+      stageType: StageType.KICKOFF,
+      stageOrder: 1,
+      isRequired: true,
+    },
+    {
+      stageName: '验收阶段',
+      stageType: StageType.ACCEPTANCE,
+      stageOrder: 2,
+      isRequired: true,
+    },
+  ]
+}
+
+/** 添加执行阶段 */
 const handleAddPhase = () => {
-  const newOrder = phases.value.length + 1
-  phases.value.push({
-    stageName: `阶段${newOrder}`,
+  // 在验收阶段之前插入执行阶段
+  const newOrder = phases.value.length
+  phases.value.splice(phases.value.length - 1, 0, {
+    stageName: `执行阶段${newOrder - 1}`,
     stageType: StageType.EXECUTION,
     stageOrder: newOrder,
     isRequired: true,
   })
+  // 重新分配顺序
+  reorderPhases()
 }
 
 /** 更新阶段 */
@@ -205,7 +226,9 @@ const handlePhaseUpdate = (index: number, phase: StageReq) => {
 
 /** 上移阶段 */
 const handleMoveUp = (index: number) => {
-  if (index === 0)
+  // 不能移动立项阶段（index=0）
+  // 执行阶段不能移动到立项之前（index=1时不能上移）
+  if (index <= 1)
     return
 
   ;[phases.value[index], phases.value[index - 1]] = [phases.value[index - 1], phases.value[index]]
@@ -216,7 +239,9 @@ const handleMoveUp = (index: number) => {
 
 /** 下移阶段 */
 const handleMoveDown = (index: number) => {
-  if (index === phases.value.length - 1)
+  // 不能移动验收阶段（最后一个）
+  // 执行阶段不能移动到验收之后（倒数第二个时不能下移）
+  if (index >= phases.value.length - 2)
     return
 
   ;[phases.value[index], phases.value[index + 1]] = [phases.value[index + 1], phases.value[index]]
@@ -242,25 +267,29 @@ const reorderPhases = () => {
 
 /** 验证阶段配置 */
 const validatePhases = (): boolean => {
-  if (phases.value.length === 0) {
-    Message.warning('请至少添加一个阶段')
+  if (phases.value.length < 2) {
+    Message.warning('至少需要立项和验收两个阶段')
     return false
   }
 
-  // 检查顺序是否连续
-  const orders = phases.value.map(p => p.stageOrder).sort((a, b) => a - b)
-  for (let i = 0; i < orders.length; i++) {
-    if (orders[i] !== i + 1) {
-      Message.warning('阶段顺序必须从1开始连续')
+  // 检查第一个必须是立项
+  if (phases.value[0].stageType !== StageType.KICKOFF) {
+    Message.warning('第一个阶段必须是立项阶段')
+    return false
+  }
+
+  // 检查最后一个必须是验收
+  if (phases.value[phases.value.length - 1].stageType !== StageType.ACCEPTANCE) {
+    Message.warning('最后一个阶段必须是验收阶段')
+    return false
+  }
+
+  // 检查阶段名称不能为空
+  for (const phase of phases.value) {
+    if (!phase.stageName || phase.stageName.trim() === '') {
+      Message.warning('阶段名称不能为空')
       return false
     }
-  }
-
-  // 检查是否有重复顺序
-  const orderSet = new Set(orders)
-  if (orderSet.size !== orders.length) {
-    Message.warning('阶段顺序不能重复')
-    return false
   }
 
   return true
@@ -372,6 +401,8 @@ const handleBack = () => {
 onMounted(async () => {
   if (isCreate.value) {
     await generateCode()
+    // 初始化默认阶段（立项和验收）
+    initDefaultPhases()
   }
   else {
     await loadDetail()
