@@ -5,24 +5,24 @@
 
 -- 评审流程模板 - 新建页面（隐藏菜单）
 INSERT INTO `sys_menu`
-(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `permission`, `sort`, `status`, `create_user`, `create_time`)
+(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `sort`, `status`, `create_user`, `create_time`)
 VALUES
-(1737201291121, '新建评审流程模板', 1737201291101, 2, '/review/template/process/add', 'ProcessTemplateAdd', 'review/template/process/edit', b'0', b'0', b'1', 'review:template:process:create', 5, 1, 1, NOW());
+(1737201291121, '新建评审流程模板', 1737201291101, 2, '/review/template/process/add', 'ProcessTemplateAdd', 'review/template/process/edit', b'0', b'0', b'1', 5, 1, 1, NOW());
 
 -- 评审流程模板 - 编辑页面（隐藏菜单）
 INSERT INTO `sys_menu`
-(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `permission`, `sort`, `status`, `create_user`, `create_time`)
+(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `sort`, `status`, `create_user`, `create_time`)
 VALUES
-(1737201291122, '编辑评审流程模板', 1737201291101, 2, '/review/template/process/edit/:id', 'ProcessTemplateEdit', 'review/template/process/edit', b'0', b'0', b'1', 'review:template:process:update', 6, 1, 1, NOW());
+(1737201291122, '编辑评审流程模板', 1737201291101, 2, '/review/template/process/edit/:id', 'ProcessTemplateEdit', 'review/template/process/edit', b'0', b'0', b'1', 6, 1, 1, NOW());
 
 -- 管理流程模板 - 新建页面（隐藏菜单）
 INSERT INTO `sys_menu`
-(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `permission`, `sort`, `status`, `create_user`, `create_time`)
+(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `sort`, `status`, `create_user`, `create_time`)
 VALUES
-(1737201291221, '新建管理流程模板', 1737201291201, 2, '/review/template/management/add', 'ManagementTemplateAdd', 'review/template/management/edit', b'0', b'0', b'1', 'review:template:management:create', 5, 1, 1, NOW());
+(1737201291221, '新建管理流程模板', 1737201291201, 2, '/review/template/management/add', 'ManagementTemplateAdd', 'review/template/management/edit', b'0', b'0', b'1', 5, 1, 1, NOW());
 
 -- 管理流程模板 - 编辑页面（隐藏菜单）
 INSERT INTO `sys_menu`
-(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `permission`, `sort`, `status`, `create_user`, `create_time`)
+(`id`, `title`, `parent_id`, `type`, `path`, `name`, `component`, `is_external`, `is_cache`, `is_hidden`, `sort`, `status`, `create_user`, `create_time`)
 VALUES
-(1737201291222, '编辑管理流程模板', 1737201291201, 2, '/review/template/management/edit/:id', 'ManagementTemplateEdit', 'review/template/management/edit', b'0', b'0', b'1', 'review:template:management:update', 6, 1, 1, NOW());
+(1737201291222, '编辑管理流程模板', 1737201291201, 2, '/review/template/management/edit/:id', 'ManagementTemplateEdit', 'review/template/management/edit', b'0', b'0', b'1', 6, 1, 1, NOW());
