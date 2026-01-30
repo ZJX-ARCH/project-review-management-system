@@ -229,7 +229,7 @@ const reset = () => {
 
 // 新增
 const onAdd = () => {
-  router.push('/review/template/management/create')
+  router.push('/review/template/management/add')
 }
 
 // 查看详情

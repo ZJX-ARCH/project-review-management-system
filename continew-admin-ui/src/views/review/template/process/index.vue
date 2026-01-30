@@ -234,7 +234,7 @@ const reset = () => {
 
 // 新增
 const onAdd = () => {
-  router.push('/review/template/process/edit')
+  router.push('/review/template/process/add')
 }
 
 // 查看详情
