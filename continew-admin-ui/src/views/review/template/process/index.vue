@@ -172,7 +172,7 @@ const columns: TableInstance['columns'] = [
     title: '轮次配置',
     dataIndex: 'roundsSummary',
     slotName: 'roundsSummary',
-    minWidth: 250,
+    minWidth: 300,
   },
   {
     title: '启用状态',
@@ -192,7 +192,9 @@ const columns: TableInstance['columns'] = [
   {
     title: '创建时间',
     dataIndex: 'createTime',
-    width: 180,
+    width: 165,
+    ellipsis: true,
+    tooltip: true,
   },
   {
     title: '创建人',

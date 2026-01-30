@@ -29,7 +29,7 @@ export function updateManagementTemplate(id: string | number, data: ManagementTe
 
 /** @desc 删除管理流程模板 */
 export function deleteManagementTemplate(ids: (string | number)[]) {
-  return http.del(`${BASE_URL}`, { ids })
+  return http.del(`${BASE_URL}`, ids)
 }
 
 /** @desc 启用/禁用管理流程模板 */
