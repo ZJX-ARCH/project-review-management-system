@@ -75,9 +75,10 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import type { TableInstance } from '@arco-design/web-vue'
 import { Message, Modal } from '@arco-design/web-vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import RoundsSummary from './components/RoundsSummary.vue'
 import ProcessTemplateDetail from './components/ProcessTemplateDetail.vue'
 import {
@@ -94,6 +95,7 @@ import type { ColumnItem } from '@/components/GiForm'
 
 defineOptions({ name: 'ProcessTemplate' })
 
+const route = useRoute()
 const router = useRouter()
 
 // 查询表单
@@ -284,4 +286,11 @@ const onDelete = (record: ProcessTemplateResp) => {
     },
   )
 }
+
+// 监听路由参数变化，从编辑页返回时触发刷新
+watch(() => route.query.t, (newVal) => {
+  if (newVal) {
+    search()
+  }
+})
 </script>

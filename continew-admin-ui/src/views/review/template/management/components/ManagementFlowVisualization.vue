@@ -55,9 +55,7 @@ const getPhaseDescription = (phase: StageResp): string => {
     [StageType.EXECUTION]: '执行',
     [StageType.ACCEPTANCE]: '验收',
   }
-  const typeName = typeMap[phase.stageType] || phase.stageType
-  const requiredText = phase.isRequired ? '必须' : '可选'
-  return `${typeName} - ${requiredText}`
+  return typeMap[phase.stageType] || phase.stageType
 }
 
 /** 获取阶段状态（控制步骤条颜色） */
@@ -82,11 +80,6 @@ const getPhaseIconClass = (phase: StageResp): string => {
   }
   else if (phase.stageType === StageType.ACCEPTANCE) {
     classes.push('icon-orange')
-  }
-
-  // 可选阶段使用灰色
-  if (!phase.isRequired) {
-    classes.push('icon-gray')
   }
 
   return classes.join(' ')

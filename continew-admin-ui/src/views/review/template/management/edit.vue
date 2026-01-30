@@ -382,7 +382,7 @@ const handleSave = async () => {
       Message.success('更新成功')
     }
 
-    handleBack()
+    handleBack(true)
   }
   catch (error) {
     console.error('保存失败:', error)
@@ -393,8 +393,17 @@ const handleSave = async () => {
 }
 
 /** 返回 */
-const handleBack = () => {
-  router.back()
+const handleBack = (needRefresh = false) => {
+  if (needRefresh) {
+    // 保存成功后，使用 replace 返回并添加时间戳参数触发列表刷新
+    router.replace({
+      path: '/review/template/management',
+      query: { t: Date.now().toString() },
+    })
+  }
+  else {
+    router.back()
+  }
 }
 
 // 初始化
