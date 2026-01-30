@@ -261,9 +261,21 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
         Page<ManagementTemplateDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
         Page<ManagementTemplateDO> resultPage = baseMapper.selectPage(page, wrapper);
 
-        // 步骤4: 转换为响应对象列表
+        // 步骤4: 转换为响应对象列表并查询阶段数据
         List<ManagementTemplateResp> respList = BeanUtil.copyToList(resultPage.getRecords(),
             ManagementTemplateResp.class);
+
+        // 为每个模板查询阶段数据
+        for (ManagementTemplateResp resp : respList) {
+            QueryWrapper<ManagementStageDO> stageWrapper = new QueryWrapper<>();
+            stageWrapper.eq("template_id", resp.getId());
+            stageWrapper.eq("deleted", 0);
+            stageWrapper.orderByAsc("stage_order");
+            List<ManagementStageDO> stageEntities = stageMapper.selectList(stageWrapper);
+            List<ManagementStageResp> stageList = BeanUtil.copyToList(stageEntities,
+                ManagementStageResp.class);
+            resp.setStages(stageList);
+        }
 
         // 步骤5: 组装分页响应对象
         PageResp<ManagementTemplateResp> pageResp = new PageResp<>();

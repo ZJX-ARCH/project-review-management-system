@@ -341,10 +341,22 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         Page<ProcessTemplateDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
         Page<ProcessTemplateDO> resultPage = baseMapper.selectPage(page, wrapper);
 
-        // 步骤4: 转换为响应对象列表
-        // 注意：分页列表不查询轮次名称详情（性能考虑），只显示轮次数量
+        // 步骤4: 转换为响应对象列表并查询轮次数据
         List<ProcessTemplateResp> respList = BeanUtil.copyToList(resultPage.getRecords(),
             ProcessTemplateResp.class);
+
+        // 为每个模板查询轮次数据
+        for (ProcessTemplateResp resp : respList) {
+            QueryWrapper<ProcessTemplateRoundNameDO> roundNameWrapper = new QueryWrapper<>();
+            roundNameWrapper.eq("template_id", resp.getId());
+            roundNameWrapper.eq("deleted", 0);
+            roundNameWrapper.orderByAsc("round_type", "round_sequence");
+            List<ProcessTemplateRoundNameDO> roundNameEntities = roundNameMapper.selectList(
+                roundNameWrapper);
+            List<RoundNameResp> roundNameList = BeanUtil.copyToList(roundNameEntities,
+                RoundNameResp.class);
+            resp.setRoundNames(roundNameList);
+        }
 
         // 步骤5: 组装分页响应对象
         PageResp<ProcessTemplateResp> pageResp = new PageResp<>();

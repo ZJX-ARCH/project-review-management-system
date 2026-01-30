@@ -29,7 +29,7 @@ export function updateProcessTemplate(id: string | number, data: ProcessTemplate
 
 /** @desc 删除评审流程模板 */
 export function deleteProcessTemplate(ids: (string | number)[]) {
-  return http.del(`${BASE_URL}`, ids)
+  return http.del(`${BASE_URL}`, { ids })
 }
 
 /** @desc 启用/禁用评审流程模板 */
