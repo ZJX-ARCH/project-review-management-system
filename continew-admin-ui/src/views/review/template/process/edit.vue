@@ -56,7 +56,7 @@
 
             <a-row :gutter="16">
               <a-col :span="8">
-                <a-form-item label="审核轮次数量" field="auditRounds" required>
+                <a-form-item label="审核轮次数量 (0-10)" field="auditRounds">
                   <a-input-number
                     v-model="formData.auditRounds"
                     :min="0"
@@ -67,7 +67,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="评审轮次数量" field="reviewRounds" required>
+                <a-form-item label="评审轮次数量 (0-10)" field="reviewRounds">
                   <a-input-number
                     v-model="formData.reviewRounds"
                     :min="0"
@@ -78,7 +78,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="决策轮次数量" field="decisionRounds" required>
+                <a-form-item label="决策轮次数量 (1-10)" field="decisionRounds">
                   <a-input-number
                     v-model="formData.decisionRounds"
                     :min="1"
