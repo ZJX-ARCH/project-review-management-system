@@ -1,6 +1,6 @@
 package top.continew.admin.review.template.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,7 +35,7 @@ public class ManagementTemplateController {
      */
     @PostMapping
     @Operation(summary = "创建管理模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:management:create")
     public R<Long> create(@Valid @RequestBody ManagementTemplateReq req) {
         Long id = managementTemplateService.create(req);
         return R.ok(id);
@@ -46,7 +46,7 @@ public class ManagementTemplateController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "修改管理模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:management:update")
     public R<Void> update(@PathVariable Long id,
                           @Valid @RequestBody ManagementTemplateReq req) {
         managementTemplateService.update(id, req);
@@ -58,7 +58,7 @@ public class ManagementTemplateController {
      */
     @DeleteMapping
     @Operation(summary = "删除管理模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:management:delete")
     public R<Void> delete(@RequestBody List<Long> ids) {
         managementTemplateService.delete(ids);
         return R.ok();
@@ -69,7 +69,7 @@ public class ManagementTemplateController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询模板详情")
-    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
+    @SaCheckPermission("review:template:management:query")
     public R<ManagementTemplateResp> getDetail(@PathVariable Long id) {
         ManagementTemplateResp detail = managementTemplateService.getDetail(id);
         return R.ok(detail);
@@ -80,7 +80,7 @@ public class ManagementTemplateController {
      */
     @GetMapping
     @Operation(summary = "分页查询模板列表")
-    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
+    @SaCheckPermission("review:template:management:query")
     public R<PageResp<ManagementTemplateResp>> page(@Valid ManagementTemplateQuery query,
                                                       @Valid PageQuery pageQuery) {
         PageResp<ManagementTemplateResp> page = managementTemplateService.page(query, pageQuery);
@@ -92,7 +92,7 @@ public class ManagementTemplateController {
      */
     @PutMapping("/{id}/status")
     @Operation(summary = "启用/禁用模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:management:status")
     public R<Void> updateStatus(@PathVariable Long id,
                                  @RequestParam Integer status) {
         managementTemplateService.updateStatus(id, status);
@@ -104,7 +104,7 @@ public class ManagementTemplateController {
      */
     @GetMapping("/generate-code")
     @Operation(summary = "生成模板编码")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:management:create")
     public R<String> generateCode() {
         String code = managementTemplateService.generateCode();
         return R.ok(code);

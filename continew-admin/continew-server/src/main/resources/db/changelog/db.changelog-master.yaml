@@ -15,6 +15,8 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/review/review_template_table.sql
   - include:
       file: db/changelog/mysql/plugin/review/review_template_data.sql
+  - include:
+      file: db/changelog/mysql/plugin/review/review_template_routes.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql
@@ -28,3 +30,9 @@ databaseChangeLog:
 #      file: db/changelog/postgresql/plugin/plugin_schedule.sql
 #  - include:
 #      file: db/changelog/postgresql/plugin/plugin_generator.sql
+#  - include:
+#      file: db/changelog/postgresql/plugin/review/review_template_table.sql
+#  - include:
+#      file: db/changelog/postgresql/plugin/review/review_template_data.sql
+#  - include:
+#      file: db/changelog/postgresql/plugin/review/review_template_routes.sql

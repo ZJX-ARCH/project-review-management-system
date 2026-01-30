@@ -1,6 +1,6 @@
 package top.continew.admin.review.template.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,7 +35,7 @@ public class ProcessTemplateController {
      */
     @PostMapping
     @Operation(summary = "创建流程模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:process:create")
     public R<Long> create(@Valid @RequestBody ProcessTemplateReq req) {
         Long id = processTemplateService.create(req);
         return R.ok(id);
@@ -46,7 +46,7 @@ public class ProcessTemplateController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "修改流程模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:process:update")
     public R<Void> update(@PathVariable Long id,
                           @Valid @RequestBody ProcessTemplateReq req) {
         processTemplateService.update(id, req);
@@ -58,7 +58,7 @@ public class ProcessTemplateController {
      */
     @DeleteMapping
     @Operation(summary = "删除流程模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:process:delete")
     public R<Void> delete(@RequestBody List<Long> ids) {
         processTemplateService.delete(ids);
         return R.ok();
@@ -69,7 +69,7 @@ public class ProcessTemplateController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "查询模板详情")
-    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
+    @SaCheckPermission("review:template:process:query")
     public R<ProcessTemplateResp> getDetail(@PathVariable Long id) {
         ProcessTemplateResp detail = processTemplateService.getDetail(id);
         return R.ok(detail);
@@ -80,7 +80,7 @@ public class ProcessTemplateController {
      */
     @GetMapping
     @Operation(summary = "分页查询模板列表")
-    @SaCheckRole({"FLOW_ADMIN", "TYPE_ADMIN"})
+    @SaCheckPermission("review:template:process:query")
     public R<PageResp<ProcessTemplateResp>> page(@Valid ProcessTemplateQuery query,
                                                    @Valid PageQuery pageQuery) {
         PageResp<ProcessTemplateResp> page = processTemplateService.page(query, pageQuery);
@@ -92,7 +92,7 @@ public class ProcessTemplateController {
      */
     @PutMapping("/{id}/status")
     @Operation(summary = "启用/禁用模板")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:process:status")
     public R<Void> updateStatus(@PathVariable Long id,
                                  @RequestParam Integer status) {
         processTemplateService.updateStatus(id, status);
@@ -104,7 +104,7 @@ public class ProcessTemplateController {
      */
     @GetMapping("/generate-code")
     @Operation(summary = "生成模板编码")
-    @SaCheckRole("FLOW_ADMIN")
+    @SaCheckPermission("review:template:process:create")
     public R<String> generateCode() {
         String code = processTemplateService.generateCode();
         return R.ok(code);
