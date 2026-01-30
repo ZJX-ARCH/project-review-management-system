@@ -69,8 +69,11 @@ watch(() => props.phase, (newVal) => {
 
 /** 是否可以上移 */
 const canMoveUp = computed(() => {
-  // 立项阶段不能上移（第一个）
+  // 立项阶段不能上移
   if (props.phase.stageType === StageType.KICKOFF)
+    return false
+  // 验收阶段不能上移
+  if (props.phase.stageType === StageType.ACCEPTANCE)
     return false
   // 执行阶段如果在第二个位置（立项后面）不能上移
   if (props.isFirst)
@@ -80,7 +83,10 @@ const canMoveUp = computed(() => {
 
 /** 是否可以下移 */
 const canMoveDown = computed(() => {
-  // 验收阶段不能下移（最后一个）
+  // 立项阶段不能下移
+  if (props.phase.stageType === StageType.KICKOFF)
+    return false
+  // 验收阶段不能下移
   if (props.phase.stageType === StageType.ACCEPTANCE)
     return false
   // 执行阶段如果在倒数第二个位置（验收前面）不能下移
