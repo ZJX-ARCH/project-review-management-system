@@ -23,27 +23,13 @@
     </template>
 
     <a-form :model="localRound" layout="vertical">
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="轮次名称" required>
-            <a-input
-              v-model="localRound.roundName"
-              placeholder="请输入轮次名称"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="轮次序号" required>
-            <a-input-number
-              v-model="localRound.roundSequence"
-              :min="1"
-              :style="{ width: '100%' }"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-        </a-col>
-      </a-row>
+      <a-form-item label="轮次名称" required>
+        <a-input
+          v-model="localRound.roundName"
+          placeholder="请输入轮次名称"
+          @change="handleUpdate"
+        />
+      </a-form-item>
     </a-form>
   </a-card>
 </template>

@@ -106,9 +106,8 @@
         <a-card title="轮次配置" :bordered="false" class="config-card">
           <a-alert type="info" style="margin-bottom: 16px;">
             <ul style="margin: 0; padding-left: 20px;">
-              <li>审核和评审轮次数量范围：0-10，决策轮次数量范围：1-10</li>
               <li>轮次名称将根据轮次数量自动生成，您可以手动修改</li>
-              <li>轮次序号必须从1开始连续，同类型内不能重复</li>
+              <li>轮次顺序可通过上移/下移按钮调整</li>
             </ul>
           </a-alert>
 
@@ -223,18 +222,6 @@ const formRules = {
   templateName: [
     { required: true, message: '请输入模板名称' },
     { minLength: 2, maxLength: 100, message: '模板名称长度为2-100个字符' },
-  ],
-  auditRounds: [
-    { required: true, message: '请输入审核轮次数量' },
-    { type: 'number', min: 0, max: 10, message: '审核轮次数量范围为0-10' },
-  ],
-  reviewRounds: [
-    { required: true, message: '请输入评审轮次数量' },
-    { type: 'number', min: 0, max: 10, message: '评审轮次数量范围为0-10' },
-  ],
-  decisionRounds: [
-    { required: true, message: '请输入决策轮次数量' },
-    { type: 'number', min: 1, max: 10, message: '决策轮次数量范围为1-10' },
   ],
 }
 
