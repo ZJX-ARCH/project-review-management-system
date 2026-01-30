@@ -1,16 +1,19 @@
 <template>
   <div v-if="roundSummary.length > 0" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-    <template v-for="(item, index) in roundSummary">
-      <a-tag :key="`tag-${item.type}`" :color="item.color" size="small">
+    <span
+      v-for="(item, index) in roundSummary"
+      :key="`round-${item.type}`"
+      style="display: contents;"
+    >
+      <a-tag :color="item.color" size="small">
         {{ item.name }} x{{ item.count }}
       </a-tag>
       <icon-arrow-right
         v-if="index < roundSummary.length - 1"
-        :key="`arrow-${item.type}`"
         :size="12"
         :style="{ color: 'var(--color-text-3)' }"
       />
-    </template>
+    </span>
   </div>
   <span v-else style="color: var(--color-text-3)">暂无配置</span>
 </template>
