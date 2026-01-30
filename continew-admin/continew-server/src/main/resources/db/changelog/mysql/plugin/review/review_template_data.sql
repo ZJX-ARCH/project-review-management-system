@@ -7,7 +7,7 @@
 INSERT INTO `review_process_template`
 (`id`, `template_name`, `template_code`, `description`, `audit_rounds`, `review_rounds`, `decision_rounds`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737205001001, '标准三轮审核流程', 'THREE_ROUND_AUDIT', '适用于重大项目的标准审核流程', 3, 1, 1, 1, 1, 1, NOW(), 0);
+(1737205001001, '标准三轮审核流程', 'PROC_THREE_AUDIT', '适用于重大项目的标准审核流程', 3, 1, 1, 1, 1, 1, NOW(), 0);
 
 -- 初始化轮次名称
 INSERT INTO `review_process_template_round_name`
@@ -23,7 +23,7 @@ VALUES
 INSERT INTO `review_management_template`
 (`id`, `template_name`, `template_code`, `description`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737206001001, '五阶段科研流程', 'FIVE_STAGE_RESEARCH', '适用于科研项目的标准管理流程', 1, 1, 1, NOW(), 0);
+(1737206001001, '五阶段科研流程', 'MGMT_FIVE_RESEARCH', '适用于科研项目的标准管理流程', 1, 1, 1, NOW(), 0);
 
 -- 初始化管理流程阶段（注意：计划天数由类型层配置，模板层不设置）
 INSERT INTO `review_management_stage`
