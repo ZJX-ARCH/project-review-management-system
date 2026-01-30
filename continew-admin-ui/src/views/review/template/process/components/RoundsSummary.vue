@@ -1,5 +1,5 @@
 <template>
-  <a-space v-if="roundSummary.length > 0" :size="4" wrap>
+  <div v-if="roundSummary.length > 0" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
     <template v-for="(item, index) in roundSummary">
       <a-tag :key="`tag-${item.type}`" :color="item.color" size="small">
         {{ item.name }} x{{ item.count }}
@@ -11,7 +11,7 @@
         :style="{ color: 'var(--color-text-3)' }"
       />
     </template>
-  </a-space>
+  </div>
   <span v-else style="color: var(--color-text-3)">暂无配置</span>
 </template>
 
