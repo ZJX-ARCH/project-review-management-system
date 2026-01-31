@@ -385,8 +385,8 @@
             </a-form-item>
             <a-form-item label="模板文件">
               <a-upload
-                :file-list="localField.fieldConfig.templateFile ? [localField.fieldConfig.templateFile] : []"
-                :limit="1"
+                :file-list="localField.fieldConfig.templateFiles || []"
+                :limit="10"
                 :custom-request="handleTemplateFileUpload"
                 @change="handleTemplateFileChange"
               >
@@ -676,30 +676,23 @@ const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
   if (!localField.value)
     return
 
-  if (fileList.length > 0) {
-    // 上传成功后，从响应中获取文件信息
-    const fileData = currentFile.response || {}
-
-    // 构建文件对象，确保包含所有必要信息
-    const templateFile = {
-      uid: currentFile.uid,
-      name: fileData.originalName || currentFile.name || '模板文件',
-      status: currentFile.status || 'done',
-      url: fileData.url || fileData.path || '',
+  // 保存文件列表
+  localField.value.fieldConfig.templateFiles = fileList.map((file: any) => {
+    const fileData = file.response || {}
+    return {
+      uid: file.uid,
+      name: fileData.originalName || file.name || '模板文件',
+      status: file.status || 'done',
+      url: fileData.url || fileData.path || file.url || '',
       response: fileData,
     }
+  })
 
-    localField.value.fieldConfig.templateFile = templateFile
-    localField.value.fieldConfig.templateUrl = fileData.url || fileData.path || ''
-
-    // 更新模板名称
-    if (!localField.value.fieldConfig.templateName || localField.value.fieldConfig.templateName === '模板文件') {
-      localField.value.fieldConfig.templateName = fileData.originalName || currentFile.name || '模板文件'
-    }
-  }
-  else {
-    localField.value.fieldConfig.templateFile = null
-    localField.value.fieldConfig.templateUrl = ''
+  // 更新模板名称（使用第一个文件的名称）
+  if (fileList.length > 0 && (!localField.value.fieldConfig.templateName || localField.value.fieldConfig.templateName === '模板文件')) {
+    const firstFile = fileList[0]
+    const fileData = firstFile.response || {}
+    localField.value.fieldConfig.templateName = fileData.originalName || firstFile.name || '模板文件'
   }
 
   handleUpdate()

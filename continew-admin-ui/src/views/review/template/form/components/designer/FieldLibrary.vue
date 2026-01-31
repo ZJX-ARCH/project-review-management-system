@@ -191,7 +191,7 @@ const advancedFields = [
     icon: 'icon-file',
     defaultConfig: {
       templateName: '模板文件',
-      templateUrl: '',
+      templateFiles: [],
       allowDownload: true,
       allowPreview: false,
       tips: '点击下载模板文件',

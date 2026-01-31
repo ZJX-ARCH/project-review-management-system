@@ -147,26 +147,36 @@
               <!-- 文件模板 -->
               <div v-else-if="field.fieldType === 'FILE_TEMPLATE'" class="file-template-field">
                 <a-space direction="vertical" fill>
-                  <a-space>
-                    <a-button
-                      v-if="field.fieldConfig?.allowDownload && field.fieldConfig?.templateUrl"
-                      type="primary"
-                      :disabled="field.isReadonly === true"
-                      @click="handleDownloadTemplate(field)"
+                  <div v-if="field.fieldConfig?.templateFiles && field.fieldConfig.templateFiles.length > 0">
+                    <div
+                      v-for="(file, fileIndex) in field.fieldConfig.templateFiles"
+                      :key="fileIndex"
+                      style="margin-bottom: 8px;"
                     >
-                      <icon-download />
-                      下载{{ field.fieldConfig.templateName || '模板文件' }}
-                    </a-button>
-                    <a-button
-                      v-if="field.fieldConfig?.allowPreview && field.fieldConfig?.templateUrl"
-                      type="outline"
-                      :disabled="field.isReadonly === true"
-                      @click="handlePreviewTemplate(field)"
-                    >
-                      <icon-eye />
-                      预览
-                    </a-button>
-                  </a-space>
+                      <a-space>
+                        <a-button
+                          v-if="field.fieldConfig?.allowDownload && file.url"
+                          type="primary"
+                          size="small"
+                          :disabled="field.isReadonly === true"
+                          @click="handleDownloadTemplateFile(file)"
+                        >
+                          <icon-download />
+                          下载 {{ file.name }}
+                        </a-button>
+                        <a-button
+                          v-if="field.fieldConfig?.allowPreview && file.url"
+                          type="outline"
+                          size="small"
+                          :disabled="field.isReadonly === true"
+                          @click="handlePreviewTemplateFile(file)"
+                        >
+                          <icon-eye />
+                          预览
+                        </a-button>
+                      </a-space>
+                    </div>
+                  </div>
                   <div v-if="field.fieldConfig?.tips" class="template-tips">
                     <icon-info-circle />
                     {{ field.fieldConfig.tips }}
@@ -420,25 +430,25 @@ const handleMoveTableRowDown = (fieldCode: string, rowIndex: number) => {
   }
 }
 
-// 下载模板文件
-const handleDownloadTemplate = (field: any) => {
-  const url = field.fieldConfig?.templateUrl
+// 下载单个模板文件
+const handleDownloadTemplateFile = (file: any) => {
+  const url = file.url
   if (!url) {
     return
   }
   // 创建一个隐藏的下载链接
   const link = document.createElement('a')
   link.href = url
-  link.download = field.fieldConfig?.templateName || '模板文件'
+  link.download = file.name || '模板文件'
   link.target = '_blank'
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
 }
 
-// 预览模板文件
-const handlePreviewTemplate = (field: any) => {
-  const url = field.fieldConfig?.templateUrl
+// 预览单个模板文件
+const handlePreviewTemplateFile = (file: any) => {
+  const url = file.url
   if (!url) {
     return
   }
