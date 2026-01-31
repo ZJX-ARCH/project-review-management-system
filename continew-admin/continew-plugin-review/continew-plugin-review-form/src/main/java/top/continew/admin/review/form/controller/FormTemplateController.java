@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.form.model.query.FormTemplateQuery;
 import top.continew.admin.review.form.model.req.FormTemplateReq;
 import top.continew.admin.review.form.model.resp.FormTemplateResp;
@@ -118,7 +119,7 @@ public class FormTemplateController {
     @PutMapping("/{id}/status")
     @Operation(summary = "启用/禁用模板")
     @SaCheckPermission("review:template:form:status")
-    public R<Void> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public R<Void> updateStatus(@PathVariable Long id, @RequestParam DisEnableStatusEnum status) {
         formTemplateService.updateStatus(id, status);
         return R.ok();
     }
