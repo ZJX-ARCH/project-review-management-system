@@ -190,7 +190,6 @@ const advancedFields = [
     label: '文件模板',
     icon: 'icon-file',
     defaultConfig: {
-      templateName: '模板文件',
       templateFiles: [],
       allowDownload: true,
       allowPreview: false,

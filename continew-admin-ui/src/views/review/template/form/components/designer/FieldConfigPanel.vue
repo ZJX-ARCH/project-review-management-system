@@ -376,13 +376,6 @@
 
           <!-- 文件模板 -->
           <template v-else-if="localField.fieldType === 'FILE_TEMPLATE'">
-            <a-form-item label="模板名称">
-              <a-input
-                v-model="localField.fieldConfig.templateName"
-                placeholder="请输入模板名称"
-                @change="handleUpdate"
-              />
-            </a-form-item>
             <a-form-item label="模板文件">
               <a-upload
                 :file-list="localField.fieldConfig.templateFiles || []"
@@ -687,13 +680,6 @@ const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
       response: fileData,
     }
   })
-
-  // 更新模板名称（使用第一个文件的名称）
-  if (fileList.length > 0 && (!localField.value.fieldConfig.templateName || localField.value.fieldConfig.templateName === '模板文件')) {
-    const firstFile = fileList[0]
-    const fileData = firstFile.response || {}
-    localField.value.fieldConfig.templateName = fileData.originalName || firstFile.name || '模板文件'
-  }
 
   handleUpdate()
 }
