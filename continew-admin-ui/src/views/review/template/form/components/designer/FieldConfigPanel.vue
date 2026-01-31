@@ -201,27 +201,39 @@
                 <div
                   v-for="(option, index) in localField.fieldConfig.options"
                   :key="index"
-                  class="option-item"
+                  class="option-card"
                 >
-                  <a-input
-                    v-model="option.label"
-                    placeholder="选项标签"
-                    size="small"
-                    @input="handleUpdate"
-                  />
-                  <a-input
-                    v-model="option.value"
-                    placeholder="选项值"
-                    size="small"
-                    @input="handleUpdate"
-                  />
-                  <a-button
-                    size="small"
-                    status="danger"
-                    @click="removeOption(index)"
-                  >
-                    <icon-delete />
-                  </a-button>
+                  <div class="option-header">
+                    <span class="option-index">选项 {{ index + 1 }}</span>
+                    <a-button
+                      size="mini"
+                      type="text"
+                      status="danger"
+                      @click="removeOption(index)"
+                    >
+                      <icon-delete />
+                    </a-button>
+                  </div>
+                  <div class="option-body">
+                    <div class="option-field">
+                      <label>选项标签</label>
+                      <a-input
+                        v-model="option.label"
+                        placeholder="请输入选项标签"
+                        size="small"
+                        @input="handleUpdate"
+                      />
+                    </div>
+                    <div class="option-field">
+                      <label>选项值</label>
+                      <a-input
+                        v-model="option.value"
+                        placeholder="请输入选项值"
+                        size="small"
+                        @input="handleUpdate"
+                      />
+                    </div>
+                  </div>
                 </div>
               </template>
               <a-empty v-else description="暂无选项" :style="{ marginBottom: '12px' }" />
@@ -436,13 +448,49 @@ const removeOption = (index: number) => {
         border-left: 3px solid rgb(var(--primary-6));
       }
 
-      .option-item {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 8px;
+      .option-card {
+        margin-bottom: 12px;
+        padding: 12px;
+        background: var(--color-bg-1);
+        border: 1px solid var(--color-border-2);
+        border-radius: 4px;
+        transition: all 0.2s;
 
-        :deep(.arco-input) {
-          flex: 1;
+        &:hover {
+          border-color: var(--color-border-3);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .option-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid var(--color-border-2);
+
+          .option-index {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-2);
+          }
+        }
+
+        .option-body {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+
+          .option-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            label {
+              font-size: 12px;
+              color: var(--color-text-3);
+            }
+          }
         }
       }
     }
