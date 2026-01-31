@@ -209,12 +209,16 @@ const fileColumns: TableColumnData[] = [
 
 // 加载详情
 const loadDetail = async () => {
-  if (!props.id)
+  if (!props.id) {
     return
+  }
 
   loading.value = true
   try {
-    templateData.value = await getFormTemplate(props.id)
+    const response = await getFormTemplate(props.id)
+    // 解包响应数据：如果response有data属性则使用data，否则使用response本身
+    const data = (response as any).data || response
+    templateData.value = data
   }
   catch (error) {
     console.error('加载模板详情失败:', error)

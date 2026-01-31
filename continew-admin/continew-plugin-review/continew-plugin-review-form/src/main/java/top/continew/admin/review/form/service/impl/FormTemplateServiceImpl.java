@@ -393,7 +393,6 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         resp.setFiles(fileRespList);
 
         // 4. 返回完整详情
-        log.info("查询表单模板详情成功, ID: {}, 字段数: {}", id, fieldRespList.size());
         return resp;
     }
 
