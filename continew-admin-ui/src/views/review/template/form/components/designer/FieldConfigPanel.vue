@@ -387,6 +387,7 @@
               <a-upload
                 :file-list="localField.fieldConfig.templateFile ? [localField.fieldConfig.templateFile] : []"
                 :limit="1"
+                :custom-request="handleTemplateFileUpload"
                 @change="handleTemplateFileChange"
               >
                 <template #upload-button>
@@ -527,7 +528,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { Message } from '@arco-design/web-vue'
+import type { RequestOption } from '@arco-design/web-vue'
 import type { FormFieldReq } from '@/apis/review'
+import { uploadFile } from '@/apis/system/file'
 
 defineOptions({ name: 'FieldConfigPanel' })
 
@@ -643,19 +647,50 @@ const handleUpdate = () => {
   }
 }
 
-// 处理模板文件上传
+// 处理模板文件上传请求
+const handleTemplateFileUpload = (options: RequestOption) => {
+  ;(async function requestWrap() {
+    const { onProgress, onError, onSuccess, fileItem, name = 'file' } = options
+    onProgress(20)
+    const formData = new FormData()
+    formData.append('parentPath', '/template/')
+    formData.append(name as string, fileItem.file as Blob)
+    try {
+      const res = await uploadFile(formData)
+      Message.success('上传成功')
+      onSuccess(res)
+    }
+    catch (error) {
+      onError(error)
+    }
+  })()
+  return {
+    abort() {
+      Message.error('上传已取消')
+    },
+  }
+}
+
+// 处理模板文件上传变化
 const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
   if (!localField.value)
     return
 
-  if (fileList.length > 0) {
-    localField.value.fieldConfig.templateFile = currentFile
-    localField.value.fieldConfig.templateUrl = currentFile.url || ''
+  if (fileList.length > 0 && currentFile.status === 'done') {
+    // 上传成功后，从响应中获取文件信息
+    const fileData = currentFile.response || {}
+    localField.value.fieldConfig.templateFile = {
+      uid: currentFile.uid,
+      name: currentFile.name,
+      status: 'done',
+      url: fileData.url || fileData.path || '',
+    }
+    localField.value.fieldConfig.templateUrl = fileData.url || fileData.path || ''
     if (!localField.value.fieldConfig.templateName) {
       localField.value.fieldConfig.templateName = currentFile.name || '模板文件'
     }
   }
-  else {
+  else if (fileList.length === 0) {
     localField.value.fieldConfig.templateFile = null
     localField.value.fieldConfig.templateUrl = ''
   }

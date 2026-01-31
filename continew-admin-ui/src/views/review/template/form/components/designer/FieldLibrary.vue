@@ -218,7 +218,7 @@ const advancedFields = [
 const handleAddField = (fieldTemplate: any) => {
   const newField: Partial<FormFieldReq> = {
     fieldName: fieldTemplate.label,
-    fieldCode: `field_${fieldTemplate.type.toLowerCase()}_${Date.now()}`,
+    fieldCode: `field_${Date.now()}`,
     fieldType: fieldTemplate.type,
     span: 12,
     isRequired: false,
