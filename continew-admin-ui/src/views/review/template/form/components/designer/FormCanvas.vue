@@ -153,7 +153,8 @@ const fieldTypeOptions: Record<string, { label: string, color: string }> = {
   RADIO: { label: '单选', color: 'magenta' },
   CHECKBOX: { label: '多选', color: 'geekblue' },
   SCORE: { label: '评分', color: 'gold' },
-  FILE: { label: '文件', color: 'red' },
+  FILE: { label: '文件上传', color: 'red' },
+  FILE_TEMPLATE: { label: '文件模板', color: 'pinkpurple' },
   TABLE: { label: '表格', color: 'volcano' },
 }
 
