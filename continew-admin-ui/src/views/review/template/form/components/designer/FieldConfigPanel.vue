@@ -197,31 +197,34 @@
               />
             </a-form-item>
             <a-form-item label="选项配置">
-              <div
-                v-for="(option, index) in localField.fieldConfig.options"
-                :key="index"
-                class="option-item"
-              >
-                <a-input
-                  v-model="option.label"
-                  placeholder="选项标签"
-                  size="small"
-                  @change="handleUpdate"
-                />
-                <a-input
-                  v-model="option.value"
-                  placeholder="选项值"
-                  size="small"
-                  @change="handleUpdate"
-                />
-                <a-button
-                  size="small"
-                  status="danger"
-                  @click="removeOption(index)"
+              <template v-if="localField.fieldConfig.options && localField.fieldConfig.options.length > 0">
+                <div
+                  v-for="(option, index) in localField.fieldConfig.options"
+                  :key="index"
+                  class="option-item"
                 >
-                  <icon-delete />
-                </a-button>
-              </div>
+                  <a-input
+                    v-model="option.label"
+                    placeholder="选项标签"
+                    size="small"
+                    @input="handleUpdate"
+                  />
+                  <a-input
+                    v-model="option.value"
+                    placeholder="选项值"
+                    size="small"
+                    @input="handleUpdate"
+                  />
+                  <a-button
+                    size="small"
+                    status="danger"
+                    @click="removeOption(index)"
+                  >
+                    <icon-delete />
+                  </a-button>
+                </div>
+              </template>
+              <a-empty v-else description="暂无选项" :style="{ marginBottom: '12px' }" />
               <a-button size="small" type="dashed" long @click="addOption">
                 <icon-plus /> 添加选项
               </a-button>
@@ -289,6 +292,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { FormFieldReq } from '@/apis/review'
 
 defineOptions({ name: 'FieldConfigPanel' })
@@ -334,6 +338,24 @@ watch(
       // 确保 fieldConfig 存在
       if (!localField.value.fieldConfig) {
         localField.value.fieldConfig = {}
+      }
+      // 确保选择类字段的options数组存在且格式正确
+      if (['SELECT', 'RADIO', 'CHECKBOX'].includes(localField.value.fieldType)) {
+        if (!localField.value.fieldConfig.options || !Array.isArray(localField.value.fieldConfig.options)) {
+          localField.value.fieldConfig.options = []
+        }
+        // 确保每个选项都有 label 和 value 属性，过滤掉无效选项
+        localField.value.fieldConfig.options = localField.value.fieldConfig.options
+          .map((opt: any) => {
+            if (typeof opt === 'object' && opt !== null) {
+              return {
+                label: opt.label || '',
+                value: opt.value || '',
+              }
+            }
+            return null
+          })
+          .filter((opt: any) => opt !== null)
       }
     }
     else {
