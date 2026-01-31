@@ -18,7 +18,9 @@ public enum TemplateTypeEnum implements BaseEnum<Integer> {
     AUDIT(2, "审核表单"),
     REVIEW(3, "评审表单"),
     DECISION(4, "决策表单"),
-    STAGE(5, "阶段管理表单");
+    KICKOFF(5, "立项阶段管理表单"),
+    EXECUTION(6, "执行阶段管理表单"),
+    ACCEPTANCE(7, "验收阶段管理表单");
 
     private final Integer value;
     private final String description;

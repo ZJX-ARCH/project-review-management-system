@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `review_form_template` (
     `id`            bigint(20)   AUTO_INCREMENT              COMMENT '模板ID',
     `template_name` varchar(100) NOT NULL                    COMMENT '模板名称',
     `template_code` varchar(50)  NOT NULL                    COMMENT '模板编码（唯一）',
-    `template_type` tinyint(1)   UNSIGNED NOT NULL           COMMENT '模板类型（1=申请,2=审核,3=评审,4=决策,5=阶段管理）',
+    `template_type` tinyint(1)   UNSIGNED NOT NULL           COMMENT '模板类型（1=申请,2=审核,3=评审,4=决策,5=立项阶段,6=执行阶段,7=验收阶段）',
     `description`   varchar(500) DEFAULT NULL                COMMENT '模板描述',
     `layout_config` json         DEFAULT NULL                COMMENT '布局配置（JSON格式：gridCols、labelWidth、labelAlign）',
     `status`        tinyint(1)   UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态（1：启用；2：禁用）',

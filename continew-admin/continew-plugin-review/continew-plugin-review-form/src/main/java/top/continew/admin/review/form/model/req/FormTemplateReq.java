@@ -46,7 +46,7 @@ public class FormTemplateReq implements Serializable {
     /**
      * 模板类型
      */
-    @Schema(description = "模板类型(1=申请,2=审核,3=评审,4=决策,5=阶段管理)", example = "1")
+    @Schema(description = "模板类型(1=申请,2=审核,3=评审,4=决策,5=立项阶段,6=执行阶段,7=验收阶段)", example = "1")
     @NotNull(message = "模板类型不能为空")
     private TemplateTypeEnum templateType;
 

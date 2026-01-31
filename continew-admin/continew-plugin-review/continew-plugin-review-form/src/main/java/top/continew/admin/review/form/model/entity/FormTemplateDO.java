@@ -34,7 +34,7 @@ public class FormTemplateDO extends BaseDO {
     private String templateCode;
 
     /**
-     * 模板类型（1=申请,2=审核,3=评审,4=决策,5=阶段管理）
+     * 模板类型（1=申请,2=审核,3=评审,4=决策,5=立项阶段,6=执行阶段,7=验收阶段）
      */
     private TemplateTypeEnum templateType;
 
