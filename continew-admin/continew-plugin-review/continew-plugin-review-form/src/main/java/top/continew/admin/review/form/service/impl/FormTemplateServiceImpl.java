@@ -448,11 +448,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         });
 
         // 5. 构建分页响应
-        PageResp<FormTemplateResp> pageResp = new PageResp<>();
-        pageResp.setTotal(pageResult.getTotal());
-        pageResp.setRecords(respList);
-
-        return pageResp;
+        return new PageResp<>(respList, pageResult.getTotal());
     }
 
     @Override
