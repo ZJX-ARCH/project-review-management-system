@@ -7,7 +7,7 @@
 INSERT INTO `review_form_template`
 (`id`, `template_name`, `template_code`, `template_type`, `description`, `layout_config`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737207001001, '科研项目申请表', 'FORM_RESEARCH_APPLICATION', 1, '适用于科研项目申请的标准表单模板', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 1, 1, NOW(), 0);
+(1737207001001, '科研项目申请表', 'FORM_RESEARCH_APP', 1, '适用于科研项目申请的标准表单模板', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 1, 1, NOW(), 0);
 
 -- 初始化示例字段配置
 INSERT INTO `review_form_field`

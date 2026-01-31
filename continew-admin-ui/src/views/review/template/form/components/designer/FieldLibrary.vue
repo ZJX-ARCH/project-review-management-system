@@ -9,7 +9,7 @@
       <!-- 基础字段 -->
       <div class="field-group">
         <div class="group-title">
-          <icon-font style="margin-right: 4px;" />
+          <icon-align-left style="margin-right: 4px;" />
           基础字段
         </div>
         <div class="field-list">
@@ -68,8 +68,8 @@
 
 <script setup lang="ts">
 import {
+  IconAlignLeft,
   IconCheckCircle,
-  IconFont,
   IconSettings,
 } from '@arco-design/web-vue/es/icon'
 import type { FormFieldReq } from '@/apis/review'

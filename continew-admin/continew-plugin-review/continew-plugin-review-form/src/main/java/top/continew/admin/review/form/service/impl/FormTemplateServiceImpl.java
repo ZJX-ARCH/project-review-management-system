@@ -71,6 +71,9 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         if (StrUtil.isBlank(req.getTemplateCode())) {
             throw new BusinessException("模板编码不能为空");
         }
+        if (req.getTemplateCode().length() > 20) {
+            throw new BusinessException("模板编码长度不能超过20个字符");
+        }
         if (req.getTemplateType() == null) {
             throw new BusinessException("模板类型不能为空");
         }
@@ -631,32 +634,34 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
 
     @Override
     public String generateCode() {
-        // 1. 生成唯一编码(FORM_ + 时间戳)
-        String prefix = "FORM_";
-        long timestamp = System.currentTimeMillis();
-        String code = prefix + timestamp;
-
-        // 2. 校验编码唯一性(防止并发冲突)
-        FormTemplateDO existing = getByCode(code);
+        // 步骤1: 生成基础编码（FORM_前缀 + 时间戳 = 18位，符合20位限制）
+        String code;
         int retryCount = 0;
-        int maxRetry = 3;
+        final int maxRetries = 3;
 
-        // 如果存在冲突,重试生成(最多3次)
-        while (existing != null && retryCount < maxRetry) {
-            // 重试时添加随机数
-            code = prefix + System.currentTimeMillis() + "_" + RandomUtil.randomNumbers(3);
-            existing = getByCode(code);
+        // 步骤2: 循环检查编码唯一性（防止极少数情况下的时间戳重复）
+        while (retryCount < maxRetries) {
+            code = "FORM_" + System.currentTimeMillis();
+
+            // 检查编码是否已存在
+            FormTemplateDO existing = getByCode(code);
+            if (existing == null) {
+                log.info("生成模板编码: {}", code);
+                return code;
+            }
+
+            // 如果冲突，等待1毫秒后重试（让时间戳变化）
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new BusinessException("生成模板编码被中断");
+            }
             retryCount++;
         }
 
-        // 重试3次仍冲突,抛出异常
-        if (existing != null) {
-            throw new BusinessException("生成模板编码失败,请稍后重试");
-        }
-
-        // 3. 返回生成的编码
-        log.info("生成模板编码: {}", code);
-        return code;
+        // 步骤3: 重试失败，抛出异常
+        throw new BusinessException("生成模板编码失败，请稍后重试");
     }
 
     @Override

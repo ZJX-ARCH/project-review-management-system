@@ -45,8 +45,9 @@
                   <a-input-group v-if="isCreate">
                     <a-input
                       v-model="formData.templateCode"
-                      placeholder="自动生成或手动输入"
-                      :max-length="50"
+                      placeholder="请输入模板编码或点击自动生成"
+                      :max-length="20"
+                      show-word-limit
                     />
                     <a-button
                       :disabled="generateCodeDisabled"
@@ -59,6 +60,7 @@
                     v-else
                     v-model="formData.templateCode"
                     disabled
+                    placeholder="模板编码（自动生成）"
                   />
                 </a-form-item>
               </a-col>
@@ -133,9 +135,10 @@
     <a-modal
       v-model:visible="previewVisible"
       title="表单预览"
-      :width="900"
+      width="90%"
       :footer="false"
       unmount-on-close
+      fullscreen
     >
       <FormPreview
         :template-data="formData"
@@ -146,12 +149,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
-import FieldLibrary from './components/FieldLibrary.vue'
-import FormCanvas from './components/FormCanvas.vue'
-import FieldConfigPanel from './components/FieldConfigPanel.vue'
-import FormPreview from './components/FormPreview.vue'
+import FieldLibrary from './components/designer/FieldLibrary.vue'
+import FormCanvas from './components/designer/FormCanvas.vue'
+import FieldConfigPanel from './components/designer/FieldConfigPanel.vue'
+import FormPreview from './components/designer/FormPreview.vue'
 import {
   createFormTemplate,
   generateFormTemplateCode,
@@ -232,7 +237,10 @@ const loadDetail = async () => {
 
   loading.value = true
   try {
-    const data = await getFormTemplate(route.params.id as string)
+    const response = await getFormTemplate(route.params.id as string)
+    // 解包响应数据：如果response有data属性则使用data，否则使用response本身
+    const data = (response as any).data || response
+
     formData.value = {
       templateName: data.templateName,
       templateCode: data.templateCode,
@@ -260,7 +268,9 @@ const loadDetail = async () => {
 const handleGenerateCode = async () => {
   generateCodeDisabled.value = true
   try {
-    const code = await generateFormTemplateCode()
+    const response = await generateFormTemplateCode()
+    // 解包响应数据：如果response有data属性则使用data，否则使用response本身
+    const code = (response as any).data || response
     formData.value.templateCode = code
     Message.success('编码生成成功')
   }

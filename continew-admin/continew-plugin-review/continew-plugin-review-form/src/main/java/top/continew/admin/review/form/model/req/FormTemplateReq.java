@@ -40,7 +40,7 @@ public class FormTemplateReq implements Serializable {
      */
     @Schema(description = "模板编码(可选,不填自动生成)", example = "FORM_RESEARCH_APP")
     @Pattern(regexp = "^FORM_[A-Z0-9_]*$", message = "模板编码必须以FORM_开头,后续只能包含大写字母、数字和下划线")
-    @Length(max = 50, message = "模板编码长度不能超过 {max} 个字符")
+    @Length(max = 20, message = "模板编码长度不能超过 {max} 个字符")
     private String templateCode;
 
     /**

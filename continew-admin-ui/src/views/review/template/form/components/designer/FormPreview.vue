@@ -29,8 +29,9 @@
 
       <a-form
         :model="previewData"
-        :label-col-props="{ style: { width: `${templateData.layoutConfig?.labelWidth || 120}px` } }"
         :label-align="templateData.layoutConfig?.labelAlign || 'right'"
+        :rules="formRules"
+        auto-label-width
       >
         <a-row :gutter="16">
           <a-col
@@ -40,8 +41,9 @@
           >
             <a-form-item
               :label="field.fieldName"
-              :required="field.isRequired"
               :field="field.fieldCode"
+              :label-col-props="{ span: 6 }"
+              :wrapper-col-props="{ span: 18 }"
             >
               <!-- 单行文本 -->
               <a-input
@@ -132,17 +134,93 @@
 
               <!-- 表格 -->
               <div v-else-if="field.fieldType === 'TABLE'" class="table-field">
-                <a-table
-                  :columns="getTableColumns(field)"
-                  :data="previewData[field.fieldCode] || []"
-                  :pagination="false"
-                  size="small"
-                />
+                <div class="custom-table">
+                  <!-- 表头 -->
+                  <div class="table-header">
+                    <div
+                      v-for="col in getTableColumnsSimple(field)"
+                      :key="col.code"
+                      class="table-cell header-cell"
+                    >
+                      {{ col.name }}
+                    </div>
+                    <div class="table-cell header-cell actions-header">
+                      操作
+                    </div>
+                  </div>
+
+                  <!-- 数据行 -->
+                  <div v-if="previewData[field.fieldCode]?.length > 0" class="table-body">
+                    <div
+                      v-for="(row, rowIndex) in previewData[field.fieldCode]"
+                      :key="rowIndex"
+                      class="table-row"
+                    >
+                      <div
+                        v-for="col in getTableColumnsSimple(field)"
+                        :key="col.code"
+                        class="table-cell"
+                      >
+                        <!-- 数字输入 -->
+                        <a-input-number
+                          v-if="col.type === 'NUMBER'"
+                          v-model="row[col.code]"
+                          :precision="col.precision || 0"
+                          :placeholder="`请输入${col.name}`"
+                          size="small"
+                          style="width: 100%;"
+                        />
+                        <!-- 文本输入 -->
+                        <a-input
+                          v-else
+                          v-model="row[col.code]"
+                          :placeholder="`请输入${col.name}`"
+                          size="small"
+                        />
+                      </div>
+                      <div class="table-cell actions-cell">
+                        <a-space :size="4">
+                          <a-button
+                            type="text"
+                            size="mini"
+                            :disabled="rowIndex === 0"
+                            @click="handleMoveTableRowUp(field.fieldCode, rowIndex)"
+                          >
+                            上移
+                          </a-button>
+                          <a-button
+                            type="text"
+                            size="mini"
+                            :disabled="rowIndex === previewData[field.fieldCode].length - 1"
+                            @click="handleMoveTableRowDown(field.fieldCode, rowIndex)"
+                          >
+                            下移
+                          </a-button>
+                          <a-button
+                            type="text"
+                            status="danger"
+                            size="mini"
+                            @click="handleDeleteTableRow(field.fieldCode, rowIndex)"
+                          >
+                            删除
+                          </a-button>
+                        </a-space>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 空状态 -->
+                  <div v-else class="table-empty">
+                    暂无数据，点击下方"添加行"按钮添加数据
+                  </div>
+                </div>
+
                 <a-button
                   type="dashed"
                   size="small"
                   long
                   style="margin-top: 8px;"
+                  @click="handleAddTableRow(field)"
                 >
                   <icon-plus /> 添加行
                 </a-button>
@@ -163,6 +241,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
 import type { FormFieldReq, FormTemplateReq } from '@/apis/review'
 
 defineOptions({ name: 'FormPreview' })
@@ -177,19 +257,92 @@ const props = defineProps<Props>()
 // 预览数据
 const previewData = ref<Record<string, any>>({})
 
+// 表单验证规则
+const formRules = computed(() => {
+  const rules: Record<string, any> = {}
+  if (!props.templateData.fields)
+    return rules
+
+  props.templateData.fields.forEach((field) => {
+    if (field.isRequired) {
+      rules[field.fieldCode] = [
+        {
+          required: true,
+          message: `${field.fieldName}不能为空`,
+        },
+      ]
+    }
+  })
+  return rules
+})
+
 // 获取模板类型标签
 const getTemplateTypeLabel = (type: number) => {
   return props.templateTypeOptions.find(item => item.value === type)?.label || '未知'
 }
 
-// 获取表格列配置
-const getTableColumns = (field: FormFieldReq) => {
-  const columns = field.fieldConfig?.columns || []
-  return columns.map((col: any) => ({
-    title: col.name,
-    dataIndex: col.code,
+// 获取表格列配置（简化版，用于自定义表格渲染）
+const getTableColumnsSimple = (field: FormFieldReq) => {
+  const config = field.fieldConfig
+  if (!config || !config.columns)
+    return []
+
+  return config.columns.map((col: any) => ({
+    name: col.name || col.title || '未命名列',
+    code: col.code || col.dataIndex,
+    type: col.type || 'TEXT',
     width: col.width,
+    precision: col.precision,
   }))
+}
+
+// 添加表格行
+const handleAddTableRow = (field: FormFieldReq) => {
+  const config = field.fieldConfig
+  if (!config || !config.columns)
+    return
+
+  // 创建新行数据
+  const newRow: Record<string, any> = {}
+  config.columns.forEach((col: any) => {
+    const code = col.code || col.dataIndex
+    newRow[code] = undefined
+  })
+
+  // 添加到表格数据中
+  if (!previewData.value[field.fieldCode]) {
+    previewData.value[field.fieldCode] = []
+  }
+  previewData.value[field.fieldCode].push(newRow)
+}
+
+// 删除表格行
+const handleDeleteTableRow = (fieldCode: string, rowIndex: number) => {
+  if (previewData.value[fieldCode]) {
+    previewData.value[fieldCode].splice(rowIndex, 1)
+  }
+}
+
+// 上移表格行
+const handleMoveTableRowUp = (fieldCode: string, rowIndex: number) => {
+  if (rowIndex > 0 && previewData.value[fieldCode]) {
+    const rows = previewData.value[fieldCode]
+    const temp = rows[rowIndex]
+    rows[rowIndex] = rows[rowIndex - 1]
+    rows[rowIndex - 1] = temp
+  }
+}
+
+// 下移表格行
+const handleMoveTableRowDown = (fieldCode: string, rowIndex: number) => {
+  if (previewData.value[fieldCode]) {
+    const rows = previewData.value[fieldCode]
+    if (rowIndex < rows.length - 1) {
+      const temp = rows[rowIndex]
+      rows[rowIndex] = rows[rowIndex + 1]
+      rows[rowIndex + 1] = temp
+    }
+  }
 }
 
 // 初始化预览数据
@@ -223,6 +376,11 @@ watch(
 
 <style lang="scss" scoped>
 .form-preview {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+
   .info-card,
   .form-card {
     margin-bottom: 16px;
@@ -234,6 +392,64 @@ watch(
 
   .table-field {
     width: 100%;
+
+    .custom-table {
+      border: 1px solid var(--color-border-2);
+      border-radius: 4px;
+      overflow: hidden;
+
+      .table-header {
+        display: flex;
+        background-color: var(--color-fill-2);
+        border-bottom: 1px solid var(--color-border-2);
+
+        .header-cell {
+          font-weight: 600;
+          color: var(--color-text-1);
+        }
+      }
+
+      .table-body {
+        .table-row {
+          display: flex;
+          border-bottom: 1px solid var(--color-border-2);
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background-color: var(--color-fill-1);
+          }
+        }
+      }
+
+      .table-cell {
+        flex: 1;
+        padding: 8px 12px;
+        border-right: 1px solid var(--color-border-2);
+        display: flex;
+        align-items: center;
+
+        &:last-child {
+          border-right: none;
+        }
+
+        &.actions-cell,
+        &.actions-header {
+          flex: 0 0 180px;
+          justify-content: center;
+          padding: 4px 8px;
+        }
+      }
+
+      .table-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: var(--color-text-3);
+        background-color: var(--color-fill-1);
+      }
+    }
   }
 }
 </style>
