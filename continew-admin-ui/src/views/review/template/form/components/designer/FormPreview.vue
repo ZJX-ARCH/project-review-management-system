@@ -172,6 +172,15 @@
                           size="small"
                           style="width: 100%;"
                         />
+                        <!-- 下拉选择 -->
+                        <a-select
+                          v-else-if="col.type === 'SELECT'"
+                          v-model="row[col.code]"
+                          :options="col.options || []"
+                          :placeholder="`请选择${col.name}`"
+                          size="small"
+                          style="width: 100%;"
+                        />
                         <!-- 文本输入 -->
                         <a-input
                           v-else
@@ -318,6 +327,7 @@ const getTableColumnsSimple = (field: FormFieldReq) => {
     type: col.type || 'TEXT',
     width: col.width,
     precision: col.precision,
+    options: col.options || [],
   }))
 }
 

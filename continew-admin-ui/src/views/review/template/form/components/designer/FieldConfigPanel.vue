@@ -197,46 +197,43 @@
               />
             </a-form-item>
             <a-form-item label="选项配置">
-              <template v-if="localField.fieldConfig.options && localField.fieldConfig.options.length > 0">
-                <div
-                  v-for="(option, index) in localField.fieldConfig.options"
-                  :key="index"
-                  class="option-card"
-                >
-                  <div class="option-header">
-                    <span class="option-index">选项 {{ index + 1 }}</span>
-                    <a-button
-                      size="mini"
-                      type="text"
-                      status="danger"
-                      @click="removeOption(index)"
-                    >
-                      <icon-delete />
-                    </a-button>
-                  </div>
-                  <div class="option-body">
-                    <div class="option-field">
-                      <label>选项标签</label>
+              <div class="options-list">
+                <template v-if="localField.fieldConfig.options && localField.fieldConfig.options.length > 0">
+                  <div
+                    v-for="(option, index) in localField.fieldConfig.options"
+                    :key="index"
+                    class="option-item"
+                  >
+                    <div class="option-title">选项{{ index + 1 }}</div>
+                    <div class="option-fields">
                       <a-input
                         v-model="option.label"
-                        placeholder="请输入选项标签"
+                        placeholder="标签"
                         size="small"
                         @input="handleUpdate"
                       />
-                    </div>
-                    <div class="option-field">
-                      <label>选项值</label>
                       <a-input
                         v-model="option.value"
-                        placeholder="请输入选项值"
+                        placeholder="值"
                         size="small"
                         @input="handleUpdate"
                       />
+                      <a-button
+                        size="small"
+                        type="text"
+                        status="danger"
+                        @click="removeOption(index)"
+                      >
+                        <icon-delete />
+                      </a-button>
                     </div>
                   </div>
-                </div>
-              </template>
-              <a-empty v-else description="暂无选项" :style="{ marginBottom: '12px' }" />
+                </template>
+                <a-empty v-else description="暂无选项" :style="{ marginBottom: '12px' }" />
+              </div>
+            </a-form-item>
+
+            <a-form-item>
               <a-button size="small" type="dashed" long @click="addOption">
                 <icon-plus /> 添加选项
               </a-button>
@@ -295,6 +292,107 @@
                 :auto-size="{ minRows: 2, maxRows: 4 }"
                 @change="handleUpdate"
               />
+            </a-form-item>
+          </template>
+
+          <!-- 动态表格 -->
+          <template v-else-if="localField.fieldType === 'TABLE'">
+            <a-form-item label="列配置">
+              <div class="table-columns-list">
+                <template v-if="localField.fieldConfig.columns && localField.fieldConfig.columns.length > 0">
+                  <div
+                    v-for="(column, index) in localField.fieldConfig.columns"
+                    :key="index"
+                    class="column-item"
+                  >
+                    <div class="column-title">列{{ index + 1 }}</div>
+                    <div class="column-fields">
+                      <div class="column-field">
+                        <label>列名</label>
+                        <a-input
+                          v-model="column.name"
+                          placeholder="列名"
+                          size="small"
+                          @input="handleUpdate"
+                        />
+                      </div>
+                      <div class="column-field">
+                        <label>编码</label>
+                        <a-input
+                          v-model="column.code"
+                          placeholder="编码"
+                          size="small"
+                          @input="handleUpdate"
+                        />
+                      </div>
+                      <div class="column-field">
+                        <label>类型</label>
+                        <a-select
+                          v-model="column.type"
+                          size="small"
+                          @change="handleUpdate"
+                        >
+                          <a-option value="TEXT">文本</a-option>
+                          <a-option value="NUMBER">数字</a-option>
+                          <a-option value="SELECT">下拉框</a-option>
+                        </a-select>
+                      </div>
+                      <a-button
+                        size="small"
+                        type="text"
+                        status="danger"
+                        @click="removeTableColumn(index)"
+                      >
+                        <icon-delete />
+                      </a-button>
+                    </div>
+                    <!-- 下拉框选项配置 -->
+                    <div v-if="column.type === 'SELECT'" class="column-options">
+                      <div class="options-title">下拉选项</div>
+                      <div class="options-inputs">
+                        <template v-if="column.options && column.options.length > 0">
+                          <div
+                            v-for="(opt, optIndex) in column.options"
+                            :key="optIndex"
+                            class="option-input-row"
+                          >
+                            <a-input
+                              v-model="opt.label"
+                              placeholder="标签"
+                              size="mini"
+                              @input="handleUpdate"
+                            />
+                            <a-input
+                              v-model="opt.value"
+                              placeholder="值"
+                              size="mini"
+                              @input="handleUpdate"
+                            />
+                            <a-button
+                              size="mini"
+                              type="text"
+                              status="danger"
+                              @click="removeColumnOption(index, optIndex)"
+                            >
+                              <icon-delete />
+                            </a-button>
+                          </div>
+                        </template>
+                      </div>
+                      <a-button size="mini" type="text" @click="addColumnOption(index)">
+                        <icon-plus /> 添加选项
+                      </a-button>
+                    </div>
+                  </div>
+                </template>
+                <a-empty v-else description="暂无列配置" :style="{ marginBottom: '12px' }" />
+              </div>
+            </a-form-item>
+
+            <a-form-item>
+              <a-button size="small" type="dashed" long @click="addTableColumn">
+                <icon-plus /> 添加列
+              </a-button>
             </a-form-item>
           </template>
         </div>
@@ -369,6 +467,12 @@ watch(
           })
           .filter((opt: any) => opt !== null)
       }
+      // 确保表格类字段的columns数组存在
+      if (localField.value.fieldType === 'TABLE') {
+        if (!localField.value.fieldConfig.columns || !Array.isArray(localField.value.fieldConfig.columns)) {
+          localField.value.fieldConfig.columns = []
+        }
+      }
     }
     else {
       localField.value = null
@@ -407,6 +511,66 @@ const removeOption = (index: number) => {
     return
 
   localField.value.fieldConfig.options.splice(index, 1)
+  handleUpdate()
+}
+
+// 添加表格列
+const addTableColumn = () => {
+  if (!localField.value)
+    return
+
+  if (!localField.value.fieldConfig.columns) {
+    localField.value.fieldConfig.columns = []
+  }
+
+  localField.value.fieldConfig.columns.push({
+    name: `列${localField.value.fieldConfig.columns.length + 1}`,
+    code: `col${localField.value.fieldConfig.columns.length + 1}`,
+    type: 'TEXT',
+    width: 150,
+    required: false,
+  })
+
+  handleUpdate()
+}
+
+// 删除表格列
+const removeTableColumn = (index: number) => {
+  if (!localField.value || !localField.value.fieldConfig.columns)
+    return
+
+  localField.value.fieldConfig.columns.splice(index, 1)
+  handleUpdate()
+}
+
+// 添加列选项
+const addColumnOption = (columnIndex: number) => {
+  if (!localField.value || !localField.value.fieldConfig.columns)
+    return
+
+  const column = localField.value.fieldConfig.columns[columnIndex]
+  if (!column.options) {
+    column.options = []
+  }
+
+  column.options.push({
+    label: `选项${column.options.length + 1}`,
+    value: `option${column.options.length + 1}`,
+  })
+
+  handleUpdate()
+}
+
+// 删除列选项
+const removeColumnOption = (columnIndex: number, optionIndex: number) => {
+  if (!localField.value || !localField.value.fieldConfig.columns)
+    return
+
+  const column = localField.value.fieldConfig.columns[columnIndex]
+  if (!column.options)
+    return
+
+  column.options.splice(optionIndex, 1)
   handleUpdate()
 }
 </script>
@@ -448,54 +612,110 @@ const removeOption = (index: number) => {
         border-left: 3px solid rgb(var(--primary-6));
       }
 
-      .option-card {
-        margin-bottom: 12px;
-        padding: 12px;
-        background: var(--color-bg-1);
-        border: 1px solid var(--color-border-2);
-        border-radius: 4px;
-        transition: all 0.2s;
+      .options-list {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
 
-        &:hover {
-          border-color: var(--color-border-3);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
+        .option-item {
+          margin-bottom: 16px;
+          padding: 12px;
+          background: var(--color-bg-1);
+          border: 1px solid var(--color-border-2);
+          border-radius: 4px;
 
-        .option-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 12px;
-          padding-bottom: 8px;
-          border-bottom: 1px solid var(--color-border-2);
-
-          .option-index {
+          .option-title {
             font-size: 13px;
             font-weight: 600;
             color: var(--color-text-2);
+            margin-bottom: 8px;
           }
-        }
 
-        .option-body {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-
-          .option-field {
-            flex: 1;
+          .option-fields {
             display: flex;
             align-items: center;
-            gap: 6px;
-
-            label {
-              flex-shrink: 0;
-              font-size: 12px;
-              color: var(--color-text-3);
-              white-space: nowrap;
-            }
+            gap: 8px;
 
             :deep(.arco-input) {
               flex: 1;
+            }
+
+            :deep(.arco-btn) {
+              flex-shrink: 0;
+            }
+          }
+        }
+      }
+
+      .table-columns-list {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+
+        .column-item {
+          margin-bottom: 16px;
+          padding: 12px;
+          background: var(--color-bg-1);
+          border: 1px solid var(--color-border-2);
+          border-radius: 4px;
+
+          .column-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-2);
+            margin-bottom: 8px;
+          }
+
+          .column-fields {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+
+            .column-field {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              label {
+                font-size: 12px;
+                color: var(--color-text-3);
+              }
+            }
+
+            :deep(.arco-btn) {
+              flex-shrink: 0;
+            }
+          }
+
+          .column-options {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--color-border-2);
+
+            .options-title {
+              font-size: 12px;
+              color: var(--color-text-3);
+              margin-bottom: 8px;
+            }
+
+            .options-inputs {
+              margin-bottom: 8px;
+
+              .option-input-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 6px;
+
+                :deep(.arco-input) {
+                  flex: 1;
+                }
+
+                :deep(.arco-btn) {
+                  flex-shrink: 0;
+                }
+              }
             }
           }
         }
