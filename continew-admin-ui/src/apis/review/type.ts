@@ -145,3 +145,147 @@ export interface ManagementTemplateResp extends ManagementTemplateReq {
   /** 修改人 */
   updateUserString?: string
 }
+
+/** 字段类型枚举 */
+export enum FieldType {
+  /** 单行文本 */
+  TEXT = 'TEXT',
+  /** 多行文本 */
+  TEXTAREA = 'TEXTAREA',
+  /** 数字 */
+  NUMBER = 'NUMBER',
+  /** 日期 */
+  DATE = 'DATE',
+  /** 下拉选择 */
+  SELECT = 'SELECT',
+  /** 单选 */
+  RADIO = 'RADIO',
+  /** 多选 */
+  CHECKBOX = 'CHECKBOX',
+  /** 评分 */
+  SCORE = 'SCORE',
+  /** 文件 */
+  FILE = 'FILE',
+  /** 表格 */
+  TABLE = 'TABLE',
+}
+
+/** 模板类型枚举 */
+export enum TemplateType {
+  /** 申请表单 */
+  APPLICATION = 1,
+  /** 审核表单 */
+  AUDIT = 2,
+  /** 评审表单 */
+  REVIEW = 3,
+  /** 决策表单 */
+  DECISION = 4,
+  /** 立项阶段管理表单 */
+  KICKOFF = 5,
+  /** 执行阶段管理表单 */
+  EXECUTION = 6,
+  /** 验收阶段管理表单 */
+  ACCEPTANCE = 7,
+}
+
+/** 表单字段请求参数 */
+export interface FormFieldReq {
+  /** 字段名称 */
+  fieldName: string
+  /** 字段编码 */
+  fieldCode: string
+  /** 字段类型 */
+  fieldType: FieldType
+  /** 栅格占位 */
+  span: number
+  /** 是否必填 */
+  isRequired: boolean
+  /** 排序 */
+  sort: number
+  /** 字段配置(JSON) */
+  fieldConfig?: any
+}
+
+/** 表单字段响应数据 */
+export interface FormFieldResp extends FormFieldReq {
+  /** ID */
+  id?: number
+  /** 模板ID */
+  templateId?: number
+}
+
+/** 表单模板文件响应数据 */
+export interface FormTemplateFileResp {
+  /** ID */
+  id: number
+  /** 模板ID */
+  templateId: number
+  /** 字段ID */
+  fieldId?: number
+  /** 文件ID */
+  fileId: number
+  /** 文件类型 */
+  fileType: string
+  /** 文件说明 */
+  description?: string
+  /** 排序 */
+  sort: number
+  /** 文件名称 */
+  fileName?: string
+  /** 文件URL */
+  fileUrl?: string
+}
+
+/** 表单模板查询参数 */
+export interface FormTemplateQuery extends PageQuery {
+  /** 模板名称 */
+  templateName?: string
+  /** 模板编码 */
+  templateCode?: string
+  /** 模板类型 */
+  templateType?: number
+  /** 启用状态 */
+  status?: number
+}
+
+/** 表单模板请求参数 */
+export interface FormTemplateReq {
+  /** 模板名称 */
+  templateName: string
+  /** 模板编码 */
+  templateCode?: string
+  /** 模板类型 */
+  templateType: number
+  /** 模板描述 */
+  description?: string
+  /** 布局配置(JSON) */
+  layoutConfig?: any
+  /** 排序 */
+  sort?: number
+  /** 字段列表 */
+  fields?: FormFieldReq[]
+}
+
+/** 表单模板响应数据 */
+export interface FormTemplateResp extends FormTemplateReq {
+  /** ID */
+  id: number
+  /** 模板编码 */
+  templateCode: string
+  /** 启用状态 */
+  status: number
+  /** 字段列表 */
+  fields: FormFieldResp[]
+  /** 附件文件列表 */
+  files?: FormTemplateFileResp[]
+  /** 字段数量 */
+  fieldCount?: number
+  /** 创建时间 */
+  createTime?: string
+  /** 修改时间 */
+  updateTime?: string
+  /** 创建人 */
+  createUserString?: string
+  /** 修改人 */
+  updateUserString?: string
+}

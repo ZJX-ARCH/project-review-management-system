@@ -63,11 +63,14 @@ CREATE TABLE IF NOT EXISTS `review_form_template_file` (
     `sort`        int         NOT NULL DEFAULT 0    COMMENT '排序',
     `create_user` bigint(20)  NOT NULL              COMMENT '创建人',
     `create_time` datetime    NOT NULL              COMMENT '创建时间',
+    `update_user` bigint(20)  DEFAULT NULL          COMMENT '修改人',
+    `update_time` datetime    DEFAULT NULL          COMMENT '修改时间',
     `deleted`     bigint(20)  NOT NULL DEFAULT 0    COMMENT '是否已删除（0：否；id：是）',
     PRIMARY KEY (`id`),
     INDEX `idx_template_id`(`template_id`, `deleted`),
     INDEX `idx_field_id`(`field_id`, `deleted`),
     INDEX `idx_file_id`(`file_id`, `deleted`),
     INDEX `idx_create_user`(`create_user`),
+    INDEX `idx_update_user`(`update_user`),
     INDEX `idx_deleted`(`deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='表单模板文件表';

@@ -1,6 +1,7 @@
 package top.continew.admin.review.form.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -326,9 +327,13 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             throw new BusinessException("模板不存在");
         }
 
-        // 转换为响应对象
-        FormTemplateResp resp = BeanUtil.copyProperties(entity, FormTemplateResp.class);
-        // 解析布局配置JSON
+        // 创建响应对象并复制属性（忽略 layoutConfig 避免类型转换错误）
+        FormTemplateResp resp = new FormTemplateResp();
+        CopyOptions copyOptions = CopyOptions.create();
+        copyOptions.setIgnoreProperties("layoutConfig");
+        BeanUtil.copyProperties(entity, resp, copyOptions);
+
+        // 手动解析布局配置JSON
         if (StrUtil.isNotBlank(entity.getLayoutConfig())) {
             try {
                 resp.setLayoutConfig(objectMapper.readTree(entity.getLayoutConfig()));
@@ -342,10 +347,14 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         fieldQuery.eq("template_id", id).orderByAsc("sort");
         List<FormFieldDO> fieldList = formFieldMapper.selectList(fieldQuery);
 
-        // 转换为响应对象列表
+        // 转换为响应对象列表（忽略 fieldConfig 避免类型转换错误）
+        CopyOptions fieldCopyOptions = CopyOptions.create();
+        fieldCopyOptions.setIgnoreProperties("fieldConfig");
         List<FormFieldResp> fieldRespList = fieldList.stream().map(field -> {
-            FormFieldResp fieldResp = BeanUtil.copyProperties(field, FormFieldResp.class);
-            // 解析字段配置JSON
+            FormFieldResp fieldResp = new FormFieldResp();
+            BeanUtil.copyProperties(field, fieldResp, fieldCopyOptions);
+
+            // 手动解析字段配置JSON
             if (StrUtil.isNotBlank(field.getFieldConfig())) {
                 try {
                     fieldResp.setFieldConfig(objectMapper.readTree(field.getFieldConfig()));
@@ -398,9 +407,9 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             queryWrapper.like("template_name", query.getTemplateName());
         }
 
-        // 模板编码精确查询
+        // 模板编码模糊查询
         if (StrUtil.isNotBlank(query.getTemplateCode())) {
-            queryWrapper.eq("template_code", query.getTemplateCode());
+            queryWrapper.like("template_code", query.getTemplateCode());
         }
 
         // 模板类型精确查询
@@ -425,8 +434,13 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         // 3. 转换为响应对象
         List<FormTemplateDO> records = pageResult.getRecords();
         List<FormTemplateResp> respList = records.stream().map(record -> {
-            FormTemplateResp resp = BeanUtil.copyProperties(record, FormTemplateResp.class);
-            // 解析布局配置JSON
+            // 创建响应对象并复制属性（忽略 layoutConfig 字段，避免类型转换错误）
+            FormTemplateResp resp = new FormTemplateResp();
+            CopyOptions copyOptions = CopyOptions.create();
+            copyOptions.setIgnoreProperties("layoutConfig");
+            BeanUtil.copyProperties(record, resp, copyOptions);
+
+            // 手动解析布局配置JSON
             if (StrUtil.isNotBlank(record.getLayoutConfig())) {
                 try {
                     resp.setLayoutConfig(objectMapper.readTree(record.getLayoutConfig()));
