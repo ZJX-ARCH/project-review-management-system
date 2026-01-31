@@ -80,6 +80,8 @@
                 v-model="previewData[field.fieldCode]"
                 :placeholder="field.fieldConfig?.placeholder || '请选择日期'"
                 :format="field.fieldConfig?.format || 'YYYY-MM-DD'"
+                :show-time="isDateWithTime(field.fieldConfig?.format)"
+                :mode="getDatePickerMode(field.fieldConfig?.format)"
                 :style="{ width: '100%' }"
               />
 
@@ -279,6 +281,29 @@ const formRules = computed(() => {
 // 获取模板类型标签
 const getTemplateTypeLabel = (type: number) => {
   return props.templateTypeOptions.find(item => item.value === type)?.label || '未知'
+}
+
+// 判断日期是否需要显示时间选择器
+const isDateWithTime = (format?: string) => {
+  if (!format)
+    return false
+  // 如果格式包含时分秒（HH、mm、ss），则显示时间选择器
+  return /HH|mm|ss|hh|H|h|m|s/.test(format)
+}
+
+// 获取日期选择器的模式
+const getDatePickerMode = (format?: string) => {
+  if (!format)
+    return 'date'
+  // 如果格式只包含年月（YYYY-MM），使用月份模式
+  if (/^YYYY-MM$/.test(format)) {
+    return 'month'
+  }
+  // 如果格式只包含年（YYYY），使用年份模式
+  if (/^YYYY$/.test(format)) {
+    return 'year'
+  }
+  return 'date'
 }
 
 // 获取表格列配置（简化版，用于自定义表格渲染）
