@@ -478,17 +478,24 @@ const removeOption = (index: number) => {
 
         .option-body {
           display: flex;
-          flex-direction: column;
-          gap: 10px;
+          gap: 8px;
+          align-items: center;
 
           .option-field {
+            flex: 1;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 6px;
 
             label {
+              flex-shrink: 0;
               font-size: 12px;
               color: var(--color-text-3);
+              white-space: nowrap;
+            }
+
+            :deep(.arco-input) {
+              flex: 1;
             }
           }
         }
