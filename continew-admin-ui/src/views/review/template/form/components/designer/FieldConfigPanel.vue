@@ -63,6 +63,20 @@
             />
           </a-form-item>
 
+          <a-form-item label="是否显示">
+            <a-switch
+              v-model="localField.isVisible"
+              @change="handleUpdate"
+            />
+          </a-form-item>
+
+          <a-form-item label="是否只读">
+            <a-switch
+              v-model="localField.isReadonly"
+              @change="handleUpdate"
+            />
+          </a-form-item>
+
           <a-form-item label="排序">
             <a-input-number
               v-model="localField.sort"
@@ -79,6 +93,13 @@
 
           <!-- 单行文本 -->
           <template v-if="localField.fieldType === 'TEXT'">
+            <a-form-item label="默认值">
+              <a-input
+                v-model="localField.fieldConfig.defaultValue"
+                placeholder="请输入默认值"
+                @change="handleUpdate"
+              />
+            </a-form-item>
             <a-form-item label="占位提示">
               <a-input
                 v-model="localField.fieldConfig.placeholder"
@@ -99,6 +120,14 @@
 
           <!-- 多行文本 -->
           <template v-else-if="localField.fieldType === 'TEXTAREA'">
+            <a-form-item label="默认值">
+              <a-textarea
+                v-model="localField.fieldConfig.defaultValue"
+                placeholder="请输入默认值"
+                :auto-size="{ minRows: 2, maxRows: 4 }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
             <a-form-item label="占位提示">
               <a-input
                 v-model="localField.fieldConfig.placeholder"
@@ -134,6 +163,14 @@
 
           <!-- 数字 -->
           <template v-else-if="localField.fieldType === 'NUMBER'">
+            <a-form-item label="默认值">
+              <a-input-number
+                v-model="localField.fieldConfig.defaultValue"
+                placeholder="请输入默认值"
+                :style="{ width: '100%' }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
             <a-form-item label="占位提示">
               <a-input
                 v-model="localField.fieldConfig.placeholder"
@@ -168,6 +205,18 @@
 
           <!-- 日期 -->
           <template v-else-if="localField.fieldType === 'DATE'">
+            <a-form-item label="默认值">
+              <a-date-picker
+                v-model="localField.fieldConfig.defaultValue"
+                :format="localField.fieldConfig.format || 'YYYY-MM-DD'"
+                :show-time="isDateWithTime(localField.fieldConfig.format)"
+                :mode="getDatePickerMode(localField.fieldConfig.format)"
+                placeholder="请选择默认日期"
+                allow-clear
+                :style="{ width: '100%' }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
             <a-form-item label="占位提示">
               <a-input
                 v-model="localField.fieldConfig.placeholder"
@@ -193,6 +242,25 @@
               <a-input
                 v-model="localField.fieldConfig.placeholder"
                 placeholder="请输入占位提示"
+                @change="handleUpdate"
+              />
+            </a-form-item>
+            <a-form-item label="默认值">
+              <a-select
+                v-if="localField.fieldType === 'CHECKBOX'"
+                v-model="localField.fieldConfig.defaultValue"
+                :options="localField.fieldConfig.options || []"
+                placeholder="请选择默认值"
+                multiple
+                allow-clear
+                @change="handleUpdate"
+              />
+              <a-select
+                v-else
+                v-model="localField.fieldConfig.defaultValue"
+                :options="localField.fieldConfig.options || []"
+                placeholder="请选择默认值"
+                allow-clear
                 @change="handleUpdate"
               />
             </a-form-item>
@@ -248,6 +316,17 @@
 
           <!-- 评分 -->
           <template v-else-if="localField.fieldType === 'SCORE'">
+            <a-form-item label="默认值">
+              <a-input-number
+                v-model="localField.fieldConfig.defaultValue"
+                :min="0"
+                :max="localField.fieldConfig.count || 5"
+                :step="localField.fieldConfig.allowHalf ? 0.5 : 1"
+                placeholder="请输入默认评分"
+                :style="{ width: '100%' }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
             <a-form-item label="星星数量">
               <a-input-number
                 v-model="localField.fieldConfig.count"
@@ -438,6 +517,29 @@ const fieldTypeOptions = [
 // 本地字段数据
 const localField = ref<FormFieldReq | null>(null)
 
+// 判断日期是否需要显示时间选择器
+const isDateWithTime = (format?: string) => {
+  if (!format)
+    return false
+  // 如果格式包含时分秒（HH、mm、ss），则显示时间选择器
+  return /HH|mm|ss|hh|H|h|m|s/.test(format)
+}
+
+// 获取日期选择器的模式
+const getDatePickerMode = (format?: string) => {
+  if (!format)
+    return 'date'
+  // 如果格式只包含年月（YYYY-MM），使用月份模式
+  if (/^YYYY-MM$/.test(format)) {
+    return 'month'
+  }
+  // 如果格式只包含年（YYYY），使用年份模式
+  if (/^YYYY$/.test(format)) {
+    return 'year'
+  }
+  return 'date'
+}
+
 // 监听选中字段变化
 watch(
   () => props.selectedField,
@@ -448,6 +550,13 @@ watch(
       // 确保 fieldConfig 存在
       if (!localField.value.fieldConfig) {
         localField.value.fieldConfig = {}
+      }
+      // 确保 isVisible 和 isReadonly 字段存在
+      if (localField.value.isVisible === undefined) {
+        localField.value.isVisible = true
+      }
+      if (localField.value.isReadonly === undefined) {
+        localField.value.isReadonly = false
       }
       // 确保选择类字段的options数组存在且格式正确
       if (['SELECT', 'RADIO', 'CHECKBOX'].includes(localField.value.fieldType)) {

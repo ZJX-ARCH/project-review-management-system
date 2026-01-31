@@ -311,6 +311,8 @@ const handleAddField = (fieldTemplate: Partial<FormFieldReq>) => {
     fieldType: fieldTemplate.fieldType || 'TEXT',
     span: fieldTemplate.span || 12,
     isRequired: fieldTemplate.isRequired ?? false,
+    isVisible: fieldTemplate.isVisible ?? true,
+    isReadonly: fieldTemplate.isReadonly ?? false,
     sort: fieldCount,
     fieldConfig: fieldTemplate.fieldConfig || {},
   }

@@ -68,6 +68,18 @@ public class FormFieldReq implements Serializable {
     private Boolean isRequired;
 
     /**
+     * 是否显示
+     */
+    @Schema(description = "是否显示", example = "true")
+    private Boolean isVisible;
+
+    /**
+     * 是否只读
+     */
+    @Schema(description = "是否只读", example = "false")
+    private Boolean isReadonly;
+
+    /**
      * 排序
      */
     @Schema(description = "排序", example = "1")

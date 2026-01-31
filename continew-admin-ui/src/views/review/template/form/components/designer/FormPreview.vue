@@ -38,6 +38,7 @@
             v-for="(field, index) in templateData.fields"
             :key="index"
             :span="field.span"
+            v-show="field.isVisible !== false"
           >
             <a-form-item
               :label="field.fieldName"
@@ -51,6 +52,7 @@
                 v-model="previewData[field.fieldCode]"
                 :placeholder="field.fieldConfig?.placeholder || '请输入'"
                 :max-length="field.fieldConfig?.maxLength"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 多行文本 -->
@@ -61,6 +63,7 @@
                 :max-length="field.fieldConfig?.maxLength"
                 :auto-size="{ minRows: field.fieldConfig?.rows || 4, maxRows: 10 }"
                 :show-word-limit="field.fieldConfig?.showWordCount"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 数字 -->
@@ -72,6 +75,7 @@
                 :max="field.fieldConfig?.max"
                 :precision="field.fieldConfig?.precision || 0"
                 :style="{ width: '100%' }"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 日期 -->
@@ -83,6 +87,7 @@
                 :show-time="isDateWithTime(field.fieldConfig?.format)"
                 :mode="getDatePickerMode(field.fieldConfig?.format)"
                 :style="{ width: '100%' }"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 下拉选择 -->
@@ -92,6 +97,7 @@
                 :placeholder="field.fieldConfig?.placeholder || '请选择'"
                 :options="field.fieldConfig?.options || []"
                 :allow-clear="field.fieldConfig?.allowClear"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 单选 -->
@@ -99,6 +105,7 @@
                 v-else-if="field.fieldType === 'RADIO'"
                 v-model="previewData[field.fieldCode]"
                 :options="field.fieldConfig?.options || []"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 多选 -->
@@ -106,6 +113,7 @@
                 v-else-if="field.fieldType === 'CHECKBOX'"
                 v-model="previewData[field.fieldCode]"
                 :options="field.fieldConfig?.options || []"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 评分 -->
@@ -115,6 +123,7 @@
                 :count="field.fieldConfig?.count || 5"
                 :allow-half="field.fieldConfig?.allowHalf"
                 :grade-desc="field.fieldConfig?.gradeDesc"
+                :disabled="field.isReadonly === true"
               />
 
               <!-- 文件 -->
@@ -122,6 +131,7 @@
                 v-else-if="field.fieldType === 'FILE'"
                 :file-list="previewData[field.fieldCode]"
                 :limit="field.fieldConfig?.maxCount || 5"
+                :disabled="field.isReadonly === true"
               >
                 <template #upload-button>
                   <a-button type="outline">
@@ -391,7 +401,7 @@ watch(
     fields.forEach((field) => {
       // 根据字段类型初始化默认值
       if (field.fieldType === 'CHECKBOX') {
-        data[field.fieldCode] = []
+        data[field.fieldCode] = field.fieldConfig?.defaultValue || []
       }
       else if (field.fieldType === 'FILE') {
         data[field.fieldCode] = []
@@ -400,7 +410,7 @@ watch(
         data[field.fieldCode] = []
       }
       else {
-        data[field.fieldCode] = undefined
+        data[field.fieldCode] = field.fieldConfig?.defaultValue
       }
     })
     previewData.value = data
