@@ -58,6 +58,12 @@
             <artifactId>continew-plugin-review-template</artifactId>
         </dependency>
 
+        <!-- 项目评审表单模板模块 -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-form</artifactId>
+        </dependency>
+
         <!-- ContiNew Starter 链路追踪模块 -->
         <dependency>
             <groupId>top.continew.starter</groupId>

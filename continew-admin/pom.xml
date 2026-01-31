@@ -55,7 +55,11 @@
                 <version>${revision}</version>
             </dependency>
 
-
+            <dependency>
+                <groupId>top.continew.admin</groupId>
+                <artifactId>continew-plugin-review-form</artifactId>
+                <version>${revision}</version>
+            </dependency>
 
             <!-- 系统管理模块（存放系统管理模块相关功能，例如：部门管理、角色管理、用户管理等） -->
             <dependency>

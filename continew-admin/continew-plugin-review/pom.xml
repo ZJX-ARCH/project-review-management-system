@@ -18,6 +18,7 @@
     <modules>
         <module>continew-plugin-review-common</module>
         <module>continew-plugin-review-template</module>
+        <module>continew-plugin-review-form</module>
     </modules>
 
     <dependencies>
