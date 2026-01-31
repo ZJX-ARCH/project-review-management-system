@@ -676,21 +676,28 @@ const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
   if (!localField.value)
     return
 
-  if (fileList.length > 0 && currentFile.status === 'done') {
+  if (fileList.length > 0) {
     // 上传成功后，从响应中获取文件信息
     const fileData = currentFile.response || {}
-    localField.value.fieldConfig.templateFile = {
+
+    // 构建文件对象，确保包含所有必要信息
+    const templateFile = {
       uid: currentFile.uid,
-      name: currentFile.name,
-      status: 'done',
+      name: fileData.originalName || currentFile.name || '模板文件',
+      status: currentFile.status || 'done',
       url: fileData.url || fileData.path || '',
+      response: fileData,
     }
+
+    localField.value.fieldConfig.templateFile = templateFile
     localField.value.fieldConfig.templateUrl = fileData.url || fileData.path || ''
-    if (!localField.value.fieldConfig.templateName) {
-      localField.value.fieldConfig.templateName = currentFile.name || '模板文件'
+
+    // 更新模板名称
+    if (!localField.value.fieldConfig.templateName || localField.value.fieldConfig.templateName === '模板文件') {
+      localField.value.fieldConfig.templateName = fileData.originalName || currentFile.name || '模板文件'
     }
   }
-  else if (fileList.length === 0) {
+  else {
     localField.value.fieldConfig.templateFile = null
     localField.value.fieldConfig.templateUrl = ''
   }
