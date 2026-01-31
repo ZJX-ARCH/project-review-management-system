@@ -122,4 +122,26 @@ public class FormTemplateController {
         formTemplateService.updateStatus(id, status);
         return R.ok();
     }
+
+    /**
+     * 生成模板编码
+     */
+    @GetMapping("/generate-code")
+    @Operation(summary = "生成模板编码")
+    @SaCheckPermission("review:template:form:create")
+    public R<String> generateCode() {
+        String code = formTemplateService.generateCode();
+        return R.ok(code);
+    }
+
+    /**
+     * 查询所有启用的模板列表(用于下拉选择)
+     */
+    @GetMapping("/list-enabled")
+    @Operation(summary = "查询所有启用的模板列表")
+    @SaCheckPermission("review:template:form:query")
+    public R<List<FormTemplateResp>> listEnabled(@RequestParam(required = false) Integer templateType) {
+        List<FormTemplateResp> list = formTemplateService.listEnabled(templateType);
+        return R.ok(list);
+    }
 }

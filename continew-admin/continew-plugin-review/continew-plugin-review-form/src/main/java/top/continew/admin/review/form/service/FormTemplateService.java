@@ -84,4 +84,27 @@ public interface FormTemplateService extends IService<FormTemplateDO> {
      * @param status 状态
      */
     void updateStatus(Long id, Integer status);
+
+    /**
+     * 根据编码查询模板
+     *
+     * @param templateCode 模板编码
+     * @return 模板实体
+     */
+    FormTemplateDO getByCode(String templateCode);
+
+    /**
+     * 生成模板编码
+     *
+     * @return 模板编码
+     */
+    String generateCode();
+
+    /**
+     * 查询所有启用的模板列表(用于下拉选择)
+     *
+     * @param templateType 模板类型(可选)
+     * @return 模板列表
+     */
+    List<FormTemplateResp> listEnabled(Integer templateType);
 }

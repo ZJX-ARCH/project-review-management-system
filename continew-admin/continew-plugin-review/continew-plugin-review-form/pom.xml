@@ -41,5 +41,9 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-system</artifactId>
+        </dependency>
     </dependencies>
 </project>

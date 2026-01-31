@@ -87,4 +87,22 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
     public void updateStatus(Long id, Integer status) {
         // TODO: 实现状态更新逻辑
     }
+
+    @Override
+    public FormTemplateDO getByCode(String templateCode) {
+        // TODO: 实现根据编码查询逻辑
+        return null;
+    }
+
+    @Override
+    public String generateCode() {
+        // TODO: 实现生成模板编码逻辑(FORM_ + timestamp)
+        return null;
+    }
+
+    @Override
+    public List<FormTemplateResp> listEnabled(Integer templateType) {
+        // TODO: 实现查询所有启用模板逻辑
+        return null;
+    }
 }
