@@ -217,7 +217,10 @@ const formRules = {
 
 // 生成编码按钮状态
 const generateCodeDisabled = ref(false)
-const generateCodeText = computed(() => generateCodeDisabled.value ? '生成中...' : '生成编码')
+const generateCodeCooldown = ref(0)
+const generateCodeText = computed(() => {
+  return generateCodeCooldown.value > 0 ? `${generateCodeCooldown.value}s` : '自动生成'
+})
 
 // 当前选中的字段索引
 const selectedFieldIndex = ref<number | null>(null)
@@ -266,7 +269,9 @@ const loadDetail = async () => {
 
 // 生成模板编码
 const handleGenerateCode = async () => {
-  generateCodeDisabled.value = true
+  if (generateCodeDisabled.value)
+    return
+
   try {
     const response = await generateFormTemplateCode()
     // 解包响应数据：如果response有data属性则使用data，否则使用response本身
@@ -276,11 +281,20 @@ const handleGenerateCode = async () => {
   }
   catch (error) {
     console.error('生成编码失败:', error)
-    Message.error('生成编码失败')
+    Message.error('编码生成失败')
   }
-  finally {
-    generateCodeDisabled.value = false
-  }
+
+  // 启动5秒冷却时间
+  generateCodeDisabled.value = true
+  generateCodeCooldown.value = 5
+
+  const timer = setInterval(() => {
+    generateCodeCooldown.value--
+    if (generateCodeCooldown.value <= 0) {
+      clearInterval(timer)
+      generateCodeDisabled.value = false
+    }
+  }, 1000)
 }
 
 // 添加字段
