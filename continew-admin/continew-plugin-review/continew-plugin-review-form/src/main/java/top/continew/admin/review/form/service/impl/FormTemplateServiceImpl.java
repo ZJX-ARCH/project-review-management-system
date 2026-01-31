@@ -6,12 +6,15 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.x.file.storage.core.FileInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.common.util.JsonUtil;
 import top.continew.admin.review.form.mapper.FormFieldMapper;
 import top.continew.admin.review.form.mapper.FormTemplateFileMapper;
@@ -56,6 +59,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
     private final FormFieldMapper formFieldMapper;
     private final FormTemplateFileMapper formTemplateFileMapper;
     private final FileService fileService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -99,10 +103,10 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         // 复制基本属性
         BeanUtil.copyProperties(req, entity);
         // 设置状态为禁用(新建模板默认禁用,需要手动启用)
-        entity.setStatus(0);
+        entity.setStatus(DisEnableStatusEnum.DISABLE);
         // 如果有布局配置,转换为JSON字符串
         if (req.getLayoutConfig() != null) {
-            entity.setLayoutConfig(JsonUtil.toJsonString(req.getLayoutConfig()));
+            entity.setLayoutConfig(req.getLayoutConfig().toString());
         }
         // 保存主表
         baseMapper.insert(entity);
@@ -124,7 +128,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             fieldDO.setSort(fieldReq.getSort());
             // 设置字段配置(转换为JSON字符串)
             if (fieldReq.getFieldConfig() != null) {
-                fieldDO.setFieldConfig(JsonUtil.toJsonString(fieldReq.getFieldConfig()));
+                fieldDO.setFieldConfig(fieldReq.getFieldConfig().toString());
             }
             fieldList.add(fieldDO);
         }
@@ -175,7 +179,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         entity.setTemplateType(req.getTemplateType());
         // 如果有布局配置,转换为JSON字符串
         if (req.getLayoutConfig() != null) {
-            entity.setLayoutConfig(JsonUtil.toJsonString(req.getLayoutConfig()));
+            entity.setLayoutConfig(req.getLayoutConfig().toString());
         }
         // 执行更新
         baseMapper.updateById(entity);
@@ -202,7 +206,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             fieldDO.setSort(fieldReq.getSort());
             // 设置字段配置(转换为JSON字符串)
             if (fieldReq.getFieldConfig() != null) {
-                fieldDO.setFieldConfig(JsonUtil.toJsonString(fieldReq.getFieldConfig()));
+                fieldDO.setFieldConfig(fieldReq.getFieldConfig().toString());
             }
             fieldList.add(fieldDO);
         }
@@ -285,8 +289,8 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
                 // 遍历附件,删除物理文件
                 for (FormTemplateFileDO file : files) {
                     try {
-                        // 删除物理文件
-                        fileService.delete(String.valueOf(file.getFileId()));
+                        // 删除物理文件(BaseService.delete 需要 List<Long> 参数)
+                        fileService.delete(List.of(file.getFileId()));
                     } catch (Exception e) {
                         // 文件删除失败仅记录警告,不影响流程
                         log.warn("删除物理文件失败, 文件ID: {}, 错误: {}", file.getFileId(), e.getMessage());
@@ -327,7 +331,11 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         FormTemplateResp resp = BeanUtil.copyProperties(entity, FormTemplateResp.class);
         // 解析布局配置JSON
         if (StrUtil.isNotBlank(entity.getLayoutConfig())) {
-            resp.setLayoutConfig(JsonUtil.parseObject(entity.getLayoutConfig()));
+            try {
+                resp.setLayoutConfig(objectMapper.readTree(entity.getLayoutConfig()));
+            } catch (Exception e) {
+                log.warn("解析布局配置JSON失败, 模板ID: {}", id, e);
+            }
         }
 
         // 2. 查询字段配置列表
@@ -340,7 +348,11 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             FormFieldResp fieldResp = BeanUtil.copyProperties(field, FormFieldResp.class);
             // 解析字段配置JSON
             if (StrUtil.isNotBlank(field.getFieldConfig())) {
-                fieldResp.setFieldConfig(JsonUtil.parseObject(field.getFieldConfig()));
+                try {
+                    fieldResp.setFieldConfig(objectMapper.readTree(field.getFieldConfig()));
+                } catch (Exception e) {
+                    log.warn("解析字段配置JSON失败, 字段ID: {}", field.getId(), e);
+                }
             }
             return fieldResp;
         }).collect(Collectors.toList());
@@ -357,11 +369,12 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             FormTemplateFileResp fileResp = BeanUtil.copyProperties(file, FormTemplateFileResp.class);
             // 获取文件详情(文件名、URL等)
             try {
-                FileInfo fileInfo = fileService.getFileInfoById(String.valueOf(file.getFileId()));
-                if (fileInfo != null) {
-                    fileResp.setFileName(fileInfo.getOriginalFilename());
-                    fileResp.setFileUrl(fileInfo.getUrl());
-                    fileResp.setFileSize(fileInfo.getSize());
+                // 使用 FileService.get() 方法获取文件响应对象
+                top.continew.admin.system.model.resp.file.FileResp fileDetail = fileService.get(file.getFileId());
+                if (fileDetail != null) {
+                    fileResp.setFileName(fileDetail.getOriginalName());
+                    fileResp.setFileUrl(fileDetail.getUrl());
+                    fileResp.setFileSize(fileDetail.getSize());
                 }
             } catch (Exception e) {
                 log.warn("获取文件信息失败, 文件ID: {}", file.getFileId(), e);
@@ -416,7 +429,11 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             FormTemplateResp resp = BeanUtil.copyProperties(record, FormTemplateResp.class);
             // 解析布局配置JSON
             if (StrUtil.isNotBlank(record.getLayoutConfig())) {
-                resp.setLayoutConfig(JsonUtil.parseObject(record.getLayoutConfig()));
+                try {
+                    resp.setLayoutConfig(objectMapper.readTree(record.getLayoutConfig()));
+                } catch (Exception e) {
+                    log.warn("解析布局配置JSON失败, 模板ID: {}", record.getId(), e);
+                }
             }
             return resp;
         }).collect(Collectors.toList());
@@ -473,9 +490,13 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         // 3. 校验文件类型和大小(可选,根据字段配置)
         // 从字段配置中获取文件限制
         if (StrUtil.isNotBlank(field.getFieldConfig())) {
-            Object configObj = JsonUtil.parseObject(field.getFieldConfig());
-            // TODO: 解析allowedTypes和maxSize进行校验
-            // 这里简化处理,实际应从JSON配置中获取限制条件
+            try {
+                JsonNode configObj = objectMapper.readTree(field.getFieldConfig());
+                // TODO: 解析allowedTypes和maxSize进行校验
+                // 这里简化处理,实际应从JSON配置中获取限制条件
+            } catch (Exception e) {
+                log.warn("解析字段配置JSON失败, 字段ID: {}", fieldId, e);
+            }
         }
 
         // 4. 上传文件到存储服务
@@ -525,7 +546,8 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
 
         // 3. 删除物理文件
         try {
-            fileService.delete(String.valueOf(storageFileId));
+            // BaseService.delete 需要 List<Long> 参数
+            fileService.delete(List.of(storageFileId));
             log.info("删除物理文件成功, 存储文件ID: {}", storageFileId);
         } catch (Exception e) {
             // 文件服务删除失败仅记录警告,不影响流程(文件可能已被删除)
@@ -542,17 +564,13 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateStatus(Long id, Integer status) {
+    public void updateStatus(Long id, DisEnableStatusEnum status) {
         // 1. 参数校验
         if (id == null) {
             throw new BusinessException("模板ID不能为空");
         }
         if (status == null) {
             throw new BusinessException("状态不能为空");
-        }
-        // 校验状态值: 0-禁用, 1-启用
-        if (status != 0 && status != 1) {
-            throw new BusinessException("状态值非法,只能为0(禁用)或1(启用)");
         }
         log.info("开始更新模板状态, ID: {}, 目标状态: {}", id, status);
 
@@ -561,15 +579,15 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         if (entity == null) {
             throw new BusinessException("模板不存在");
         }
-        Integer currentStatus = entity.getStatus();
+        DisEnableStatusEnum currentStatus = entity.getStatus();
         // 如果状态相同,无需更新
-        if (currentStatus.equals(status)) {
+        if (currentStatus == status) {
             log.info("模板状态未变化,无需更新, ID: {}, 状态: {}", id, status);
             return;
         }
 
         // 3. 业务校验:启用时检查模板是否配置完整
-        if (status == 1) {
+        if (status == DisEnableStatusEnum.ENABLE) {
             // 查询字段数量
             QueryWrapper<FormFieldDO> countQuery = new QueryWrapper<>();
             countQuery.eq("template_id", id);
@@ -655,7 +673,11 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             FormTemplateResp resp = BeanUtil.copyProperties(record, FormTemplateResp.class);
             // 解析布局配置JSON
             if (StrUtil.isNotBlank(record.getLayoutConfig())) {
-                resp.setLayoutConfig(JsonUtil.parseObject(record.getLayoutConfig()));
+                try {
+                    resp.setLayoutConfig(objectMapper.readTree(record.getLayoutConfig()));
+                } catch (Exception e) {
+                    log.warn("解析布局配置JSON失败, 模板ID: {}", record.getId(), e);
+                }
             }
 
             // 填充字段数量统计

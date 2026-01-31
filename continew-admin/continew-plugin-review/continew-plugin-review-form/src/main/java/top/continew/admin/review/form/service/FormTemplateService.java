@@ -1,6 +1,7 @@
 package top.continew.admin.review.form.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.form.model.entity.FormTemplateDO;
 import top.continew.admin.review.form.model.query.FormTemplateQuery;
 import top.continew.admin.review.form.model.req.FormTemplateReq;
@@ -81,9 +82,9 @@ public interface FormTemplateService extends IService<FormTemplateDO> {
      * 启用/禁用模板
      *
      * @param id     模板ID
-     * @param status 状态
+     * @param status 状态(ENABLE=启用, DISABLE=禁用)
      */
-    void updateStatus(Long id, Integer status);
+    void updateStatus(Long id, DisEnableStatusEnum status);
 
     /**
      * 根据编码查询模板

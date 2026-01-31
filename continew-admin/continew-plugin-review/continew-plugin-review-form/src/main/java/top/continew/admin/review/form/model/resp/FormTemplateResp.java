@@ -80,4 +80,16 @@ public class FormTemplateResp extends BaseDetailResp {
      */
     @Schema(description = "字段配置列表")
     private List<FormFieldResp> fields;
+
+    /**
+     * 附件文件列表
+     */
+    @Schema(description = "附件文件列表")
+    private List<FormTemplateFileResp> files;
+
+    /**
+     * 字段数量
+     */
+    @Schema(description = "字段数量", example = "7")
+    private Integer fieldCount;
 }
