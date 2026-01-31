@@ -56,27 +56,6 @@
             />
           </a-form-item>
 
-          <a-form-item label="是否必填">
-            <a-switch
-              v-model="localField.isRequired"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-
-          <a-form-item label="是否显示">
-            <a-switch
-              v-model="localField.isVisible"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-
-          <a-form-item label="是否只读">
-            <a-switch
-              v-model="localField.isReadonly"
-              @change="handleUpdate"
-            />
-          </a-form-item>
-
           <a-form-item label="排序">
             <a-input-number
               v-model="localField.sort"
