@@ -344,7 +344,7 @@
             </a-form-item>
           </template>
 
-          <!-- 文件 -->
+          <!-- 文件上传 -->
           <template v-else-if="localField.fieldType === 'FILE'">
             <a-form-item label="最大文件数">
               <a-input-number
@@ -361,6 +361,51 @@
                 :min="1"
                 :max="200"
                 :style="{ width: '100%' }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
+            <a-form-item label="提示信息">
+              <a-textarea
+                v-model="localField.fieldConfig.tips"
+                placeholder="请输入提示信息"
+                :auto-size="{ minRows: 2, maxRows: 4 }"
+                @change="handleUpdate"
+              />
+            </a-form-item>
+          </template>
+
+          <!-- 文件模板 -->
+          <template v-else-if="localField.fieldType === 'FILE_TEMPLATE'">
+            <a-form-item label="模板名称">
+              <a-input
+                v-model="localField.fieldConfig.templateName"
+                placeholder="请输入模板名称"
+                @change="handleUpdate"
+              />
+            </a-form-item>
+            <a-form-item label="模板文件">
+              <a-upload
+                :file-list="localField.fieldConfig.templateFile ? [localField.fieldConfig.templateFile] : []"
+                :limit="1"
+                @change="handleTemplateFileChange"
+              >
+                <template #upload-button>
+                  <a-button type="outline">
+                    <icon-upload />
+                    上传模板文件
+                  </a-button>
+                </template>
+              </a-upload>
+            </a-form-item>
+            <a-form-item label="允许下载">
+              <a-switch
+                v-model="localField.fieldConfig.allowDownload"
+                @change="handleUpdate"
+              />
+            </a-form-item>
+            <a-form-item label="允许预览">
+              <a-switch
+                v-model="localField.fieldConfig.allowPreview"
                 @change="handleUpdate"
               />
             </a-form-item>
@@ -511,6 +556,7 @@ const fieldTypeOptions = [
   { label: '多选', value: 'CHECKBOX' },
   { label: '评分', value: 'SCORE' },
   { label: '文件上传', value: 'FILE' },
+  { label: '文件模板', value: 'FILE_TEMPLATE' },
   { label: '动态表格', value: 'TABLE' },
 ]
 
@@ -595,6 +641,26 @@ const handleUpdate = () => {
   if (localField.value) {
     emit('update', localField.value)
   }
+}
+
+// 处理模板文件上传
+const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
+  if (!localField.value)
+    return
+
+  if (fileList.length > 0) {
+    localField.value.fieldConfig.templateFile = currentFile
+    localField.value.fieldConfig.templateUrl = currentFile.url || ''
+    if (!localField.value.fieldConfig.templateName) {
+      localField.value.fieldConfig.templateName = currentFile.name || '模板文件'
+    }
+  }
+  else {
+    localField.value.fieldConfig.templateFile = null
+    localField.value.fieldConfig.templateUrl = ''
+  }
+
+  handleUpdate()
 }
 
 // 添加选项

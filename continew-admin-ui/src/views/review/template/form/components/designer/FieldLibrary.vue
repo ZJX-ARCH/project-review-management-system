@@ -186,6 +186,18 @@ const advancedFields = [
     },
   },
   {
+    type: 'FILE_TEMPLATE',
+    label: '文件模板',
+    icon: 'icon-file',
+    defaultConfig: {
+      templateName: '模板文件',
+      templateUrl: '',
+      allowDownload: true,
+      allowPreview: false,
+      tips: '点击下载模板文件',
+    },
+  },
+  {
     type: 'TABLE',
     label: '动态表格',
     icon: 'icon-table',

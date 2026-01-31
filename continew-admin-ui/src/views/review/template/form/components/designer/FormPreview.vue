@@ -126,7 +126,7 @@
                 :disabled="field.isReadonly === true"
               />
 
-              <!-- 文件 -->
+              <!-- 文件上传 -->
               <a-upload
                 v-else-if="field.fieldType === 'FILE'"
                 :file-list="previewData[field.fieldCode]"
@@ -143,6 +143,36 @@
                   {{ field.fieldConfig.tips }}
                 </template>
               </a-upload>
+
+              <!-- 文件模板 -->
+              <div v-else-if="field.fieldType === 'FILE_TEMPLATE'" class="file-template-field">
+                <a-space direction="vertical" fill>
+                  <a-space>
+                    <a-button
+                      v-if="field.fieldConfig?.allowDownload && field.fieldConfig?.templateUrl"
+                      type="primary"
+                      :disabled="field.isReadonly === true"
+                      @click="handleDownloadTemplate(field)"
+                    >
+                      <icon-download />
+                      下载{{ field.fieldConfig.templateName || '模板文件' }}
+                    </a-button>
+                    <a-button
+                      v-if="field.fieldConfig?.allowPreview && field.fieldConfig?.templateUrl"
+                      type="outline"
+                      :disabled="field.isReadonly === true"
+                      @click="handlePreviewTemplate(field)"
+                    >
+                      <icon-eye />
+                      预览
+                    </a-button>
+                  </a-space>
+                  <div v-if="field.fieldConfig?.tips" class="template-tips">
+                    <icon-info-circle />
+                    {{ field.fieldConfig.tips }}
+                  </div>
+                </a-space>
+              </div>
 
               <!-- 表格 -->
               <div v-else-if="field.fieldType === 'TABLE'" class="table-field">
@@ -263,7 +293,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
+import { IconDownload, IconEye, IconInfoCircle, IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
 import type { FormFieldReq, FormTemplateReq } from '@/apis/review'
 
 defineOptions({ name: 'FormPreview' })
@@ -390,6 +420,32 @@ const handleMoveTableRowDown = (fieldCode: string, rowIndex: number) => {
   }
 }
 
+// 下载模板文件
+const handleDownloadTemplate = (field: any) => {
+  const url = field.fieldConfig?.templateUrl
+  if (!url) {
+    return
+  }
+  // 创建一个隐藏的下载链接
+  const link = document.createElement('a')
+  link.href = url
+  link.download = field.fieldConfig?.templateName || '模板文件'
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+// 预览模板文件
+const handlePreviewTemplate = (field: any) => {
+  const url = field.fieldConfig?.templateUrl
+  if (!url) {
+    return
+  }
+  // 在新窗口打开预览
+  window.open(url, '_blank')
+}
+
 // 初始化预览数据
 watch(
   () => props.templateData.fields,
@@ -432,6 +488,22 @@ watch(
 
     &:last-child {
       margin-bottom: 0;
+    }
+  }
+
+  .file-template-field {
+    width: 100%;
+
+    .template-tips {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background-color: var(--color-fill-1);
+      border-radius: 4px;
+      color: var(--color-text-3);
+      font-size: 13px;
     }
   }
 
