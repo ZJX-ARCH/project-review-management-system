@@ -38,9 +38,9 @@ public class FormFieldReq implements Serializable {
     /**
      * 字段编码
      */
-    @Schema(description = "字段编码", example = "projectName")
+    @Schema(description = "字段编码", example = "field_text_1769855091319")
     @NotBlank(message = "字段编码不能为空")
-    @Pattern(regexp = "^[a-z][a-zA-Z0-9]*$", message = "字段编码必须以小写字母开头,只能包含字母和数字")
+    @Pattern(regexp = "^[a-z][a-zA-Z0-9_]*$", message = "字段编码必须以小写字母开头,只能包含字母、数字和下划线")
     @Length(max = 50, message = "字段编码长度不能超过 {max} 个字符")
     private String fieldCode;
 
