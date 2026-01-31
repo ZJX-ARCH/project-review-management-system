@@ -158,17 +158,15 @@
                           v-if="field.fieldConfig?.allowDownload && file.url"
                           type="primary"
                           size="small"
-                          :disabled="field.isReadonly === true"
                           @click="handleDownloadTemplateFile(file)"
                         >
                           <icon-download />
-                          下载 {{ file.name }}
+                          下载 {{ file.name || '模板文件' }}
                         </a-button>
                         <a-button
                           v-if="field.fieldConfig?.allowPreview && file.url"
                           type="outline"
                           size="small"
-                          :disabled="field.isReadonly === true"
                           @click="handlePreviewTemplateFile(file)"
                         >
                           <icon-eye />
@@ -177,6 +175,7 @@
                       </a-space>
                     </div>
                   </div>
+                  <a-empty v-else description="暂无模板文件" :style="{ margin: '8px 0' }" />
                   <div v-if="field.fieldConfig?.tips" class="template-tips">
                     <icon-info-circle />
                     {{ field.fieldConfig.tips }}
