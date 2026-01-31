@@ -161,7 +161,7 @@ import {
   type FormTemplateReq,
 } from '@/apis/review'
 
-defineOptions({ name: 'FormTemplateDesigner' })
+defineOptions({ name: 'FormDesigner' })
 
 const route = useRoute()
 const router = useRouter()
