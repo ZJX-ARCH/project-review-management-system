@@ -15,7 +15,8 @@ const storeSetup = () => {
     if (index >= 0) {
       tabList.value[index].fullPath !== item.fullPath && (tabList.value[index] = item)
     } else {
-      if (item.meta?.showInTabs ?? true) {
+      const showInTabs = item.meta?.showInTabs ?? true
+      if (showInTabs) {
         tabList.value.push(item)
       }
     }

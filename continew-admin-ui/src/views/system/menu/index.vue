@@ -51,8 +51,8 @@
         </a-button>
       </template>
       <template #title="{ record }">
-        <GiSvgIcon :name="record.icon" :size="15" />
-        <span style="margin-left: 5px; vertical-align: middle">{{ record.title }}</span>
+        <GiSvgIcon v-if="record.icon" :name="record.icon" :size="15" />
+        <span :style="{ marginLeft: record.icon ? '5px' : '0', verticalAlign: 'middle' }">{{ record.title }}</span>
       </template>
       <template #type="{ record }">
         <a-tag v-if="record.type === 1" color="arcoblue">目录</a-tag>
@@ -103,6 +103,7 @@ import type GiTable from '@/components/GiTable/index.vue'
 import { useTable } from '@/hooks'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
+import { useRouteStore } from '@/stores/modules/route'
 
 defineOptions({ name: 'SystemMenu' })
 
@@ -188,15 +189,22 @@ const onDelete = (record: MenuResp) => {
 }
 
 // 清除缓存
+const routeStore = useRouteStore()
 const onClearCache = () => {
   Modal.warning({
     title: '提示',
-    content: `是否确定清除全部菜单缓存？`,
+    content: `是否确定清除全部菜单缓存？清除后将重新加载路由。`,
     hideCancel: false,
     maskClosable: false,
     onOk: async () => {
       await clearMenuCache()
-      Message.success('清除成功')
+      // 清除前端路由缓存（localStorage）
+      localStorage.removeItem('route')
+      // 重新生成路由，刷新前端路由缓存
+      await routeStore.generateRoutes()
+      Message.success('清除成功，路由已刷新')
+      // 刷新页面以应用新路由
+      window.location.reload()
     },
   })
 }

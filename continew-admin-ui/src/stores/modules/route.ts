@@ -28,7 +28,7 @@ const formatAsyncRoutes = (menus: RouteItem[]) => {
   if (!menus.length) return []
 
   const pathMap = new Map()
-  return mapTree(menus, (item) => {
+  const routes = mapTree(menus, (item) => {
     pathMap.set(item.id, item.path)
 
     if (item.children?.length) {
@@ -55,6 +55,8 @@ const formatAsyncRoutes = (menus: RouteItem[]) => {
       },
     }
   }) as unknown as RouteRecordRaw[]
+
+  return routes
 }
 
 /** 判断路由层级是否大于 2 */

@@ -124,6 +124,12 @@ public class MenuReq implements Serializable {
     private Boolean isHidden;
 
     /**
+     * 是否在页签中显示
+     */
+    @Schema(description = "是否在页签中显示", example = "true")
+    private Boolean showInTabs;
+
+    /**
      * 上级菜单 ID
      */
     @Schema(description = "上级菜单 ID", example = "1000")

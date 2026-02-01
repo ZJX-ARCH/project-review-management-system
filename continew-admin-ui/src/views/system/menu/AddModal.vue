@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { nextTick, watch } from 'vue'
 import { type ColProps, type FormInstance, Message, type TreeNodeData } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { mapTree } from 'xe-utils'
@@ -232,9 +232,10 @@ const onChangeType = () => {
   formRef.value?.clearValidate()
 }
 
-// 监听路径变化，智能设置页签显示
+// 监听路径变化，智能设置页签显示（仅在新增时生效）
 watch(() => form.path, (newPath: string | undefined) => {
-  if (form.type === 2 && newPath) {
+  // 只在新增菜单时应用智能逻辑，编辑时不覆盖用户设置
+  if (!isUpdate.value && form.type === 2 && newPath) {
     // 如果路径包含 edit/add/detail/form 等关键词，默认不显示页签
     const shouldHideTabs = /\/(edit|add|detail|form|create|update)($|\/)/.test(newPath)
     if (shouldHideTabs && form.showInTabs !== false) {
@@ -267,6 +268,7 @@ const save = async () => {
   try {
     const isInvalid = await formRef.value?.validate()
     if (isInvalid) return false
+
     if (isUpdate.value) {
       await updateMenu(form, dataId.value)
       Message.success('修改成功')
@@ -294,7 +296,29 @@ const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
   const { data } = await getMenu(id)
-  Object.assign(form, data)
+  // 确保 showInTabs 是布尔值
+  if (data.showInTabs !== undefined && data.showInTabs !== null) {
+    data.showInTabs = Boolean(data.showInTabs)
+  }
+  // 使用逐个赋值而不是 Object.assign，确保响应式更新
+  form.type = data.type
+  form.parentId = data.parentId
+  form.title = data.title
+  form.icon = data.icon
+  form.path = data.path
+  form.name = data.name
+  form.component = data.component
+  form.redirect = data.redirect
+  form.permission = data.permission
+  form.sort = data.sort
+  form.isExternal = data.isExternal
+  form.isCache = data.isCache
+  form.isHidden = data.isHidden
+  form.showInTabs = data.showInTabs
+  form.status = data.status
+
+  // 使用 nextTick 确保 DOM 更新后再显示弹窗
+  await nextTick()
   visible.value = true
 }
 
