@@ -161,22 +161,22 @@
                       </div>
                       <a-space :size="8" class="file-actions">
                         <a-button
-                          v-if="field.fieldConfig?.allowDownload && file.url"
+                          v-if="field.fieldConfig?.allowPreview && file.url"
                           type="primary"
-                          size="small"
-                          @click="handleDownloadTemplateFile(file)"
-                        >
-                          <icon-download />
-                          下载
-                        </a-button>
-                        <a-button
-                          v-if="field.fieldConfig?.allowPreview && file.url && isImageFile(file.name)"
-                          type="outline"
                           size="small"
                           @click="handlePreviewTemplateFile(file)"
                         >
                           <icon-eye />
                           预览
+                        </a-button>
+                        <a-button
+                          v-if="field.fieldConfig?.allowDownload && file.url"
+                          type="outline"
+                          size="small"
+                          @click="handleDownloadTemplateFile(file)"
+                        >
+                          <icon-download />
+                          下载
                         </a-button>
                       </a-space>
                     </div>
@@ -564,10 +564,6 @@ watch(
 
         &:hover {
           background-color: var(--color-fill-1);
-
-          .file-actions {
-            opacity: 1;
-          }
         }
 
         .file-info {
@@ -580,11 +576,6 @@ watch(
             color: var(--color-text-1);
             font-size: 14px;
           }
-        }
-
-        .file-actions {
-          opacity: 0;
-          transition: opacity 0.2s;
         }
       }
     }
