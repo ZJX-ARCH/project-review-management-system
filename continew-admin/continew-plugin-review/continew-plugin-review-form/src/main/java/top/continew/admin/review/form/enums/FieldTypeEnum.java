@@ -24,7 +24,8 @@ public enum FieldTypeEnum implements BaseEnum<String> {
     FILE("FILE", "文件上传"),
     FILE_TEMPLATE("FILE_TEMPLATE", "文件模板"),
     TABLE("TABLE", "动态表格"),
-    SCORE("SCORE", "评分组件");
+    SCORE("SCORE", "评分组件"),
+    SCORE_TABLE("SCORE_TABLE", "评分表");
 
     private final String value;
     private final String description;

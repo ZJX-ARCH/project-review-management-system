@@ -514,6 +514,267 @@
               </a-button>
             </a-form-item>
           </template>
+
+          <!-- 评分表 -->
+          <template v-else-if="localField.fieldType === 'SCORE_TABLE'">
+            <!-- 计分模式 -->
+            <a-form-item label="计分模式">
+              <div class="score-mode-panel">
+                <a-radio-group v-model="localField.fieldConfig.scoreMode" @change="handleUpdate">
+                  <a-radio value="WEIGHTED">加权求和</a-radio>
+                  <a-radio value="SIMPLE">简单相加</a-radio>
+                </a-radio-group>
+              </div>
+            </a-form-item>
+
+            <!-- 及格标准配置 -->
+            <a-form-item label="及格标准配置">
+              <div class="pass-config-panel">
+                <div class="pass-config-row">
+                  <label>标准类型</label>
+                  <a-radio-group
+                    v-model="localField.fieldConfig.passConfig.passType"
+                    @change="handleUpdate"
+                  >
+                    <a-radio value="RATIO">按比例</a-radio>
+                    <a-radio value="FIXED">固定分数</a-radio>
+                  </a-radio-group>
+                </div>
+
+                <div class="pass-config-row">
+                  <label>及格值</label>
+                  <a-input-number
+                    v-model="localField.fieldConfig.passConfig.passValue"
+                    :min="0"
+                    :max="localField.fieldConfig.passConfig.passType === 'RATIO' ? 100 : computedTotalScore"
+                    :precision="0"
+                    :style="{ width: '120px' }"
+                    @change="handleUpdate"
+                  >
+                    <template #suffix>
+                      {{ localField.fieldConfig.passConfig.passType === 'RATIO' ? '%' : '分' }}
+                    </template>
+                  </a-input-number>
+                </div>
+
+                <div class="pass-config-row">
+                  <label>良好值（可选）</label>
+                  <a-input-number
+                    v-model="localField.fieldConfig.passConfig.goodValue"
+                    :min="0"
+                    :max="localField.fieldConfig.passConfig.passType === 'RATIO' ? 100 : computedTotalScore"
+                    :precision="0"
+                    :style="{ width: '120px' }"
+                    @change="handleUpdate"
+                  >
+                    <template #suffix>
+                      {{ localField.fieldConfig.passConfig.passType === 'RATIO' ? '%' : '分' }}
+                    </template>
+                  </a-input-number>
+                </div>
+
+                <div class="pass-config-row">
+                  <label>优秀值（可选）</label>
+                  <a-input-number
+                    v-model="localField.fieldConfig.passConfig.excellentValue"
+                    :min="0"
+                    :max="localField.fieldConfig.passConfig.passType === 'RATIO' ? 100 : computedTotalScore"
+                    :precision="0"
+                    :style="{ width: '120px' }"
+                    @change="handleUpdate"
+                  >
+                    <template #suffix>
+                      {{ localField.fieldConfig.passConfig.passType === 'RATIO' ? '%' : '分' }}
+                    </template>
+                  </a-input-number>
+                </div>
+              </div>
+            </a-form-item>
+
+            <!-- 评分项列表 -->
+            <a-form-item label="评分项列表">
+              <div class="score-items-list">
+                <template v-if="localField.fieldConfig.scoreItems && localField.fieldConfig.scoreItems.length > 0">
+                  <div
+                    v-for="(item, index) in localField.fieldConfig.scoreItems"
+                    :key="item.id"
+                    class="score-item"
+                  >
+                    <div class="score-item-header">
+                      <span class="score-item-index">{{ index + 1 }}.</span>
+                      <a-input
+                        v-model="item.itemName"
+                        placeholder="评分项名称"
+                        size="small"
+                        :style="{ width: '140px' }"
+                        @input="handleUpdate"
+                      />
+                      <div class="score-item-actions">
+                        <a-button
+                          size="mini"
+                          type="text"
+                          :disabled="index === 0"
+                          @click="moveScoreItemUp(index)"
+                        >
+                          <icon-up />
+                        </a-button>
+                        <a-button
+                          size="mini"
+                          type="text"
+                          :disabled="index === localField.fieldConfig.scoreItems.length - 1"
+                          @click="moveScoreItemDown(index)"
+                        >
+                          <icon-down />
+                        </a-button>
+                        <a-button
+                          size="mini"
+                          type="text"
+                          status="danger"
+                          @click="removeScoreItem(index)"
+                        >
+                          <icon-delete />
+                        </a-button>
+                      </div>
+                    </div>
+
+                    <!-- 第一行：编码、满分、权重(仅加权模式) -->
+                    <div class="score-item-row">
+                      <div class="score-field">
+                        <label>编码</label>
+                        <a-input
+                          v-model="item.itemCode"
+                          placeholder="item1"
+                          size="small"
+                          @input="handleUpdate"
+                        />
+                      </div>
+                      <div class="score-field">
+                        <label>满分</label>
+                        <a-input-number
+                          v-model="item.maxScore"
+                          :min="0"
+                          :max="1000"
+                          :precision="0"
+                          size="small"
+                          @change="handleUpdate"
+                        />
+                      </div>
+                      <div v-if="localField.fieldConfig.scoreMode === 'WEIGHTED'" class="score-field">
+                        <label>权重</label>
+                        <a-input-number
+                          v-model="item.weight"
+                          :min="0"
+                          :max="1"
+                          :precision="2"
+                          :step="0.1"
+                          size="small"
+                          @change="handleUpdate"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- 第二行：必填、允许小数、小数位数 -->
+                    <div class="score-item-row score-options-row">
+                      <a-space size="medium">
+                        <a-checkbox
+                          v-model="item.required"
+                          @change="handleUpdate"
+                        >
+                          必填
+                        </a-checkbox>
+                        <a-checkbox
+                          v-model="item.allowDecimal"
+                          @change="handleUpdate"
+                        >
+                          允许小数
+                        </a-checkbox>
+                        <div v-if="item.allowDecimal" style="display: inline-flex; align-items: center; gap: 6px;">
+                          <span style="font-size: 12px; color: var(--color-text-3);">小数位数:</span>
+                          <a-input-number
+                            v-model="item.decimalPlaces"
+                            :min="1"
+                            :max="2"
+                            :precision="0"
+                            size="small"
+                            :style="{ width: '80px' }"
+                            @change="handleUpdate"
+                          />
+                        </div>
+                      </a-space>
+                    </div>
+
+                    <!-- 第三行：评分说明 -->
+                    <div class="score-item-row">
+                      <div class="score-field-full">
+                        <label>评分说明</label>
+                        <a-textarea
+                          v-model="item.description"
+                          placeholder="请输入评分项说明"
+                          :auto-size="{ minRows: 2, maxRows: 3 }"
+                          size="small"
+                          @input="handleUpdate"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <a-empty v-else description="暂无评分项" :style="{ marginBottom: '12px' }" />
+              </div>
+            </a-form-item>
+
+            <a-form-item>
+              <a-button size="small" type="dashed" long @click="addScoreItem">
+                <icon-plus /> 添加评分项
+              </a-button>
+            </a-form-item>
+
+            <!-- 汇总信息 -->
+            <a-form-item label="汇总信息">
+              <a-space direction="vertical" :style="{ width: '100%' }">
+                <a-alert type="info">
+                  总分: {{ computedTotalScore }} 分
+                </a-alert>
+                <a-alert
+                  v-if="localField.fieldConfig.scoreMode === 'WEIGHTED'"
+                  :type="Math.abs(computedTotalWeight - 1) < 0.01 ? 'success' : 'warning'"
+                >
+                  权重总和: {{ computedTotalWeight }}
+                  {{ Math.abs(computedTotalWeight - 1) < 0.01 ? '✓' : '(建议总和为1.0)' }}
+                </a-alert>
+              </a-space>
+            </a-form-item>
+
+            <!-- 显示选项 -->
+            <a-form-item label="显示选项">
+              <a-space direction="vertical">
+                <a-checkbox
+                  v-if="localField.fieldConfig.scoreMode === 'WEIGHTED'"
+                  v-model="localField.fieldConfig.displayConfig.showWeight"
+                  @change="handleUpdate"
+                >
+                  显示权重列
+                </a-checkbox>
+                <a-checkbox
+                  v-model="localField.fieldConfig.displayConfig.showDescription"
+                  @change="handleUpdate"
+                >
+                  显示评分说明
+                </a-checkbox>
+                <a-checkbox
+                  v-model="localField.fieldConfig.displayConfig.showProgress"
+                  @change="handleUpdate"
+                >
+                  显示进度条
+                </a-checkbox>
+                <a-checkbox
+                  v-model="localField.fieldConfig.displayConfig.showSummary"
+                  @change="handleUpdate"
+                >
+                  显示汇总信息
+                </a-checkbox>
+              </a-space>
+            </a-form-item>
+          </template>
         </div>
       </a-form>
     </div>
@@ -521,7 +782,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import type { RequestOption } from '@arco-design/web-vue'
 import type { FormFieldReq } from '@/apis/review'
@@ -556,6 +817,7 @@ const fieldTypeOptions = [
   { label: '文件上传', value: 'FILE' },
   { label: '文件模板', value: 'FILE_TEMPLATE' },
   { label: '动态表格', value: 'TABLE' },
+  { label: '评分表', value: 'SCORE_TABLE' },
 ]
 
 // 本地字段数据
@@ -624,6 +886,30 @@ watch(
       if (localField.value.fieldType === 'TABLE') {
         if (!localField.value.fieldConfig.columns || !Array.isArray(localField.value.fieldConfig.columns)) {
           localField.value.fieldConfig.columns = []
+        }
+      }
+      // 确保评分表字段的配置存在
+      if (localField.value.fieldType === 'SCORE_TABLE') {
+        if (!localField.value.fieldConfig.scoreMode) {
+          localField.value.fieldConfig.scoreMode = 'WEIGHTED'
+        }
+        if (!localField.value.fieldConfig.passConfig) {
+          localField.value.fieldConfig.passConfig = {
+            passType: 'RATIO',
+            passValue: 60,
+          }
+        }
+        if (!localField.value.fieldConfig.scoreItems || !Array.isArray(localField.value.fieldConfig.scoreItems)) {
+          localField.value.fieldConfig.scoreItems = []
+        }
+        if (!localField.value.fieldConfig.displayConfig) {
+          localField.value.fieldConfig.displayConfig = {
+            showWeight: true,
+            showDescription: true,
+            showProgress: true,
+            showSummary: true,
+            summaryPosition: 'bottom',
+          }
         }
       }
     }
@@ -773,6 +1059,78 @@ const removeColumnOption = (columnIndex: number, optionIndex: number) => {
   column.options.splice(optionIndex, 1)
   handleUpdate()
 }
+
+// 添加评分项
+const addScoreItem = () => {
+  if (!localField.value)
+    return
+
+  if (!localField.value.fieldConfig.scoreItems) {
+    localField.value.fieldConfig.scoreItems = []
+  }
+
+  const newItem = {
+    id: `score_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    itemName: `评分项${localField.value.fieldConfig.scoreItems.length + 1}`,
+    itemCode: `item${localField.value.fieldConfig.scoreItems.length + 1}`,
+    maxScore: 10,
+    weight: 0.1,
+    description: '',
+    required: true,
+    allowDecimal: true,
+    decimalPlaces: 1,
+  }
+
+  localField.value.fieldConfig.scoreItems.push(newItem)
+  handleUpdate()
+}
+
+// 删除评分项
+const removeScoreItem = (index: number) => {
+  if (!localField.value || !localField.value.fieldConfig.scoreItems)
+    return
+
+  localField.value.fieldConfig.scoreItems.splice(index, 1)
+  handleUpdate()
+}
+
+// 上移评分项
+const moveScoreItemUp = (index: number) => {
+  if (!localField.value || !localField.value.fieldConfig.scoreItems || index === 0)
+    return
+
+  const items = localField.value.fieldConfig.scoreItems
+  ;[items[index - 1], items[index]] = [items[index], items[index - 1]]
+  handleUpdate()
+}
+
+// 下移评分项
+const moveScoreItemDown = (index: number) => {
+  if (!localField.value || !localField.value.fieldConfig.scoreItems)
+    return
+
+  const items = localField.value.fieldConfig.scoreItems
+  if (index === items.length - 1)
+    return
+
+  ;[items[index], items[index + 1]] = [items[index + 1], items[index]]
+  handleUpdate()
+}
+
+// 计算总分
+const computedTotalScore = computed(() => {
+  if (!localField.value || !localField.value.fieldConfig.scoreItems)
+    return 0
+  return localField.value.fieldConfig.scoreItems.reduce((sum: number, item: any) => sum + (item.maxScore || 0), 0)
+})
+
+// 计算权重总和
+const computedTotalWeight = computed(() => {
+  if (!localField.value || !localField.value.fieldConfig.scoreItems)
+    return 0
+  const total = localField.value.fieldConfig.scoreItems.reduce((sum: number, item: any) => sum + (item.weight || 0), 0)
+  return Math.round(total * 100) / 100
+})
 </script>
 
 <style lang="scss" scoped>
@@ -920,6 +1278,170 @@ const removeColumnOption = (columnIndex: number, optionIndex: number) => {
           }
         }
       }
+
+      // 评分表配置样式
+      .score-mode-panel {
+        padding: 10px 12px;
+        background-color: #f7f8fa;
+        border-radius: 6px;
+        border: 2px solid #d9d9d9;
+      }
+
+      .pass-config-panel {
+        padding: 12px;
+        background-color: #f7f8fa;
+        border-radius: 6px;
+        border: 2px solid #d9d9d9;
+
+        .pass-config-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 10px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          label {
+            min-width: 90px;
+            font-size: 12px;
+            color: var(--color-text-2);
+          }
+
+          :deep(.arco-radio-group) {
+            flex: 1;
+          }
+
+          :deep(.arco-input-number) {
+            width: 140px;
+          }
+        }
+      }
+
+      .score-items-list {
+        max-height: 450px;
+        overflow-y: auto;
+        padding: 10px;
+        background-color: #ffffff;
+        border-radius: 6px;
+        border: 2px solid #d9d9d9 !important;
+
+          &::-webkit-scrollbar {
+            width: 4px;
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background-color: var(--color-border-3);
+            border-radius: 2px;
+
+            &:hover {
+              background-color: var(--color-border-4);
+            }
+          }
+
+          .score-item {
+            padding: 12px;
+            background-color: #fafafa;
+            border: 2px solid #c9cdd4;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+
+            &:hover {
+              border-color: rgb(var(--primary-6));
+              box-shadow: 0 2px 8px rgba(var(--primary-6), 0.15);
+            }
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+
+            .score-item-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin-bottom: 10px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid var(--color-border-3);
+
+              .score-item-index {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--color-text-3);
+                min-width: 20px;
+              }
+
+              :deep(.arco-input) {
+                font-size: 13px;
+              }
+
+              .score-item-actions {
+                margin-left: auto;
+                display: flex;
+                gap: 0;
+              }
+            }
+
+            .score-item-row {
+              display: flex;
+              align-items: flex-start;
+              gap: 8px;
+              margin-bottom: 8px;
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+
+              &.score-options-row {
+                padding: 8px 0;
+                border-top: 1px dashed var(--color-border-2);
+                border-bottom: 1px dashed var(--color-border-2);
+                margin: 10px 0;
+              }
+
+              .score-field {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+
+                label {
+                  font-size: 12px;
+                  color: var(--color-text-3);
+                }
+
+                :deep(.arco-input-number),
+                :deep(.arco-input),
+                :deep(.arco-textarea) {
+                  width: 100%;
+                }
+              }
+
+              .score-field-inline {
+                display: flex;
+                align-items: center;
+                padding-top: 20px;
+              }
+
+              .score-field-full {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+
+                label {
+                  font-size: 12px;
+                  color: var(--color-text-3);
+                }
+
+                :deep(.arco-textarea) {
+                  width: 100%;
+                }
+              }
+            }
+          }
+        }
     }
   }
 }

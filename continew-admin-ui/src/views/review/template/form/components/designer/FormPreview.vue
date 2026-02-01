@@ -293,6 +293,88 @@
                 </a-button>
               </div>
 
+              <!-- 评分表 -->
+              <div v-else-if="field.fieldType === 'SCORE_TABLE'" class="score-table-field">
+                <div class="score-table">
+                  <!-- 表头 -->
+                  <div class="score-table-header">
+                    <div class="score-table-cell score-item-name">评分项</div>
+                    <div class="score-table-cell score-item-max">满分</div>
+                    <div
+                      v-if="field.fieldConfig?.scoreMode === 'WEIGHTED' && field.fieldConfig?.displayConfig?.showWeight"
+                      class="score-table-cell score-item-weight"
+                    >
+                      权重
+                    </div>
+                    <div class="score-table-cell score-item-score">得分</div>
+                  </div>
+
+                  <!-- 评分项 -->
+                  <div class="score-table-body">
+                    <div
+                      v-for="(item, index) in field.fieldConfig?.scoreItems || []"
+                      :key="item.id"
+                      class="score-table-row"
+                    >
+                      <div class="score-table-cell score-item-name">
+                        <div class="item-name-content">
+                          <span class="item-index">{{ index + 1 }}.</span>
+                          <span class="item-name">{{ item.itemName }}</span>
+                        </div>
+                        <div
+                          v-if="field.fieldConfig?.displayConfig?.showDescription && item.description"
+                          class="item-description"
+                        >
+                          {{ item.description }}
+                        </div>
+                      </div>
+                      <div class="score-table-cell score-item-max">
+                        {{ item.maxScore }}
+                      </div>
+                      <div
+                        v-if="field.fieldConfig?.scoreMode === 'WEIGHTED' && field.fieldConfig?.displayConfig?.showWeight"
+                        class="score-table-cell score-item-weight"
+                      >
+                        {{ (item.weight * 100).toFixed(0) }}%
+                      </div>
+                      <div class="score-table-cell score-item-score">
+                        <a-input-number
+                          v-model="getScoreTableData(field.fieldCode)[item.itemCode]"
+                          :min="0"
+                          :max="item.maxScore"
+                          :precision="item.allowDecimal ? item.decimalPlaces : 0"
+                          :placeholder="`请输入分数(0-${item.maxScore})`"
+                          size="small"
+                          :style="{ width: '120px' }"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 汇总信息 -->
+                  <div v-if="field.fieldConfig?.displayConfig?.showSummary" class="score-table-summary">
+                    <div class="summary-row">
+                      <span class="summary-label">总分:</span>
+                      <span class="summary-value">{{ calculateScoreTableTotal(field) }} / {{ calculateScoreTableMaxTotal(field) }}</span>
+                    </div>
+                    <div v-if="field.fieldConfig?.scoreMode === 'WEIGHTED'" class="summary-row">
+                      <span class="summary-label">加权分:</span>
+                      <span class="summary-value">{{ calculateScoreTableWeighted(field).toFixed(1) }}</span>
+                    </div>
+                    <div class="summary-row">
+                      <span class="summary-label">得分率:</span>
+                      <span class="summary-value">{{ calculateScoreTablePercentage(field).toFixed(1) }}%</span>
+                    </div>
+                    <div class="summary-row">
+                      <span class="summary-label">评价:</span>
+                      <span :class="['summary-value', 'level-' + getScoreTableLevel(field)]">
+                        {{ getScoreTableLevelText(field) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- 未知类型 -->
               <a-input
                 v-else
@@ -513,6 +595,99 @@ const handleFileUpload = (options: RequestOption) => {
   }
 }
 
+// 获取评分表数据
+const getScoreTableData = (fieldCode: string) => {
+  if (!previewData.value[fieldCode]) {
+    previewData.value[fieldCode] = { scores: {} }
+  }
+  if (!previewData.value[fieldCode].scores) {
+    previewData.value[fieldCode].scores = {}
+  }
+  return previewData.value[fieldCode].scores
+}
+
+// 计算评分表总分
+const calculateScoreTableTotal = (field: any) => {
+  const scores = getScoreTableData(field.fieldCode)
+  const items = field.fieldConfig?.scoreItems || []
+  return items.reduce((sum: number, item: any) => {
+    const score = scores[item.itemCode] || 0
+    return sum + score
+  }, 0)
+}
+
+// 计算评分表满分
+const calculateScoreTableMaxTotal = (field: any) => {
+  const items = field.fieldConfig?.scoreItems || []
+  return items.reduce((sum: number, item: any) => sum + (item.maxScore || 0), 0)
+}
+
+// 计算加权分
+const calculateScoreTableWeighted = (field: any) => {
+  const scores = getScoreTableData(field.fieldCode)
+  const items = field.fieldConfig?.scoreItems || []
+  return items.reduce((sum: number, item: any) => {
+    const score = scores[item.itemCode] || 0
+    return sum + (score * (item.weight || 0))
+  }, 0)
+}
+
+// 计算得分率
+const calculateScoreTablePercentage = (field: any) => {
+  const maxTotal = calculateScoreTableMaxTotal(field)
+  if (maxTotal === 0)
+    return 0
+
+  const scoreMode = field.fieldConfig?.scoreMode
+  const currentScore = scoreMode === 'WEIGHTED'
+    ? calculateScoreTableWeighted(field)
+    : calculateScoreTableTotal(field)
+
+  return (currentScore / maxTotal) * 100
+}
+
+// 获取评价等级
+const getScoreTableLevel = (field: any) => {
+  const percentage = calculateScoreTablePercentage(field)
+  const passConfig = field.fieldConfig?.passConfig || {}
+
+  let passValue = passConfig.passValue || 60
+  let excellentValue = passConfig.excellentValue || 85
+  let goodValue = passConfig.goodValue || 75
+
+  // 如果是固定分数模式，需要转换为百分比
+  if (passConfig.passType === 'FIXED') {
+    const maxTotal = calculateScoreTableMaxTotal(field)
+    if (maxTotal > 0) {
+      passValue = (passValue / maxTotal) * 100
+      if (excellentValue)
+        excellentValue = (excellentValue / maxTotal) * 100
+      if (goodValue)
+        goodValue = (goodValue / maxTotal) * 100
+    }
+  }
+
+  if (percentage >= excellentValue)
+    return 'EXCELLENT'
+  if (percentage >= goodValue)
+    return 'GOOD'
+  if (percentage >= passValue)
+    return 'PASS'
+  return 'FAIL'
+}
+
+// 获取评价等级文本
+const getScoreTableLevelText = (field: any) => {
+  const level = getScoreTableLevel(field)
+  const levelMap: Record<string, string> = {
+    EXCELLENT: '优秀',
+    GOOD: '良好',
+    PASS: '及格',
+    FAIL: '不及格',
+  }
+  return levelMap[level] || '未评分'
+}
+
 // 初始化预览数据
 watch(
   () => props.templateData.fields,
@@ -680,6 +855,168 @@ watch(
         text-align: center;
         color: var(--color-text-3);
         background-color: var(--color-fill-1);
+      }
+    }
+  }
+
+  .score-table-field {
+    width: 100%;
+
+    .score-table {
+      border: 2px solid #d9dde3;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+      .score-table-header {
+        display: grid;
+        grid-template-columns: 2fr 100px 160px;
+        background: linear-gradient(to bottom, #f5f7fa, #ebeef5);
+        border-bottom: 2px solid #d0d7de;
+
+        &:has(.score-item-weight) {
+          grid-template-columns: 2fr 100px 100px 160px;
+        }
+
+        .score-table-cell {
+          font-weight: 600;
+          color: var(--color-text-1);
+          text-align: center;
+          padding: 14px 12px;
+          font-size: 14px;
+          border-right: 1px solid #e4e7ed;
+
+          &:last-child {
+            border-right: none;
+          }
+
+          &.score-item-name {
+            text-align: left;
+            padding-left: 16px;
+          }
+        }
+      }
+
+      .score-table-body {
+        .score-table-row {
+          display: grid;
+          grid-template-columns: 2fr 100px 160px;
+          border-bottom: 1px solid var(--color-border-2);
+          transition: background-color 0.2s;
+
+          &:has(.score-item-weight) {
+            grid-template-columns: 2fr 100px 100px 160px;
+          }
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background-color: #fafbfc;
+          }
+
+          .score-table-cell {
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #f0f1f3;
+
+            &:last-child {
+              border-right: none;
+            }
+
+            &.score-item-name {
+              flex-direction: column;
+              align-items: flex-start;
+              justify-content: flex-start;
+
+              .item-name-content {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 500;
+                color: var(--color-text-1);
+
+                .item-index {
+                  color: var(--color-text-3);
+                  font-size: 13px;
+                }
+
+                .item-name {
+                  font-size: 14px;
+                }
+              }
+
+              .item-description {
+                margin-top: 4px;
+                padding-left: 20px;
+                font-size: 12px;
+                color: var(--color-text-3);
+                line-height: 1.5;
+              }
+            }
+
+            &.score-item-max,
+            &.score-item-weight {
+              font-size: 14px;
+              color: var(--color-text-2);
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
+      .score-table-summary {
+        padding: 16px 20px;
+        background: linear-gradient(to bottom, #f8f9fb, #f0f2f5);
+        border-top: 2px solid #d9dde3;
+
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 14px;
+          margin-bottom: 8px;
+          background-color: #ffffff;
+          border-radius: 6px;
+          border: 1px solid #e4e7ed;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .summary-label {
+            font-size: 14px;
+            color: #606266;
+            font-weight: 500;
+          }
+
+          .summary-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+
+            &.level-EXCELLENT {
+              color: rgb(var(--success-6));
+            }
+
+            &.level-GOOD {
+              color: rgb(var(--primary-6));
+            }
+
+            &.level-PASS {
+              color: rgb(var(--warning-6));
+            }
+
+            &.level-FAIL {
+              color: rgb(var(--danger-6));
+            }
+          }
+        }
       }
     }
   }

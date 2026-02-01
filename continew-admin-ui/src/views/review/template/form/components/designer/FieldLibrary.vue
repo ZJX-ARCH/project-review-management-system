@@ -211,6 +211,62 @@ const advancedFields = [
       allowDelete: true,
     },
   },
+  {
+    type: 'SCORE_TABLE',
+    label: '评分表',
+    icon: 'icon-list',
+    defaultConfig: {
+      scoreMode: 'WEIGHTED',
+      passConfig: {
+        passType: 'RATIO',
+        passValue: 60,
+        goodValue: 75,
+        excellentValue: 85,
+      },
+      scoreItems: [
+        {
+          id: `score_${Date.now()}_1`,
+          itemName: '评分项1',
+          itemCode: 'item1',
+          maxScore: 30,
+          weight: 0.3,
+          description: '请填写评分说明',
+          required: true,
+          allowDecimal: true,
+          decimalPlaces: 1,
+        },
+        {
+          id: `score_${Date.now()}_2`,
+          itemName: '评分项2',
+          itemCode: 'item2',
+          maxScore: 40,
+          weight: 0.4,
+          description: '请填写评分说明',
+          required: true,
+          allowDecimal: true,
+          decimalPlaces: 1,
+        },
+        {
+          id: `score_${Date.now()}_3`,
+          itemName: '评分项3',
+          itemCode: 'item3',
+          maxScore: 30,
+          weight: 0.3,
+          description: '请填写评分说明',
+          required: true,
+          allowDecimal: true,
+          decimalPlaces: 1,
+        },
+      ],
+      displayConfig: {
+        showWeight: true,
+        showDescription: true,
+        showProgress: true,
+        showSummary: true,
+        summaryPosition: 'bottom',
+      },
+    },
+  },
 ]
 
 // 添加字段
