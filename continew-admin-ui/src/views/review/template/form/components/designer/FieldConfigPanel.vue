@@ -527,6 +527,21 @@
               </div>
             </a-form-item>
 
+            <!-- 总分配置（仅加权模式） -->
+            <a-form-item v-if="localField.fieldConfig.scoreMode === 'WEIGHTED'" label="总分">
+              <a-input-number
+                v-model="localField.fieldConfig.totalScore"
+                :min="1"
+                :max="1000"
+                :precision="0"
+                placeholder="请输入总分"
+                @change="handleUpdate"
+              />
+              <template #extra>
+                <span style="font-size: 12px; color: var(--color-text-3);">加权模式下每个评分项的满分统一为此总分</span>
+              </template>
+            </a-form-item>
+
             <!-- 及格标准配置 -->
             <a-form-item label="及格标准配置">
               <div class="pass-config-panel">
@@ -637,7 +652,7 @@
                       </div>
                     </div>
 
-                    <!-- 第一行：编码、满分、权重(仅加权模式) -->
+                    <!-- 第一行：编码、满分/权重 -->
                     <div class="score-item-row">
                       <div class="score-field">
                         <label>编码</label>
@@ -648,7 +663,8 @@
                           @input="handleUpdate"
                         />
                       </div>
-                      <div class="score-field">
+                      <!-- 简单相加模式：显示满分 -->
+                      <div v-if="localField.fieldConfig.scoreMode === 'SIMPLE'" class="score-field">
                         <label>满分</label>
                         <a-input-number
                           v-model="item.maxScore"
@@ -659,6 +675,7 @@
                           @change="handleUpdate"
                         />
                       </div>
+                      <!-- 加权模式：显示权重 -->
                       <div v-if="localField.fieldConfig.scoreMode === 'WEIGHTED'" class="score-field">
                         <label>权重</label>
                         <a-input-number

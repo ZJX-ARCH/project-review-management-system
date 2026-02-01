@@ -300,6 +300,7 @@
                   <div class="score-table-header">
                     <div class="score-table-cell score-item-name">评分项</div>
                     <div class="score-table-cell score-item-max">满分</div>
+                    <!-- 加权模式：显示权重列 -->
                     <div
                       v-if="field.fieldConfig?.scoreMode === 'WEIGHTED' && field.fieldConfig?.displayConfig?.showWeight"
                       class="score-table-cell score-item-weight"
@@ -328,9 +329,11 @@
                           {{ item.description }}
                         </div>
                       </div>
+                      <!-- 满分：简单相加显示各项满分，加权显示总分 -->
                       <div class="score-table-cell score-item-max">
-                        {{ item.maxScore }}
+                        {{ field.fieldConfig?.scoreMode === 'WEIGHTED' ? field.fieldConfig?.totalScore : item.maxScore }}
                       </div>
+                      <!-- 加权模式：显示权重 -->
                       <div
                         v-if="field.fieldConfig?.scoreMode === 'WEIGHTED' && field.fieldConfig?.displayConfig?.showWeight"
                         class="score-table-cell score-item-weight"
@@ -341,9 +344,9 @@
                         <a-input-number
                           v-model="getScoreTableData(field.fieldCode)[item.itemCode]"
                           :min="0"
-                          :max="item.maxScore"
+                          :max="field.fieldConfig?.scoreMode === 'WEIGHTED' ? field.fieldConfig?.totalScore : item.maxScore"
                           :precision="item.allowDecimal ? item.decimalPlaces : 0"
-                          :placeholder="`请输入分数(0-${item.maxScore})`"
+                          :placeholder="`请输入分数(0-${field.fieldConfig?.scoreMode === 'WEIGHTED' ? field.fieldConfig?.totalScore : item.maxScore})`"
                           size="small"
                           :style="{ width: '120px' }"
                         />
@@ -353,18 +356,22 @@
 
                   <!-- 汇总信息 -->
                   <div v-if="field.fieldConfig?.displayConfig?.showSummary" class="score-table-summary">
-                    <div class="summary-row">
+                    <!-- 加权模式：显示加权总分 -->
+                    <div v-if="field.fieldConfig?.scoreMode === 'WEIGHTED'" class="summary-row">
+                      <span class="summary-label">总分:</span>
+                      <span class="summary-value">{{ calculateScoreTableWeighted(field).toFixed(1) }}</span>
+                    </div>
+                    <!-- 简单相加模式：显示实际得分/满分 -->
+                    <div v-else class="summary-row">
                       <span class="summary-label">总分:</span>
                       <span class="summary-value">{{ calculateScoreTableTotal(field) }} / {{ calculateScoreTableMaxTotal(field) }}</span>
                     </div>
-                    <div v-if="field.fieldConfig?.scoreMode === 'WEIGHTED'" class="summary-row">
-                      <span class="summary-label">加权分:</span>
-                      <span class="summary-value">{{ calculateScoreTableWeighted(field).toFixed(1) }}</span>
-                    </div>
+                    <!-- 得分率 -->
                     <div class="summary-row">
                       <span class="summary-label">得分率:</span>
                       <span class="summary-value">{{ calculateScoreTablePercentage(field).toFixed(1) }}%</span>
                     </div>
+                    <!-- 评价等级 -->
                     <div class="summary-row">
                       <span class="summary-label">评价:</span>
                       <span :class="['summary-value', 'level-' + getScoreTableLevel(field)]">
@@ -618,31 +625,44 @@ const calculateScoreTableTotal = (field: any) => {
 
 // 计算评分表满分
 const calculateScoreTableMaxTotal = (field: any) => {
+  const scoreMode = field.fieldConfig?.scoreMode
+  // 加权模式：返回配置的总分
+  if (scoreMode === 'WEIGHTED') {
+    return field.fieldConfig?.totalScore || 100
+  }
+  // 简单相加模式：返回各项满分之和
   const items = field.fieldConfig?.scoreItems || []
   return items.reduce((sum: number, item: any) => sum + (item.maxScore || 0), 0)
 }
 
-// 计算加权分
+// 计算加权总分
 const calculateScoreTableWeighted = (field: any) => {
   const scores = getScoreTableData(field.fieldCode)
   const items = field.fieldConfig?.scoreItems || []
   return items.reduce((sum: number, item: any) => {
     const score = scores[item.itemCode] || 0
-    return sum + (score * (item.weight || 0))
+    const weight = item.weight || 0
+    // 得分 × 权重
+    return sum + (score * weight)
   }, 0)
 }
 
 // 计算得分率
 const calculateScoreTablePercentage = (field: any) => {
+  const scoreMode = field.fieldConfig?.scoreMode
   const maxTotal = calculateScoreTableMaxTotal(field)
+
   if (maxTotal === 0)
     return 0
 
-  const scoreMode = field.fieldConfig?.scoreMode
-  const currentScore = scoreMode === 'WEIGHTED'
-    ? calculateScoreTableWeighted(field)
-    : calculateScoreTableTotal(field)
+  // 加权模式：加权总分 / 标准总分 × 100
+  if (scoreMode === 'WEIGHTED') {
+    const weightedScore = calculateScoreTableWeighted(field)
+    return (weightedScore / maxTotal) * 100
+  }
 
+  // 简单相加模式：实际总分 / 满分总和 × 100
+  const currentScore = calculateScoreTableTotal(field)
   return (currentScore / maxTotal) * 100
 }
 

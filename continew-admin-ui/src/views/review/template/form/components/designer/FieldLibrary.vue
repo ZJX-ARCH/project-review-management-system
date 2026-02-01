@@ -217,6 +217,7 @@ const advancedFields = [
     icon: 'icon-list',
     defaultConfig: {
       scoreMode: 'WEIGHTED',
+      totalScore: 100,
       passConfig: {
         passType: 'RATIO',
         passValue: 60,
