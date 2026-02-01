@@ -58,7 +58,7 @@ public class NoticePublishJob {
     public static class Scheduler {
 
         @TenantIgnore
-        @Scheduled(cron = "0 * * * * ?")
+//        @Scheduled(cron = "0 * * * * ?")
         @Transactional(rollbackFor = Exception.class)
         public void publishNoticeWithSchedule() {
             log.info("定时任务 [公告发布] 开始执行。");
