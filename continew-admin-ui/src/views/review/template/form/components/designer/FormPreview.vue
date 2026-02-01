@@ -147,13 +147,17 @@
               <!-- 文件模板 -->
               <div v-else-if="field.fieldType === 'FILE_TEMPLATE'" class="file-template-field">
                 <a-space direction="vertical" fill>
-                  <div v-if="field.fieldConfig?.templateFiles && field.fieldConfig.templateFiles.length > 0">
+                  <div v-if="field.fieldConfig?.templateFiles && field.fieldConfig.templateFiles.length > 0" class="template-files-list">
                     <div
                       v-for="(file, fileIndex) in field.fieldConfig.templateFiles"
                       :key="fileIndex"
-                      style="margin-bottom: 8px;"
+                      class="template-file-item"
                     >
-                      <a-space>
+                      <div class="file-info">
+                        <icon-file style="color: var(--color-primary-6);" />
+                        <span class="file-name">{{ file.name || '未命名文件' }}</span>
+                      </div>
+                      <a-space :size="8" class="file-actions">
                         <a-button
                           v-if="field.fieldConfig?.allowDownload && file.url"
                           type="primary"
@@ -161,7 +165,7 @@
                           @click="handleDownloadTemplateFile(file)"
                         >
                           <icon-download />
-                          下载 {{ file.name || '模板文件' }}
+                          下载
                         </a-button>
                         <a-button
                           v-if="field.fieldConfig?.allowPreview && file.url"
@@ -302,7 +306,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconDownload, IconEye, IconInfoCircle, IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
+import { IconDownload, IconEye, IconFile, IconInfoCircle, IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
 import type { FormFieldReq, FormTemplateReq } from '@/apis/review'
 
 defineOptions({ name: 'FormPreview' })
@@ -502,6 +506,50 @@ watch(
 
   .file-template-field {
     width: 100%;
+
+    .template-files-list {
+      border: 1px solid var(--color-border-2);
+      border-radius: 4px;
+      overflow: hidden;
+
+      .template-file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-bottom: 1px solid var(--color-border-2);
+        transition: all 0.2s;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: var(--color-fill-1);
+
+          .file-actions {
+            opacity: 1;
+          }
+        }
+
+        .file-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+
+          .file-name {
+            color: var(--color-text-1);
+            font-size: 14px;
+          }
+        }
+
+        .file-actions {
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+      }
+    }
 
     .template-tips {
       display: flex;
