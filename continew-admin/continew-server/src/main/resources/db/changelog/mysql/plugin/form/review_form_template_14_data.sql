@@ -101,7 +101,7 @@ VALUES
 INSERT INTO `review_form_template`
 (`id`, `template_name`, `template_code`, `template_type`, `description`, `layout_config`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737207004001, '立项决策表', 'FORM_APPROVAL_DECISION', 4, '适用于项目立项决策的表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 1, 1, NOW(), 0);
+(1737207004001, '立项决策表', 'FORM_APPROVAL_DEC', 4, '适用于项目立项决策的表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 1, 1, NOW(), 0);
 
 INSERT INTO `review_form_field`
 (`id`, `template_id`, `field_name`, `field_code`, `field_type`, `span`, `is_required`, `sort`, `field_config`, `create_user`, `create_time`, `deleted`)
@@ -117,7 +117,7 @@ VALUES
 INSERT INTO `review_form_template`
 (`id`, `template_name`, `template_code`, `template_type`, `description`, `layout_config`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737207004002, '资助决策表', 'FORM_FUNDING_DECISION', 4, '适用于项目资助决策的表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 2, 1, NOW(), 0);
+(1737207004002, '资助决策表', 'FORM_FUNDING_DEC', 4, '适用于项目资助决策的表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 2, 1, NOW(), 0);
 
 INSERT INTO `review_form_field`
 (`id`, `template_id`, `field_name`, `field_code`, `field_type`, `span`, `is_required`, `sort`, `field_config`, `create_user`, `create_time`, `deleted`)
@@ -230,7 +230,7 @@ VALUES
 INSERT INTO `review_form_template`
 (`id`, `template_name`, `template_code`, `template_type`, `description`, `layout_config`, `status`, `sort`, `create_user`, `create_time`, `deleted`)
 VALUES
-(1737207007002, '成果评价表', 'FORM_ACHIEVEMENT_EVAL', 7, '适用于项目验收阶段的成果评价表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 2, 1, NOW(), 0);
+(1737207007002, '成果评价表', 'FORM_ACHIEVE_EVAL', 7, '适用于项目验收阶段的成果评价表单', '{"gridCols":24,"labelWidth":120,"labelAlign":"right"}', 1, 2, 1, NOW(), 0);
 
 INSERT INTO `review_form_field`
 (`id`, `template_id`, `field_name`, `field_code`, `field_type`, `span`, `is_required`, `sort`, `field_config`, `create_user`, `create_time`, `deleted`)
