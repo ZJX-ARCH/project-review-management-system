@@ -131,6 +131,7 @@
                 v-else-if="field.fieldType === 'FILE'"
                 :file-list="previewData[field.fieldCode]"
                 :limit="field.fieldConfig?.maxCount || 5"
+                action=""
                 :custom-request="handleFileUpload"
                 :disabled="field.isReadonly === true"
               >
@@ -169,7 +170,7 @@
                           下载
                         </a-button>
                         <a-button
-                          v-if="field.fieldConfig?.allowPreview && file.url"
+                          v-if="field.fieldConfig?.allowPreview && file.url && isImageFile(file.name)"
                           type="outline"
                           size="small"
                           @click="handlePreviewTemplateFile(file)"
@@ -461,6 +462,15 @@ const handlePreviewTemplateFile = (file: any) => {
   }
   // 在新窗口打开预览
   window.open(url, '_blank')
+}
+
+// 判断是否为图片文件
+const isImageFile = (fileName: string) => {
+  if (!fileName)
+    return false
+  const ext = fileName.toLowerCase().split('.').pop()
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico']
+  return imageExts.includes(ext || '')
 }
 
 // 处理文件上传

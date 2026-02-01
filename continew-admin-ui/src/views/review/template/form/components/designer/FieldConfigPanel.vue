@@ -380,6 +380,7 @@
               <a-upload
                 :file-list="localField.fieldConfig.templateFiles || []"
                 :limit="10"
+                action=""
                 :custom-request="handleTemplateFileUpload"
                 @change="handleTemplateFileChange"
               >
