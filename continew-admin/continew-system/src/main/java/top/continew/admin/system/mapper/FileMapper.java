@@ -20,6 +20,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -97,6 +98,7 @@ public interface FileMapper extends BaseMapper<FileDO> {
      *
      * @param userId 用户 ID
      */
+    @InterceptorIgnore(blockAttack = "true")
     @Update("UPDATE sys_file SET deleted = id, update_user = #{userId}, update_time = NOW() WHERE deleted = 1")
     void cleanRecycleBin(@Param("userId") Long userId);
 }

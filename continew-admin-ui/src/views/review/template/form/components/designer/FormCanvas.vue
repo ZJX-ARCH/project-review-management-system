@@ -57,7 +57,7 @@
                   <icon-drag-arrow class="drag-icon" />
                   <span class="field-name">{{ field.fieldName }}</span>
                   <a-tag size="small" :color="getFieldTypeColor(field.fieldType)">
-                    {{ getFieldTypeLabel(field.fieldType) }}
+                    {{ field.fieldType }}
                   </a-tag>
                   <a-tag v-if="field.isRequired" size="small" color="red">必填</a-tag>
                 </div>
@@ -156,6 +156,7 @@ const fieldTypeOptions: Record<string, { label: string, color: string }> = {
   FILE: { label: '文件上传', color: 'red' },
   FILE_TEMPLATE: { label: '文件模板', color: 'pinkpurple' },
   TABLE: { label: '表格', color: 'volcano' },
+  SCORE_TABLE: { label: '评分表', color: 'arcoblue' },
 }
 
 // 获取字段类型标签
