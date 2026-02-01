@@ -53,6 +53,11 @@ public class ProcessTemplateDO extends BaseDO {
     private Integer decisionRounds;
 
     /**
+     * 部门ID
+     */
+    private Long deptId;
+
+    /**
      * 状态
      */
     private DisEnableStatusEnum status;

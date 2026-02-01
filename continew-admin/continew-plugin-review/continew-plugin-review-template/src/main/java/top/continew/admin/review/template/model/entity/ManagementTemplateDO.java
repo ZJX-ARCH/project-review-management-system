@@ -38,6 +38,11 @@ public class ManagementTemplateDO extends BaseDO {
     private String description;
 
     /**
+     * 部门ID
+     */
+    private Long deptId;
+
+    /**
      * 状态
      */
     private DisEnableStatusEnum status;

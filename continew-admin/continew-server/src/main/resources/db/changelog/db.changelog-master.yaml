@@ -29,6 +29,10 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/form/review_form_template_routes.sql
   - include:
       file: db/changelog/mysql/plugin/form/review_form_template_14_data.sql
+  - include:
+      file: db/changelog/mysql/plugin/review/review_template_add_dept_id.sql
+  - include:
+      file: db/changelog/mysql/plugin/form/review_form_template_add_dept_id.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql

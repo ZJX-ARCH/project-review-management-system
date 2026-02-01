@@ -39,6 +39,11 @@ public class FormTemplateDO extends BaseDO {
     private TemplateTypeEnum templateType;
 
     /**
+     * 部门ID
+     */
+    private Long deptId;
+
+    /**
      * 模板描述
      */
     private String description;
