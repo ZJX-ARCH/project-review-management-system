@@ -160,8 +160,9 @@
                         <span class="file-name">{{ file.name || '未命名文件' }}</span>
                       </div>
                       <a-space :size="8" class="file-actions">
+                        <!-- 只有图片才显示预览按钮 -->
                         <a-button
-                          v-if="field.fieldConfig?.allowPreview && file.url"
+                          v-if="field.fieldConfig?.allowPreview && isImageFile(file.name)"
                           type="primary"
                           size="small"
                           @click="handlePreviewTemplateFile(file)"
@@ -170,7 +171,7 @@
                           预览
                         </a-button>
                         <a-button
-                          v-if="field.fieldConfig?.allowDownload && file.url"
+                          v-if="field.fieldConfig?.allowDownload"
                           type="outline"
                           size="small"
                           @click="handleDownloadTemplateFile(file)"
@@ -440,24 +441,39 @@ const handleMoveTableRowDown = (fieldCode: string, rowIndex: number) => {
 
 // 下载单个模板文件
 const handleDownloadTemplateFile = (file: any) => {
-  const url = file.url
+  // 从文件对象中提取 URL（支持多种格式）
+  const url = file.url || file.response?.data?.url || file.response?.url || file.response?.path
   if (!url) {
+    Message.warning('文件地址不存在，无法下载')
     return
   }
-  // 创建一个隐藏的下载链接
-  const link = document.createElement('a')
-  link.href = url
-  link.download = file.name || '模板文件'
-  link.target = '_blank'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+
+  // 使用 fetch 下载并保持原始文件名
+  fetch(url)
+    .then(response => response.blob())
+    .then((blob) => {
+      const link = document.createElement('a')
+      const objectUrl = URL.createObjectURL(blob)
+      link.href = objectUrl
+      link.download = file.name || '模板文件' // 使用原始文件名
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      // 释放对象 URL
+      URL.revokeObjectURL(objectUrl)
+    })
+    .catch((error) => {
+      console.error('下载失败:', error)
+      Message.error('下载失败，请稍后重试')
+    })
 }
 
 // 预览单个模板文件
 const handlePreviewTemplateFile = (file: any) => {
-  const url = file.url
+  // 从文件对象中提取 URL（支持多种格式）
+  const url = file.url || file.response?.data?.url || file.response?.url || file.response?.path
   if (!url) {
+    Message.warning('文件地址不存在，无法预览')
     return
   }
   // 在新窗口打开预览
@@ -564,6 +580,12 @@ watch(
 
         &:hover {
           background-color: var(--color-fill-1);
+
+          // 悬浮时显示操作按钮
+          .file-actions {
+            opacity: 1;
+            visibility: visible;
+          }
         }
 
         .file-info {
@@ -576,6 +598,13 @@ watch(
             color: var(--color-text-1);
             font-size: 14px;
           }
+        }
+
+        // 默认隐藏操作按钮
+        .file-actions {
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.2s;
         }
       }
     }

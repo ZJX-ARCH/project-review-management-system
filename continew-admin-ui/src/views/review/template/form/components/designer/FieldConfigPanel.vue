@@ -673,11 +673,14 @@ const handleTemplateFileChange = (fileList: any[], currentFile: any) => {
   // 保存文件列表
   localField.value.fieldConfig.templateFiles = fileList.map((file: any) => {
     const fileData = file.response || {}
+    // 从响应数据中提取 URL（支持多种格式）
+    const extractedUrl = fileData.data?.url || fileData.url || fileData.path || file.url || ''
+
     return {
       uid: file.uid,
-      name: fileData.originalName || file.name || '模板文件',
+      name: file.name || '模板文件',
       status: file.status || 'done',
-      url: fileData.url || fileData.path || file.url || '',
+      url: extractedUrl,
       response: fileData,
     }
   })
