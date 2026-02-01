@@ -131,6 +131,7 @@
                 v-else-if="field.fieldType === 'FILE'"
                 :file-list="previewData[field.fieldCode]"
                 :limit="field.fieldConfig?.maxCount || 5"
+                :custom-request="handleFileUpload"
                 :disabled="field.isReadonly === true"
               >
                 <template #upload-button>
@@ -306,8 +307,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Message } from '@arco-design/web-vue'
+import type { RequestOption } from '@arco-design/web-vue'
 import { IconDownload, IconEye, IconFile, IconInfoCircle, IconPlus, IconUpload } from '@arco-design/web-vue/es/icon'
 import type { FormFieldReq, FormTemplateReq } from '@/apis/review'
+import { uploadFile } from '@/apis/system/file'
 
 defineOptions({ name: 'FormPreview' })
 
@@ -457,6 +461,30 @@ const handlePreviewTemplateFile = (file: any) => {
   }
   // 在新窗口打开预览
   window.open(url, '_blank')
+}
+
+// 处理文件上传
+const handleFileUpload = (options: RequestOption) => {
+  ;(async function requestWrap() {
+    const { onProgress, onError, onSuccess, fileItem, name = 'file' } = options
+    onProgress(20)
+    const formData = new FormData()
+    formData.append('parentPath', '/form/')
+    formData.append(name as string, fileItem.file as Blob)
+    try {
+      const res = await uploadFile(formData)
+      Message.success('上传成功')
+      onSuccess(res)
+    }
+    catch (error) {
+      onError(error)
+    }
+  })()
+  return {
+    abort() {
+      Message.error('上传已取消')
+    },
+  }
 }
 
 // 初始化预览数据
