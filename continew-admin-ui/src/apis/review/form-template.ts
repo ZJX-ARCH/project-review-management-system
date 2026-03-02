@@ -62,5 +62,5 @@ export function deleteTemplateFile(fileId: string | number) {
 
 /** @desc 查询所有启用的模板列表(用于下拉选择) */
 export function listEnabledFormTemplate(templateType?: number) {
-  return http.get<FormTemplateResp[]>(`${BASE_URL}/list-enabled`, { params: { templateType } })
+  return http.get<FormTemplateResp[]>(`${BASE_URL}/list-enabled`, { templateType })
 }
