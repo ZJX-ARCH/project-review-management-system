@@ -80,4 +80,11 @@ public interface ManagementTemplateService extends IService<ManagementTemplateDO
      * @return 模板编码（格式：MGMT_ + 时间戳）
      */
     String generateCode();
+
+    /**
+     * 查询当前用户权限范围内所有已启用的模板列表（用于类型配置向导下拉选择，含阶段结构）
+     *
+     * @return 已启用模板列表
+     */
+    List<ManagementTemplateResp> listEnabled();
 }

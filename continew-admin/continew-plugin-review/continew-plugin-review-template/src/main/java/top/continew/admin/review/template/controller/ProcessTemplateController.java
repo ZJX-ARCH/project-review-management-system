@@ -109,4 +109,15 @@ public class ProcessTemplateController {
         String code = processTemplateService.generateCode();
         return R.ok(code);
     }
+
+    /**
+     * 查询当前用户权限范围内已启用的模板列表（用于类型配置向导下拉选择，含轮次结构）
+     */
+    @GetMapping("/list-enabled")
+    @Operation(summary = "查询已启用的评审流程模板列表")
+    @SaCheckPermission("review:template:process:query")
+    public R<List<ProcessTemplateResp>> listEnabled() {
+        List<ProcessTemplateResp> list = processTemplateService.listEnabled();
+        return R.ok(list);
+    }
 }

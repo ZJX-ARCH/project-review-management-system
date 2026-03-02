@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.template.mapper.ManagementStageMapper;
 import top.continew.admin.review.template.mapper.ManagementTemplateMapper;
+import top.continew.admin.review.template.mapper.TypeProcessConfigRefMapper;
 import top.continew.admin.review.template.model.entity.ManagementStageDO;
 import top.continew.admin.review.template.model.entity.ManagementTemplateDO;
 import top.continew.admin.review.template.model.query.ManagementTemplateQuery;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplateMapper, ManagementTemplateDO> implements ManagementTemplateService {
 
     private final ManagementStageMapper stageMapper;
+    private final TypeProcessConfigRefMapper typeProcessConfigRefMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -114,10 +116,16 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
         }
         String oldTemplateCode = existingEntity.getTemplateCode();
 
-        // 步骤2: 检查模板是否被项目类型引用（如果阶段配置发生变化）
-        // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
-        // 如果阶段数量、顺序或类型发生变化且被引用，应抛出异常
-        log.warn("模板ID={} 正在更新，TODO: 需要检查项目类型引用关系", id);
+        // 步骤2: 检查模板是否被项目类型引用（阶段配置提交时做引用校验）
+        // 阶段配置变化会使已关联项目类型的表单映射和审批规则失效
+        if (CollUtil.isNotEmpty(req.getStages())) {
+            long refCount = typeProcessConfigRefMapper.countByManageTemplateId(id);
+            if (refCount > 0) {
+                throw new BusinessException(StrUtil.format(
+                    "管理流程模板已被 {} 个项目类型引用，修改阶段配置后需重新配置表单映射和审批规则，" +
+                    "请先在项目类型中解除引用后再操作", refCount));
+            }
+        }
 
         // 步骤3: 模板编码唯一性校验
         String newTemplateCode = req.getTemplateCode();
@@ -190,8 +198,12 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
         }
 
         // 步骤3: 检查模板是否被项目类型引用
-        // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
-        log.debug("删除管理流程模板，IDs={}，TODO: 需要检查项目类型引用关系", ids);
+        List<Long> referencedIds = typeProcessConfigRefMapper.findReferencedManageTemplateIds(ids);
+        if (CollUtil.isNotEmpty(referencedIds)) {
+            throw new BusinessException(StrUtil.format(
+                "以下管理流程模板已被项目类型引用，不允许删除：{}，请先在项目类型中解除引用后再操作",
+                referencedIds));
+        }
 
         // 步骤4: 逻辑删除主表数据
         baseMapper.deleteBatchIds(ids);
@@ -305,10 +317,14 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
             throw new BusinessException("模板不存在");
         }
 
-        // 步骤3: 检查是否被项目类型使用
+        // 步骤3: 禁用时检查引用关系（禁用被引用的模板会导致已配置的项目类型无法启用）
         if (statusEnum == DisEnableStatusEnum.DISABLE) {
-            // TODO: 等type模块实现后，查询project_type表检查引用关系
-            log.warn("模板ID={} 被设置为禁用状态，TODO: 需要检查项目类型引用关系", id);
+            long refCount = typeProcessConfigRefMapper.countByManageTemplateId(id);
+            if (refCount > 0) {
+                throw new BusinessException(StrUtil.format(
+                    "管理流程模板已被 {} 个项目类型引用，禁用后将导致这些项目类型无法启用，" +
+                    "请先在项目类型中解除引用后再操作", refCount));
+            }
         }
 
         // 步骤4: 更新状态字段
@@ -358,6 +374,29 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
 
         // 步骤3: 重试次数用尽
         throw new BusinessException("生成模板编码失败，请重试");
+    }
+
+    @Override
+    public List<ManagementTemplateResp> listEnabled() {
+        // 查询所有已启用的模板
+        QueryWrapper<ManagementTemplateDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", DisEnableStatusEnum.ENABLE);
+        wrapper.eq("deleted", 0);
+        // TODO 数据权限过滤（待权限模块统一落地）：wrapper.eq("dept_id", 当前用户 deptId)
+        wrapper.orderByDesc("create_time");
+        List<ManagementTemplateDO> entities = baseMapper.selectList(wrapper);
+
+        // 转换并填充阶段数据（复用 page() 已有逻辑）
+        List<ManagementTemplateResp> respList = BeanUtil.copyToList(entities, ManagementTemplateResp.class);
+        for (ManagementTemplateResp resp : respList) {
+            QueryWrapper<ManagementStageDO> stageWrapper = new QueryWrapper<>();
+            stageWrapper.eq("template_id", resp.getId());
+            stageWrapper.eq("deleted", 0);
+            stageWrapper.orderByAsc("stage_order");
+            List<ManagementStageDO> stageEntities = stageMapper.selectList(stageWrapper);
+            resp.setStages(BeanUtil.copyToList(stageEntities, ManagementStageResp.class));
+        }
+        return respList;
     }
 
     /**

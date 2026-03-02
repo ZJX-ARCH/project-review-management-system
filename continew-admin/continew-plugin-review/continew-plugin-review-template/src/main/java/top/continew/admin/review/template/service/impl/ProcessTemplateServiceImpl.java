@@ -14,6 +14,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.template.enums.RoundType;
 import top.continew.admin.review.template.mapper.ProcessTemplateMapper;
 import top.continew.admin.review.template.mapper.ProcessTemplateRoundNameMapper;
+import top.continew.admin.review.template.mapper.TypeProcessConfigRefMapper;
 import top.continew.admin.review.template.model.entity.ProcessTemplateDO;
 import top.continew.admin.review.template.model.entity.ProcessTemplateRoundNameDO;
 import top.continew.admin.review.template.model.query.ProcessTemplateQuery;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMapper, ProcessTemplateDO> implements ProcessTemplateService {
 
     private final ProcessTemplateRoundNameMapper roundNameMapper;
+    private final TypeProcessConfigRefMapper typeProcessConfigRefMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -143,9 +145,12 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
             || !existingEntity.getDecisionRounds().equals(req.getDecisionRounds());
 
         if (roundsChanged) {
-            // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
-            // 如果被引用，抛出异常：throw new BusinessException("模板已被项目类型引用，不允许修改轮次配置");
-            log.warn("模板ID={} 的轮次配置发生变化，请确保未被项目类型引用", id);
+            long refCount = typeProcessConfigRefMapper.countByProcessTemplateId(id);
+            if (refCount > 0) {
+                throw new BusinessException(StrUtil.format(
+                    "评审流程模板已被 {} 个项目类型引用，修改轮次配置后需重新配置表单映射和审批规则，" +
+                    "请先在项目类型中解除引用或禁用相关项目类型后再操作", refCount));
+            }
         }
 
         // 步骤3: 模板编码唯一性校验
@@ -242,18 +247,12 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         }
 
         // 步骤3: 检查模板是否被项目类型引用
-        // TODO: 等type模块实现后，需要查询project_type表检查是否被引用
-        // 示例代码：
-        // for (Long id : ids) {
-        //     Long count = projectTypeMapper.selectCount(
-        //         new QueryWrapper<ProjectTypeDO>()
-        //             .eq("process_template_id", id)
-        //             .eq("deleted", 0));
-        //     if (count > 0) {
-        //         throw new BusinessException("模板已被项目类型引用，不允许删除");
-        //     }
-        // }
-        log.debug("删除评审流程模板，IDs={}，TODO: 需要检查项目类型引用关系", ids);
+        List<Long> referencedIds = typeProcessConfigRefMapper.findReferencedProcessTemplateIds(ids);
+        if (CollUtil.isNotEmpty(referencedIds)) {
+            throw new BusinessException(StrUtil.format(
+                "以下评审流程模板已被项目类型引用，不允许删除：{}，请先在项目类型中解除引用后再操作",
+                referencedIds));
+        }
 
         // 步骤4: 逻辑删除主表数据
         // MyBatis Plus的deleteBatchIds会自动进行逻辑删除（如果配置了逻辑删除字段）
@@ -386,19 +385,14 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
             throw new BusinessException("模板不存在");
         }
 
-        // 步骤3: 检查是否被项目类型使用（业务提示，不阻止操作）
+        // 步骤3: 禁用时检查引用关系（阻止操作：禁用被引用的模板会导致已配置的项目类型无法启用）
         if (statusEnum == DisEnableStatusEnum.DISABLE) {
-            // 禁用操作，检查是否被使用
-            // TODO: 等type模块实现后，查询project_type表检查引用关系
-            // 示例代码：
-            // Long count = projectTypeMapper.selectCount(
-            //     new QueryWrapper<ProjectTypeDO>()
-            //         .eq("process_template_id", id)
-            //         .eq("deleted", 0));
-            // if (count > 0) {
-            //     log.warn("模板ID={} 正在被 {} 个项目类型使用，禁用后可能影响相关功能", id, count);
-            // }
-            log.warn("模板ID={} 被设置为禁用状态，TODO: 需要检查项目类型引用关系", id);
+            long refCount = typeProcessConfigRefMapper.countByProcessTemplateId(id);
+            if (refCount > 0) {
+                throw new BusinessException(StrUtil.format(
+                    "评审流程模板已被 {} 个项目类型引用，禁用后将导致这些项目类型无法启用，" +
+                    "请先在项目类型中解除引用后再操作", refCount));
+            }
         }
 
         // 步骤4: 更新状态字段
@@ -452,6 +446,29 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
 
         // 步骤3: 重试次数用尽仍然重复
         throw new BusinessException("生成模板编码失败，请重试");
+    }
+
+    @Override
+    public List<ProcessTemplateResp> listEnabled() {
+        // 查询所有已启用的模板
+        QueryWrapper<ProcessTemplateDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", DisEnableStatusEnum.ENABLE);
+        wrapper.eq("deleted", 0);
+        // TODO 数据权限过滤（待权限模块统一落地）：wrapper.eq("dept_id", 当前用户 deptId)
+        wrapper.orderByDesc("create_time");
+        List<ProcessTemplateDO> entities = baseMapper.selectList(wrapper);
+
+        // 转换并填充轮次数据（复用 page() 已有逻辑）
+        List<ProcessTemplateResp> respList = BeanUtil.copyToList(entities, ProcessTemplateResp.class);
+        for (ProcessTemplateResp resp : respList) {
+            QueryWrapper<ProcessTemplateRoundNameDO> roundWrapper = new QueryWrapper<>();
+            roundWrapper.eq("template_id", resp.getId());
+            roundWrapper.eq("deleted", 0);
+            roundWrapper.orderByAsc("round_type", "round_sequence");
+            List<ProcessTemplateRoundNameDO> roundEntities = roundNameMapper.selectList(roundWrapper);
+            resp.setRoundNames(BeanUtil.copyToList(roundEntities, RoundNameResp.class));
+        }
+        return respList;
     }
 
     /**
