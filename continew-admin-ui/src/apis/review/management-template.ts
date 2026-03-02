@@ -41,3 +41,8 @@ export function updateManagementTemplateStatus(id: string | number, status: numb
 export function generateManagementTemplateCode() {
   return http.get<string>(`${BASE_URL}/generate-code`)
 }
+
+/** @desc 查询当前用户权限范围内已启用的管理流程模板列表（含阶段结构） */
+export function listEnabledManagementTemplate() {
+  return http.get<ManagementTemplateResp[]>(`${BASE_URL}/list-enabled`)
+}

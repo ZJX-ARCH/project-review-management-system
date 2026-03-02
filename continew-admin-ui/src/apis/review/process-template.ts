@@ -41,3 +41,8 @@ export function updateProcessTemplateStatus(id: string | number, status: number)
 export function generateProcessTemplateCode() {
   return http.get<string>(`${BASE_URL}/generate-code`)
 }
+
+/** @desc 查询当前用户权限范围内已启用的评审流程模板列表（含轮次结构） */
+export function listEnabledProcessTemplate() {
+  return http.get<ProcessTemplateResp[]>(`${BASE_URL}/list-enabled`)
+}
