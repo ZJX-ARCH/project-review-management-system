@@ -215,14 +215,15 @@ import {
   type ManagementTemplateResp,
 } from '@/apis/review'
 
-defineOptions({ name: 'ProjectTypeConfig' })
+defineOptions({ name: 'ReviewTypeConfigure' })
 
 const route = useRoute()
 const router = useRouter()
 
 // 是否为创建模式
 const isCreate = computed(() => !route.params.id)
-const typeId = computed(() => route.params.id ? Number(route.params.id) : undefined)
+// 保持字符串避免 JS 大整数精度丢失（Snowflake ID 超出 Number.MAX_SAFE_INTEGER）
+const typeId = computed(() => route.params.id ? String(route.params.id) : undefined)
 
 // 页面状态
 const loading = ref(false)
@@ -355,7 +356,7 @@ const handleCreateAndContinue = async () => {
     const res = await createProjectType(basicForm)
     const newId = res.data
     Message.success('创建成功，请继续配置各项参数')
-    router.replace(`/review/type/config/${newId}`)
+    router.replace(`/review/type/configure/${newId}`)
   }
   catch (error) {
     console.error('创建失败:', error)

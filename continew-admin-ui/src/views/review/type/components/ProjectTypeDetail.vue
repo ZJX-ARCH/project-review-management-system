@@ -131,12 +131,12 @@ import { getProjectType, type ProjectTypeDetailResp } from '@/apis/review'
 
 const props = defineProps<{
   visible: boolean
-  id?: number
+  id?: string | number
 }>()
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'config', id: number): void
+  (e: 'config', id: string | number): void
 }>()
 
 const loading = ref(false)
@@ -150,7 +150,7 @@ const handleConfig = () => {
   }
 }
 
-const loadDetail = async (id: number) => {
+const loadDetail = async (id: string | number) => {
   loading.value = true
   detail.value = null
   try {

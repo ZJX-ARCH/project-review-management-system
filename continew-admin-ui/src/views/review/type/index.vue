@@ -218,7 +218,7 @@ const columns: TableInstance['columns'] = [
 
 // 详情抽屉状态
 const detailDrawerVisible = ref(false)
-const currentId = ref<number | undefined>()
+const currentId = ref<string | number | undefined>()
 
 const reset = () => {
   resetForm()
@@ -227,7 +227,7 @@ const reset = () => {
 
 // 新建：创建基本信息后跳转配置页
 const onAdd = () => {
-  router.push('/review/type/config')
+  router.push('/review/type/configure')
 }
 
 // 查看详情
@@ -238,12 +238,12 @@ const onDetail = (record: ProjectTypeResp) => {
 
 // 进入配置页
 const onConfig = (record: ProjectTypeResp) => {
-  router.push(`/review/type/config/${record.id}`)
+  router.push(`/review/type/configure/${record.id}`)
 }
 
 // 从详情页跳转到配置页
-const handleConfigFromDetail = (id: number) => {
-  router.push(`/review/type/config/${id}`)
+const handleConfigFromDetail = (id: string | number) => {
+  router.push(`/review/type/configure/${id}`)
 }
 
 // 切换启用/禁用状态
