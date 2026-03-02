@@ -29,7 +29,7 @@
             <a-table-column title="表单模板" data-index="formTemplateId">
               <template #cell="{ record }">
                 <a-select
-                  v-model="record.formTemplateId"
+                  v-model="formSelections[record.key]"
                   :placeholder="`请选择${templateTypeLabel(record.templateType)}表单模板`"
                   :options="formOptions[record.templateType] || []"
                   :loading="optionsLoading"
@@ -53,15 +53,15 @@
         <a-table :data="manageNodes" :pagination="false" :bordered="false">
           <template #columns>
             <a-table-column title="节点" data-index="label" :width="200" />
-            <a-table-column title="节点类型" data-index="nodeType" :width="120">
+            <a-table-column title="节点类型" data-index="stageType" :width="120">
               <template #cell="{ record }">
-                <a-tag :color="nodeTypeColor(record.nodeType)">{{ nodeTypeLabel(record.nodeType) }}</a-tag>
+                <a-tag :color="stageTypeColor(record.stageType)">{{ stageTypeLabel(record.stageType) }}</a-tag>
               </template>
             </a-table-column>
             <a-table-column title="表单模板" data-index="formTemplateId">
               <template #cell="{ record }">
                 <a-select
-                  v-model="record.formTemplateId"
+                  v-model="formSelections[record.key]"
                   :placeholder="`请选择${templateTypeLabel(record.templateType)}表单模板`"
                   :options="formOptions[record.templateType] || []"
                   :loading="optionsLoading"
@@ -103,6 +103,7 @@ interface NodeRow {
   nodeType: string
   nodeSequence?: number
   templateType: number
+  stageType?: string
   formTemplateId?: number
 }
 
@@ -124,6 +125,9 @@ const saveLoading = ref(false)
 
 // 各类型表单下拉选项
 const formOptions = ref<Record<number, { label: string; value: number }[]>>({})
+
+// 各节点的表单模板选择（key -> formTemplateId），独立 reactive 保证视图响应
+const formSelections = reactive<Record<string, number | undefined>>({})
 
 /** 生成评审流程节点列表 */
 const reviewNodes = computed<NodeRow[]>(() => {
@@ -205,6 +209,7 @@ const manageNodes = computed<NodeRow[]>(() => {
       nodeType: 'STAGE',
       nodeSequence: stage.stageOrder,
       templateType: templateTypeMap[stage.stageType] ?? TemplateType.EXECUTION,
+      stageType: stage.stageType,
       formTemplateId: undefined,
     })
   }
@@ -221,7 +226,7 @@ const fillFromMappings = () => {
       && m.nodeType === node.nodeType
       && (m.nodeSequence ?? null) === (node.nodeSequence ?? null)
     )
-    node.formTemplateId = existing?.formTemplateId
+    formSelections[node.key] = existing?.formTemplateId
   }
 }
 
@@ -258,12 +263,12 @@ const loadFormOptions = async () => {
 const handleSave = async () => {
   const allNodes = [...reviewNodes.value, ...manageNodes.value]
   const reqs = allNodes
-    .filter(n => n.formTemplateId)
+    .filter(n => formSelections[n.key])
     .map(n => ({
       mappingType: n.mappingType,
       nodeType: n.nodeType,
       nodeSequence: n.nodeSequence,
-      formTemplateId: n.formTemplateId!,
+      formTemplateId: formSelections[n.key]!,
     }))
 
   if (reqs.length === 0) {
@@ -294,6 +299,9 @@ const nodeTypeColor = (type: string) => ({
   APPLICATION: 'blue', AUDIT: 'orange', REVIEW: 'green',
   DECISION: 'red', STAGE: 'purple',
 }[type] ?? 'gray')
+
+const stageTypeLabel = (type: string) => ({ KICKOFF: '立项', EXECUTION: '执行', ACCEPTANCE: '验收' }[type] ?? type)
+const stageTypeColor = (type: string) => ({ KICKOFF: 'blue', EXECUTION: 'green', ACCEPTANCE: 'orange' }[type] ?? 'gray')
 
 const templateTypeLabel = (type: number) => ({
   1: '申请', 2: '审核', 3: '评审', 4: '决策', 5: '立项', 6: '执行', 7: '验收',
