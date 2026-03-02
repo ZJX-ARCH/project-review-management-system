@@ -729,7 +729,10 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
 
         // 3. 转换为响应对象
         List<FormTemplateResp> respList = list.stream().map(record -> {
-            FormTemplateResp resp = BeanUtil.copyProperties(record, FormTemplateResp.class);
+            // 忽略 layoutConfig（String→JsonNode 无法自动转换），下方手动解析
+            FormTemplateResp resp = new FormTemplateResp();
+            CopyOptions copyOptions = CopyOptions.create().setIgnoreProperties("layoutConfig");
+            BeanUtil.copyProperties(record, resp, copyOptions);
             // 解析布局配置JSON
             if (StrUtil.isNotBlank(record.getLayoutConfig())) {
                 try {
