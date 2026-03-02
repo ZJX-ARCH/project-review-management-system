@@ -21,6 +21,18 @@
             <artifactId>continew-plugin-review-common</artifactId>
         </dependency>
 
+        <!-- 依赖流程模板模块（校验模板存在性和启用状态） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-template</artifactId>
+        </dependency>
+
+        <!-- 依赖表单模板模块（校验表单模板存在性和启用状态） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-form</artifactId>
+        </dependency>
+
         <!-- MyBatis Plus -->
         <dependency>
             <groupId>top.continew.starter</groupId>
