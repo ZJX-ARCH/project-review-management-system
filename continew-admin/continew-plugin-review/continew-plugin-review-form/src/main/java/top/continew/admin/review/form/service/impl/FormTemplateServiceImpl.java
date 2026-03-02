@@ -19,6 +19,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.form.mapper.FormFieldMapper;
 import top.continew.admin.review.form.mapper.FormTemplateFileMapper;
 import top.continew.admin.review.form.mapper.FormTemplateMapper;
+import top.continew.admin.review.form.mapper.TypeFormMappingRefMapper;
 import top.continew.admin.review.form.model.entity.FormFieldDO;
 import top.continew.admin.review.form.model.entity.FormTemplateDO;
 import top.continew.admin.review.form.model.entity.FormTemplateFileDO;
@@ -60,6 +61,7 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
     private final FormTemplateFileMapper formTemplateFileMapper;
     private final FileService fileService;
     private final ObjectMapper objectMapper;
+    private final TypeFormMappingRefMapper typeFormMappingRefMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -265,20 +267,14 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
                 throw new BusinessException("模板不存在, ID: " + id);
             }
 
-            // TODO: 校验模板是否被类型配置引用
-            // 这里需要查询review_type表的form_template_config字段,判断是否包含当前模板ID
-            // 如果未来有类型配置模块,需要添加此校验
-            // TypeConfigDO typeConfig = typeConfigMapper.selectByFormTemplateId(id);
-            // if (typeConfig != null) {
-            //     throw new BusinessException("模板已被类型配置引用,无法删除");
-            // }
-
-            // TODO: 校验模板是否有正在进行的评审项目使用
-            // 如果未来有项目管理模块,需要添加此校验
-            // ProjectDO project = projectMapper.selectByFormTemplateId(id);
-            // if (project != null) {
-            //     throw new BusinessException("模板正在使用中,无法删除");
-            // }
+            // 校验模板是否被项目类型配置引用
+            long refCount = typeFormMappingRefMapper.countByFormTemplateId(id);
+            if (refCount > 0) {
+                throw new BusinessException(StrUtil.format(
+                    "表单模板[ID={}]已被 {} 个项目类型节点引用，不允许删除，" +
+                    "请先在项目类型中解除表单映射后再操作", id, refCount));
+            }
+            // TODO: 校验模板是否有正在进行的评审项目使用（待 project 模块实现后补充）
         }
 
         // 3. 删除关联的附件文件
@@ -498,15 +494,45 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
             throw new BusinessException("字段不属于该模板");
         }
 
-        // 3. 校验文件类型和大小(可选,根据字段配置)
-        // 从字段配置中获取文件限制
+        // 3. 校验文件类型和大小（根据字段配置中的 allowedTypes / maxSize）
         if (StrUtil.isNotBlank(field.getFieldConfig())) {
             try {
                 JsonNode configObj = objectMapper.readTree(field.getFieldConfig());
-                // TODO: 解析allowedTypes和maxSize进行校验
-                // 这里简化处理,实际应从JSON配置中获取限制条件
+
+                // 校验文件类型：allowedTypes 为字符串数组，如 ["image/jpeg","image/png","application/pdf"]
+                JsonNode allowedTypesNode = configObj.get("allowedTypes");
+                if (allowedTypesNode != null && allowedTypesNode.isArray() && allowedTypesNode.size() > 0) {
+                    String contentType = file.getContentType();
+                    boolean typeAllowed = false;
+                    for (JsonNode typeNode : allowedTypesNode) {
+                        if (typeNode.asText().equalsIgnoreCase(contentType)) {
+                            typeAllowed = true;
+                            break;
+                        }
+                    }
+                    if (!typeAllowed) {
+                        List<String> allowed = new ArrayList<>();
+                        allowedTypesNode.forEach(n -> allowed.add(n.asText()));
+                        throw new BusinessException(StrUtil.format(
+                            "文件类型不符合要求，当前类型：{}，允许类型：{}", contentType, allowed));
+                    }
+                }
+
+                // 校验文件大小：maxSize 单位为字节（long）
+                JsonNode maxSizeNode = configObj.get("maxSize");
+                if (maxSizeNode != null && !maxSizeNode.isNull()) {
+                    long maxBytes = maxSizeNode.asLong();
+                    if (maxBytes > 0 && file.getSize() > maxBytes) {
+                        long maxMb = maxBytes / (1024 * 1024);
+                        throw new BusinessException(StrUtil.format(
+                            "文件大小超出限制，最大允许 {} MB，当前文件 {} KB",
+                            maxMb, file.getSize() / 1024));
+                    }
+                }
+            } catch (BusinessException e) {
+                throw e;
             } catch (Exception e) {
-                log.warn("解析字段配置JSON失败, 字段ID: {}", fieldId, e);
+                log.warn("解析字段配置JSON失败, 字段ID: {}, 跳过文件限制校验", fieldId, e);
             }
         }
 
@@ -528,12 +554,32 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         Long recordId = fileEntity.getId();
         log.info("保存文件关联记录成功, 记录ID: {}", recordId);
 
-        // 6. 检查字段文件数量限制(可选)
-        // 查询当前字段已有文件数
+        // 6. 检查字段文件数量限制
+        // 查询当前字段已有文件数（含本次刚插入的记录）
         QueryWrapper<FormTemplateFileDO> countQuery = new QueryWrapper<>();
-        countQuery.eq("template_id", templateId).eq("field_id", fieldId);
+        countQuery.eq("template_id", templateId).eq("field_id", fieldId).eq("deleted", 0);
         Long currentCount = formTemplateFileMapper.selectCount(countQuery);
-        // TODO: 根据字段配置的maxCount进行限制检查
+
+        if (StrUtil.isNotBlank(field.getFieldConfig())) {
+            try {
+                JsonNode configObj = objectMapper.readTree(field.getFieldConfig());
+                JsonNode maxCountNode = configObj.get("maxCount");
+                if (maxCountNode != null && !maxCountNode.isNull()) {
+                    long maxCount = maxCountNode.asLong();
+                    if (maxCount > 0 && currentCount > maxCount) {
+                        // 超出数量限制：删除本次插入的记录并抛出异常
+                        formTemplateFileMapper.deleteById(recordId);
+                        throw new BusinessException(StrUtil.format(
+                            "字段文件数量超出限制，最多允许 {} 个文件，上传前已有 {} 个",
+                            maxCount, currentCount - 1));
+                    }
+                }
+            } catch (BusinessException e) {
+                throw e;
+            } catch (Exception e) {
+                log.warn("解析字段配置JSON失败（maxCount检查）, 字段ID: {}, 跳过数量限制校验", fieldId, e);
+            }
+        }
 
         // 7. 返回文件关联记录ID
         return recordId;
