@@ -464,7 +464,8 @@ onMounted(async () => {
 <style scoped>
 .spin-container {
   width: 100%;
-  height: 100%;
+  flex: 1;       /* 占 a-page-header 之后的剩余空间，而非 100% 父高 */
+  min-height: 0; /* 允许 flex 子项在内容超高时正常收缩 */
   display: flex;
   flex-direction: column;
 }
@@ -490,5 +491,10 @@ onMounted(async () => {
 
 .config-tabs :deep(.arco-tabs-content) {
   padding: 0;
+  overflow: visible; /* 允许内容溢出到 .config-body 的滚动容器 */
+}
+
+.config-tabs :deep(.arco-tabs-pane) {
+  overflow: visible;
 }
 </style>

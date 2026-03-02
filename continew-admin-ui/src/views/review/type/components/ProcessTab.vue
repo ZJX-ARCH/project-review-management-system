@@ -35,7 +35,12 @@
                 </a-descriptions-item>
               </a-descriptions>
               <div v-if="selectedReviewTemplate.roundNames?.length" style="margin-top: 8px">
-                <a-tag v-for="rn in selectedReviewTemplate.roundNames" :key="`${rn.roundType}-${rn.roundSequence}`" style="margin: 2px">
+                <a-tag
+                  v-for="rn in selectedReviewTemplate.roundNames"
+                  :key="`${rn.roundType}-${rn.roundSequence}`"
+                  :color="roundTypeColor(rn.roundType)"
+                  style="margin: 2px"
+                >
                   {{ roundTypeLabel(rn.roundType) }}{{ rn.roundSequence }}：{{ rn.roundName }}
                 </a-tag>
               </div>
@@ -145,6 +150,7 @@ const selectedManageTemplate = computed(() =>
 )
 
 const roundTypeLabel = (type: string) => ({ AUDIT: '审核', REVIEW: '评审', DECISION: '决策' }[type] ?? type)
+const roundTypeColor = (type: string) => ({ AUDIT: 'orange', REVIEW: 'blue', DECISION: 'purple' }[type] ?? 'gray')
 const stageTypeColor = (type: string) => ({ KICKOFF: 'blue', EXECUTION: 'green', ACCEPTANCE: 'orange' }[type] ?? 'gray')
 
 /** 加载下拉选项 */
