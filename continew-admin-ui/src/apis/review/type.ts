@@ -310,20 +310,6 @@ export enum ProcessType {
   MANAGE = 'MANAGE',
 }
 
-/** 角色类型枚举 */
-export enum RoleType {
-  /** 审核人 */
-  AUDITOR = 'AUDITOR',
-  /** 评审人 */
-  REVIEWER = 'REVIEWER',
-  /** 决策人 */
-  DECISION_MAKER = 'DECISION_MAKER',
-  /** 管理员 */
-  MANAGER = 'MANAGER',
-  /** 验收人 */
-  ACCEPTANCE_INSPECTOR = 'ACCEPTANCE_INSPECTOR',
-}
-
 /** 人员范围类型枚举 */
 export enum ScopeType {
   /** 指定用户 */
@@ -485,8 +471,10 @@ export interface TypeFormMappingResp {
 
 /** 类型人员范围配置请求 */
 export interface TypePersonnelConfigReq {
-  /** 角色类型 */
-  roleType: RoleType
+  /** 节点类型：APPLICATION/AUDIT/REVIEW/DECISION/STAGE */
+  nodeType: string
+  /** 节点序号（APPLICATION时为undefined） */
+  nodeSequence?: number
   /** 范围类型 */
   scopeType: ScopeType
   /** 范围配置(JSON字符串) */
@@ -499,7 +487,8 @@ export interface TypePersonnelConfigReq {
 export interface TypePersonnelConfigResp {
   id?: number
   typeId?: number
-  roleType: RoleType
+  nodeType: string
+  nodeSequence?: number
   scopeType: ScopeType
   scopeConfig: string
   remark?: string
