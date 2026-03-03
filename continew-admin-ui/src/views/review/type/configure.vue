@@ -88,7 +88,7 @@
         <!-- 编辑模式：步骤向导 -->
         <template v-else>
           <!-- 步骤指示器 -->
-          <a-steps :current="currentStep" style="margin-bottom: 24px" size="small" @change="(step) => currentStep = step">
+          <a-steps :current="currentStep + 1" style="margin-bottom: 24px" size="small" @change="(step) => currentStep = step - 1">
             <a-step title="基本信息" />
             <a-step title="流程模板" />
             <a-step title="节点配置" />

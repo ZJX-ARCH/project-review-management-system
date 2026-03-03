@@ -9,59 +9,121 @@
     </a-alert>
 
     <a-spin :loading="saveLoading">
-      <!-- 节点卡片列表 -->
-      <a-card
-        v-for="node in allNodes"
-        :key="node.key"
-        class="node-card"
-      >
-        <template #title>
-          <a-space>
-            <a-tag :color="nodeTagColor(node)">{{ nodeTagLabel(node) }}</a-tag>
-            <span>{{ node.label }}</span>
-            <a-tag v-if="isNodeConfigured(node)" color="green" size="small">已配置</a-tag>
-            <a-tag v-else color="gray" size="small">未配置</a-tag>
+      <!-- 评审阶段 -->
+      <template v-if="reviewNodes.length > 0">
+        <div class="phase-header">
+          <span class="phase-title">评审阶段</span>
+          <a-space size="mini">
+            <a-link @click="expandedReviewKeys = reviewNodes.map(n => n.key)">全部展开</a-link>
+            <a-divider direction="vertical" />
+            <a-link @click="expandedReviewKeys = []">全部收起</a-link>
           </a-space>
-        </template>
-
-        <a-row :gutter="[16, 0]">
-          <!-- 左列：表单模板 + 人员范围 -->
-          <a-col :span="node.hasApproval ? 12 : 24">
-            <a-form layout="vertical">
-              <a-form-item label="表单模板">
-                <a-select
-                  v-model="formSelections[node.key]"
-                  :options="formOptions[node.templateType] || []"
+        </div>
+        <a-collapse :active-key="expandedReviewKeys" :bordered="false" class="node-collapse" @change="(keys) => expandedReviewKeys = keys">
+          <a-collapse-item v-for="node in reviewNodes" :key="node.key">
+            <template #header>
+              <a-space>
+                <a-tag :color="nodeTagColor(node)" size="small">{{ nodeTagLabel(node) }}</a-tag>
+                <span>{{ node.label }}</span>
+                <a-tag v-if="isNodeConfigured(node)" color="green" size="small">已配置</a-tag>
+                <a-tag v-else color="arcoblue" size="small">待配置</a-tag>
+              </a-space>
+            </template>
+            <a-row :gutter="[16, 0]">
+              <a-col :span="node.hasApproval ? 12 : 24">
+                <a-form layout="vertical">
+                  <a-form-item label="表单模板">
+                    <a-select
+                      v-model="formSelections[node.key]"
+                      :options="formOptions[node.templateType] || []"
+                      :disabled="disabled"
+                      allow-clear
+                      placeholder="请选择表单模板"
+                      style="width: 100%"
+                    />
+                  </a-form-item>
+                </a-form>
+                <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+                <ScopeConfigForm
+                  v-if="nodePersonnel[node.key]"
+                  v-model="nodePersonnel[node.key]"
                   :disabled="disabled"
-                  allow-clear
-                  placeholder="请选择表单模板"
-                  style="width: 100%"
                 />
-              </a-form-item>
-            </a-form>
-            <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
-            <ScopeConfigForm
-              v-if="nodePersonnel[node.key]"
-              v-model="nodePersonnel[node.key]"
-              :disabled="disabled"
-            />
-          </a-col>
+              </a-col>
+              <a-col v-if="node.hasApproval" :span="12">
+                <a-divider orientation="left">审批规则</a-divider>
+                <ApprovalNodeForm
+                  :node-scope="node.approvalNodeScope"
+                  :node-label="node.label"
+                  :is-acceptance="node.stageType === 'ACCEPTANCE'"
+                  :manage-stages="props.manageTemplate?.stages || []"
+                  :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
+                  :disabled="disabled"
+                  @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
+                />
+              </a-col>
+            </a-row>
+          </a-collapse-item>
+        </a-collapse>
+      </template>
 
-          <!-- 右列：审批规则（仅有 hasApproval 的节点） -->
-          <a-col v-if="node.hasApproval" :span="12">
-            <a-divider orientation="left">审批规则</a-divider>
-            <ApprovalNodeForm
-              :node-scope="node.approvalNodeScope"
-              :node-label="node.label"
-              :is-acceptance="node.stageType === 'ACCEPTANCE'"
-              :manage-stages="props.manageTemplate?.stages || []"
-              :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
-              :disabled="disabled"
-              @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
-            />
-          </a-col>
-        </a-row>
-      </a-card>
+      <!-- 管理阶段 -->
+      <template v-if="manageNodes.length > 0">
+        <div class="phase-header" :style="reviewNodes.length > 0 ? 'margin-top: 16px' : ''">
+          <span class="phase-title">管理阶段</span>
+          <a-space size="mini">
+            <a-link @click="expandedManageKeys = manageNodes.map(n => n.key)">全部展开</a-link>
+            <a-divider direction="vertical" />
+            <a-link @click="expandedManageKeys = []">全部收起</a-link>
+          </a-space>
+        </div>
+        <a-collapse :active-key="expandedManageKeys" :bordered="false" class="node-collapse" @change="(keys) => expandedManageKeys = keys">
+          <a-collapse-item v-for="node in manageNodes" :key="node.key">
+            <template #header>
+              <a-space>
+                <a-tag :color="nodeTagColor(node)" size="small">{{ nodeTagLabel(node) }}</a-tag>
+                <span>{{ node.label }}</span>
+                <a-tag v-if="isNodeConfigured(node)" color="green" size="small">已配置</a-tag>
+                <a-tag v-else color="arcoblue" size="small">待配置</a-tag>
+              </a-space>
+            </template>
+            <a-row :gutter="[16, 0]">
+              <a-col :span="node.hasApproval ? 12 : 24">
+                <a-form layout="vertical">
+                  <a-form-item label="表单模板">
+                    <a-select
+                      v-model="formSelections[node.key]"
+                      :options="formOptions[node.templateType] || []"
+                      :disabled="disabled"
+                      allow-clear
+                      placeholder="请选择表单模板"
+                      style="width: 100%"
+                    />
+                  </a-form-item>
+                </a-form>
+                <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+                <ScopeConfigForm
+                  v-if="nodePersonnel[node.key]"
+                  v-model="nodePersonnel[node.key]"
+                  :disabled="disabled"
+                />
+              </a-col>
+              <a-col v-if="node.hasApproval" :span="12">
+                <a-divider orientation="left">审批规则</a-divider>
+                <ApprovalNodeForm
+                  :node-scope="node.approvalNodeScope"
+                  :node-label="node.label"
+                  :is-acceptance="node.stageType === 'ACCEPTANCE'"
+                  :manage-stages="props.manageTemplate?.stages || []"
+                  :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
+                  :disabled="disabled"
+                  @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
+                />
+              </a-col>
+            </a-row>
+          </a-collapse-item>
+        </a-collapse>
+      </template>
 
       <!-- 保存按钮 -->
       <div v-if="allNodes.length > 0" style="margin-top: 16px; text-align: right">
@@ -137,6 +199,10 @@ const nodePersonnel = reactive<Record<string, ScopeConfig>>({})
 const nodeApproval = reactive<Record<string, TypeApprovalConfigReq | null>>({})
 
 const saveLoading = ref(false)
+
+// 折叠面板展开状态（key 为 string | number，与 Arco Design 类型一致）
+const expandedReviewKeys = ref<(string | number)[]>([])
+const expandedManageKeys = ref<(string | number)[]>([])
 
 /** 按照流程节点顺序构建节点列表 */
 const allNodes = computed<NodeDef[]>(() => {
@@ -229,6 +295,12 @@ const allNodes = computed<NodeDef[]>(() => {
 
   return nodes
 })
+
+/** 评审阶段节点（APPLICATION / AUDIT / REVIEW / DECISION） */
+const reviewNodes = computed(() => allNodes.value.filter(n => n.mappingType === 'REVIEW'))
+
+/** 管理阶段节点（STAGE） */
+const manageNodes = computed(() => allNodes.value.filter(n => n.mappingType === 'MANAGE'))
 
 /** 加载表单模板选项 */
 const loadFormOptions = async () => {
@@ -396,7 +468,33 @@ watch(
   padding: 16px 0;
 }
 
-.node-card {
-  margin-bottom: 16px;
+.phase-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.phase-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  padding-left: 10px;
+  border-left: 3px solid rgb(var(--arcoblue-6));
+}
+
+.node-collapse :deep(.arco-collapse-item) {
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+}
+
+.node-collapse :deep(.arco-collapse-item-header) {
+  background-color: var(--color-fill-2);
+  border-radius: 4px;
+}
+
+.node-collapse :deep(.arco-collapse-item-content) {
+  padding: 16px;
 }
 </style>

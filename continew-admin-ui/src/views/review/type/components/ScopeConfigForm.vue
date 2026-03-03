@@ -97,7 +97,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<!-- 导出供外部使用的接口和工具函数（<script setup> 不支持 export，须放独立 <script> 块） -->
+<script lang="ts">
 import { ScopeType } from '@/apis/review'
 
 export interface ScopeConfig {
@@ -175,6 +176,10 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
   }
   return parsed
 }
+</script>
+
+<script setup lang="ts">
+// ScopeConfig、defaultScopeConfig 由上方 <script> 块导出，此处直接使用
 
 const props = defineProps<{
   modelValue: ScopeConfig
