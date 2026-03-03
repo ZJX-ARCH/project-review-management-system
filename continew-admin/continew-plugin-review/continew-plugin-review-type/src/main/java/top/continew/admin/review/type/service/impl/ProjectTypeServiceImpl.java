@@ -393,15 +393,15 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             throw new BusinessException("已启用的类型不允许直接修改人员范围配置，请先禁用");
         }
 
+        // reqs 为空时，允许清空人员配置（与 saveFormMapping 保持一致）
+
         // 步骤2：业务规则校验
-        Set<RoleTypeEnum> roleTypeSet = new HashSet<>();
+        Set<String> nodeKeySet = new HashSet<>();
         for (TypePersonnelConfigReq req : reqs) {
-            // roleType 不重复
-            if (!roleTypeSet.add(req.getRoleType())) {
-                throw new BadRequestException(StrUtil.format("角色类型[{}]重复配置",
-                        req.getRoleType().getDescription()));
+            String nodeKey = buildNodeKey(req.getNodeType(), req.getNodeSequence());
+            if (!nodeKeySet.add(nodeKey)) {
+                throw new BadRequestException(StrUtil.format("节点[{}]重复配置人员范围", nodeKey));
             }
-            // scopeConfig 结构合法性校验
             validateScopeConfig(req);
         }
 
@@ -553,6 +553,14 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
         }
 
         // 验证B - 表单映射完整性（依赖流程配置正常才能推算节点）
+        // 提前查询 stages，验证B和验证C共用
+        List<ManagementStageDO> stages = Collections.emptyList();
+        if (ObjectUtil.isNotNull(manageTemplate)) {
+            QueryWrapper<ManagementStageDO> stageWrapper = new QueryWrapper<>();
+            stageWrapper.eq("template_id", manageTemplate.getId())
+                    .eq("deleted", 0).orderByAsc("stage_order");
+            stages = stageMapper.selectList(stageWrapper);
+        }
         if (ObjectUtil.isNotNull(reviewTemplate) && ObjectUtil.isNotNull(manageTemplate)) {
             QueryWrapper<TypeFormMappingDO> formWrapper = new QueryWrapper<>();
             formWrapper.eq("type_id", id).eq("deleted", 0);
@@ -582,10 +590,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
 
             // MANAGE 侧：每个阶段对应一个 STAGE 节点（按 stageOrder）
-            QueryWrapper<ManagementStageDO> stageWrapper = new QueryWrapper<>();
-            stageWrapper.eq("template_id", manageTemplate.getId())
-                    .eq("deleted", 0).orderByAsc("stage_order");
-            List<ManagementStageDO> stages = stageMapper.selectList(stageWrapper);
             for (ManagementStageDO stage : stages) {
                 checkNodeFormMapping(errors, mappedNodes, "MANAGE", "STAGE", stage.getStageOrder());
             }
@@ -601,15 +605,42 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
         }
 
-        // 验证C - 人员范围：5类角色必须全部配置
+        // 验证C - 人员范围：所有流程节点（评审轮次+管理阶段）必须配置人员范围
+        // 注：若 reviewTemplate 或 manageTemplate 未配置，相关节点键不进入期望集（验证A/B已报错）
         QueryWrapper<TypePersonnelConfigDO> personnelWrapper = new QueryWrapper<>();
         personnelWrapper.eq("type_id", id).eq("deleted", 0);
         List<TypePersonnelConfigDO> personnelConfigs = personnelConfigMapper.selectList(personnelWrapper);
-        Set<RoleTypeEnum> configuredRoles = personnelConfigs.stream()
-                .map(TypePersonnelConfigDO::getRoleType).collect(Collectors.toSet());
-        for (RoleTypeEnum role : RoleTypeEnum.values()) {
-            if (!configuredRoles.contains(role)) {
-                errors.add("角色[" + role.getDescription() + "]未配置人员范围");
+        Set<String> configuredPersonnelKeys = personnelConfigs.stream()
+                .map(p -> buildNodeKey(p.getNodeType(), p.getNodeSequence()))
+                .collect(Collectors.toSet());
+
+        // 构建期望节点键（与 formMapping 验证保持一致）
+        Set<String> expectedPersonnelKeys = new HashSet<>();
+        expectedPersonnelKeys.add(buildNodeKey("APPLICATION", null));
+        if (ObjectUtil.isNotNull(reviewTemplate)) {
+            if (reviewTemplate.getAuditRounds() != null && reviewTemplate.getAuditRounds() > 0) {
+                for (int i = 1; i <= reviewTemplate.getAuditRounds(); i++) {
+                    expectedPersonnelKeys.add(buildNodeKey("AUDIT", i));
+                }
+            }
+            if (reviewTemplate.getReviewRounds() != null && reviewTemplate.getReviewRounds() > 0) {
+                for (int i = 1; i <= reviewTemplate.getReviewRounds(); i++) {
+                    expectedPersonnelKeys.add(buildNodeKey("REVIEW", i));
+                }
+            }
+            if (reviewTemplate.getDecisionRounds() != null && reviewTemplate.getDecisionRounds() > 0) {
+                for (int i = 1; i <= reviewTemplate.getDecisionRounds(); i++) {
+                    expectedPersonnelKeys.add(buildNodeKey("DECISION", i));
+                }
+            }
+        }
+        for (ManagementStageDO stage : stages) {
+            expectedPersonnelKeys.add(buildNodeKey("STAGE", stage.getStageOrder()));
+        }
+
+        for (String key : expectedPersonnelKeys) {
+            if (!configuredPersonnelKeys.contains(key)) {
+                errors.add("节点[" + key + "]未配置人员范围");
             }
         }
 
@@ -746,8 +777,8 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
     private void validateScopeConfig(TypePersonnelConfigReq req) {
         Map<String, Object> scopeConfig = req.getScopeConfig();
         if (ObjectUtil.isNull(scopeConfig)) {
-            throw new BadRequestException(StrUtil.format("角色[{}]的范围配置不能为空",
-                    req.getRoleType().getDescription()));
+            throw new BadRequestException(StrUtil.format("节点[{}]的范围配置不能为空",
+                    req.getNodeType()));
         }
         switch (req.getScopeType()) {
             case DEPT:
@@ -846,5 +877,16 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             errors.add(StrUtil.format("节点[{}-{}-{}]未配置表单", processType, nodeType,
                     nodeSequence == null ? "N/A" : nodeSequence));
         }
+    }
+
+    /**
+     * 构建人员配置节点键（与表单映射节点键格式一致）
+     *
+     * @param nodeType     节点类型（APPLICATION/AUDIT/REVIEW/DECISION/STAGE）
+     * @param nodeSequence 节点序号，APPLICATION 时为 null
+     * @return 节点键，如 "APPLICATION"、"AUDIT_1"、"STAGE_2"
+     */
+    private static String buildNodeKey(String nodeType, Integer nodeSequence) {
+        return nodeType + (nodeSequence != null ? "_" + nodeSequence : "");
     }
 }

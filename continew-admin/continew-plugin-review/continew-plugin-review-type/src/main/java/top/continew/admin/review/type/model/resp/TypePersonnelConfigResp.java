@@ -2,7 +2,6 @@ package top.continew.admin.review.type.model.resp;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import top.continew.admin.review.type.enums.RoleTypeEnum;
 import top.continew.admin.review.type.enums.ScopeTypeEnum;
 
 import java.io.Serial;
@@ -29,10 +28,16 @@ public class TypePersonnelConfigResp implements Serializable {
     private Long id;
 
     /**
-     * 角色类型
+     * 节点类型
      */
-    @Schema(description = "角色类型", example = "AUDITOR")
-    private RoleTypeEnum roleType;
+    @Schema(description = "节点类型", example = "AUDIT")
+    private String nodeType;
+
+    /**
+     * 节点序号
+     */
+    @Schema(description = "节点序号", example = "1")
+    private Integer nodeSequence;
 
     /**
      * 范围类型

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import top.continew.admin.common.base.model.entity.BaseDO;
-import top.continew.admin.review.type.enums.RoleTypeEnum;
 import top.continew.admin.review.type.enums.ScopeTypeEnum;
 
 import java.io.Serial;
@@ -32,9 +31,14 @@ public class TypePersonnelConfigDO extends BaseDO {
     private Long typeId;
 
     /**
-     * 角色类型（AUDITOR/REVIEWER/DECISION_MAKER/MANAGER/ACCEPTANCE_INSPECTOR）
+     * 节点类型（APPLICATION/AUDIT/REVIEW/DECISION/STAGE）
      */
-    private RoleTypeEnum roleType;
+    private String nodeType;
+
+    /**
+     * 节点序号（轮次/阶段顺序，APPLICATION为NULL）
+     */
+    private Integer nodeSequence;
 
     /**
      * 范围类型（USER/ROLE/DEPT/COMBINED）

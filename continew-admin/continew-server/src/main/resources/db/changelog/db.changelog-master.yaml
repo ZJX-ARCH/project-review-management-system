@@ -39,6 +39,9 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/type/review_type_data.sql
   - include:
       file: db/changelog/mysql/plugin/type/review_type_routes.sql
+  - include:
+      file: db/changelog/mysql/plugin/type/review_type_personnel_v2.sql
+      relativeToChangelogFile: false
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql

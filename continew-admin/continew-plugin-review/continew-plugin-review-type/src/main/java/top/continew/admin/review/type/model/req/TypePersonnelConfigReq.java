@@ -1,10 +1,10 @@
 package top.continew.admin.review.type.model.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
-import top.continew.admin.review.type.enums.RoleTypeEnum;
 import top.continew.admin.review.type.enums.ScopeTypeEnum;
 
 import java.io.Serial;
@@ -25,11 +25,18 @@ public class TypePersonnelConfigReq implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 角色类型（AUDITOR/REVIEWER/DECISION_MAKER/MANAGER/ACCEPTANCE_INSPECTOR）
+     * 节点类型（APPLICATION/AUDIT/REVIEW/DECISION/STAGE）
      */
-    @Schema(description = "角色类型", example = "AUDITOR")
-    @NotNull(message = "角色类型不能为空")
-    private RoleTypeEnum roleType;
+    @Schema(description = "节点类型", example = "AUDIT")
+    @NotBlank(message = "节点类型不能为空")
+    @Length(max = 30, message = "节点类型长度不能超过 {max} 个字符")
+    private String nodeType;
+
+    /**
+     * 节点序号（轮次/阶段顺序，APPLICATION时为null）
+     */
+    @Schema(description = "节点序号，APPLICATION时为null", example = "1")
+    private Integer nodeSequence;
 
     /**
      * 范围类型（USER/ROLE/DEPT/COMBINED）
