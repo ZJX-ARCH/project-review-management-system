@@ -126,7 +126,7 @@ interface VisibilityItem {
 }
 
 const props = defineProps<{
-  typeId: number
+  typeId: string | number
   visibilityConfigs: TypeVisibilityConfigResp[]
   disabled?: boolean
 }>()

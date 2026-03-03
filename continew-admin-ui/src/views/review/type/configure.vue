@@ -85,12 +85,21 @@
           </a-card>
         </template>
 
-        <!-- 编辑模式：多 Tab 配置 -->
+        <!-- 编辑模式：步骤向导 -->
         <template v-else>
-          <a-tabs v-model:active-key="activeTab" class="config-tabs">
-            <!-- Tab 1：基本信息 -->
-            <a-tab-pane key="basic" title="基本信息">
-              <a-card :bordered="false" style="margin-top: 8px">
+          <!-- 步骤指示器 -->
+          <a-steps :current="currentStep" style="margin-bottom: 24px" size="small" @change="(step) => currentStep = step">
+            <a-step title="基本信息" />
+            <a-step title="流程模板" />
+            <a-step title="节点配置" />
+            <a-step title="可见性" />
+          </a-steps>
+
+          <!-- 步骤内容 -->
+          <div class="step-content">
+            <!-- Step 0: 基本信息 -->
+            <template v-if="currentStep === 0">
+              <a-card :bordered="false">
                 <a-form ref="basicFormRef" :model="basicForm" :rules="basicFormRules" layout="vertical">
                   <a-row :gutter="16">
                     <a-col :span="12">
@@ -121,10 +130,10 @@
                   <a-button type="primary" :loading="saveBasicLoading" @click="handleSaveBasic">保存基本信息</a-button>
                 </div>
               </a-card>
-            </a-tab-pane>
+            </template>
 
-            <!-- Tab 2：流程模板 -->
-            <a-tab-pane key="process" title="流程模板">
+            <!-- Step 1: 流程模板 -->
+            <template v-else-if="currentStep === 1">
               <ProcessTab
                 v-if="typeId"
                 :type-id="typeId"
@@ -132,47 +141,26 @@
                 :disabled="detail?.status === 1"
                 @saved="onSubConfigSaved"
               />
-            </a-tab-pane>
+            </template>
 
-            <!-- Tab 3：表单映射 -->
-            <a-tab-pane key="form" title="表单映射">
-              <FormMappingTab
-                v-if="typeId"
+            <!-- Step 2: 节点配置 -->
+            <template v-else-if="currentStep === 2">
+              <NodeConfigStep
+                v-if="typeId && (reviewTemplate || manageTemplate)"
                 :type-id="typeId"
                 :form-mappings="detail?.formMappings || []"
+                :personnel-configs="detail?.personnelConfigs || []"
+                :approval-configs="detail?.approvalConfigs || []"
                 :review-template="reviewTemplate"
                 :manage-template="manageTemplate"
                 :disabled="detail?.status === 1"
                 @saved="onSubConfigSaved"
               />
-            </a-tab-pane>
+              <a-alert v-else type="warning">请先完成【流程模板】步骤的配置并保存。</a-alert>
+            </template>
 
-            <!-- Tab 4：人员范围 -->
-            <a-tab-pane key="personnel" title="人员范围">
-              <PersonnelTab
-                v-if="typeId"
-                :type-id="typeId"
-                :personnel-configs="detail?.personnelConfigs || []"
-                :disabled="detail?.status === 1"
-                @saved="onSubConfigSaved"
-              />
-            </a-tab-pane>
-
-            <!-- Tab 5：审批规则 -->
-            <a-tab-pane key="approval" title="审批规则">
-              <ApprovalTab
-                v-if="typeId"
-                :type-id="typeId"
-                :approval-configs="detail?.approvalConfigs || []"
-                :review-template="reviewTemplate"
-                :manage-stages="manageTemplate?.stages || []"
-                :disabled="detail?.status === 1"
-                @saved="onSubConfigSaved"
-              />
-            </a-tab-pane>
-
-            <!-- Tab 6：可见性 -->
-            <a-tab-pane key="visibility" title="可见性">
+            <!-- Step 3: 可见性 -->
+            <template v-else-if="currentStep === 3">
               <VisibilityTab
                 v-if="typeId"
                 :type-id="typeId"
@@ -180,8 +168,15 @@
                 :disabled="detail?.status === 1"
                 @saved="onSubConfigSaved"
               />
-            </a-tab-pane>
-          </a-tabs>
+            </template>
+          </div>
+
+          <!-- 底部导航 -->
+          <div class="step-nav">
+            <a-button v-if="currentStep > 0" @click="currentStep--">上一步</a-button>
+            <div v-else></div>
+            <a-button v-if="currentStep < 3" type="primary" @click="currentStep++">下一步</a-button>
+          </div>
         </template>
       </div>
     </a-spin>
@@ -192,9 +187,7 @@
 import { Message, Modal } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import ProcessTab from './components/ProcessTab.vue'
-import FormMappingTab from './components/FormMappingTab.vue'
-import PersonnelTab from './components/PersonnelTab.vue'
-import ApprovalTab from './components/ApprovalTab.vue'
+import NodeConfigStep from './components/NodeConfigStep.vue'
 import VisibilityTab from './components/VisibilityTab.vue'
 import {
   createProjectType,
@@ -203,15 +196,11 @@ import {
   generateTypeCode,
   getProjectType,
   updateProjectType,
+  getProcessTemplate,
+  getManagementTemplate,
   type ProjectTypeDetailResp,
   type ProjectTypeReq,
-} from '@/apis/review'
-import {
-  getProcessTemplate,
   type ProcessTemplateResp,
-} from '@/apis/review'
-import {
-  getManagementTemplate,
   type ManagementTemplateResp,
 } from '@/apis/review'
 
@@ -231,13 +220,13 @@ const saveBasicLoading = ref(false)
 const enableLoading = ref(false)
 const disableLoading = ref(false)
 
-// 当前激活 Tab
-const activeTab = ref('basic')
+// 当前步骤（0-indexed: 0=基本信息, 1=流程模板, 2=节点配置, 3=可见性）
+const currentStep = ref(0)
 
 // 类型详情
 const detail = ref<ProjectTypeDetailResp | null>(null)
 
-// 关联的流程模板（用于 FormMappingTab 和 ApprovalTab）
+// 关联的流程模板（用于 NodeConfigStep）
 const reviewTemplate = ref<ProcessTemplateResp | null>(null)
 const manageTemplate = ref<ManagementTemplateResp | null>(null)
 
@@ -321,7 +310,7 @@ const loadDetail = async () => {
       sortOrder: res.data.sortOrder ?? 0,
     })
 
-    // 加载关联的流程模板（供 FormMappingTab 和 ApprovalTab 使用）
+    // 加载关联的流程模板（供 NodeConfigStep 使用）
     const reviewConfig = res.data.processConfigs?.find(c => c.processType === 'REVIEW')
     const manageConfig = res.data.processConfigs?.find(c => c.processType === 'MANAGE')
 
@@ -489,12 +478,17 @@ onMounted(async () => {
   font-family: monospace;
 }
 
-.config-tabs :deep(.arco-tabs-content) {
-  padding: 0;
-  overflow: visible; /* 允许内容溢出到 .config-body 的滚动容器 */
+.step-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
-.config-tabs :deep(.arco-tabs-pane) {
-  overflow: visible;
+.step-nav {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 16px;
+  flex-shrink: 0;
 }
 </style>

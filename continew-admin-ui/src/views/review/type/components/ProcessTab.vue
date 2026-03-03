@@ -111,7 +111,7 @@ import {
 } from '@/apis/review'
 
 const props = defineProps<{
-  typeId: number
+  typeId: string | number
   processConfigs: TypeProcessConfigResp[]
   disabled?: boolean
 }>()
