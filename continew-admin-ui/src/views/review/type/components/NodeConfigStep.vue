@@ -281,7 +281,7 @@ const allNodes = computed<NodeDef[]>(() => {
     }
     nodes.push({
       key: `STAGE_${stage.stageOrder}`,
-      label: `${stage.stageName}（第${stage.stageOrder}阶段）`,
+      label: stage.stageName,
       nodeType: 'STAGE',
       nodeSequence: stage.stageOrder,
       stageType: stage.stageType,
@@ -371,23 +371,21 @@ const fillFromProps = () => {
   }
 }
 
-/** 节点标签颜色 */
-const nodeTagColor = (node: NodeDef) => ({
-  APPLICATION: 'blue',
-  AUDIT: 'orange',
-  REVIEW: 'green',
-  DECISION: 'red',
-  STAGE: 'purple',
-}[node.nodeType] ?? 'gray')
+/** 节点标签颜色（STAGE 按阶段类型细分，与管理模板配色一致） */
+const nodeTagColor = (node: NodeDef): string => {
+  if (node.nodeType === 'STAGE') {
+    return { KICKOFF: 'green', EXECUTION: 'blue', ACCEPTANCE: 'orange' }[node.stageType ?? ''] ?? 'gray'
+  }
+  return { APPLICATION: 'arcoblue', AUDIT: 'orange', REVIEW: 'green', DECISION: 'red' }[node.nodeType] ?? 'gray'
+}
 
-/** 节点标签文字 */
-const nodeTagLabel = (node: NodeDef) => ({
-  APPLICATION: '申请',
-  AUDIT: '审核',
-  REVIEW: '评审',
-  DECISION: '决策',
-  STAGE: '阶段',
-}[node.nodeType] ?? node.nodeType)
+/** 节点标签文字（STAGE 按阶段类型细分，与管理模板一致） */
+const nodeTagLabel = (node: NodeDef): string => {
+  if (node.nodeType === 'STAGE') {
+    return { KICKOFF: '立项', EXECUTION: '执行', ACCEPTANCE: '验收' }[node.stageType ?? ''] ?? '阶段'
+  }
+  return { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策' }[node.nodeType] ?? node.nodeType
+}
 
 /** 判断节点是否已完成基本配置 */
 const isNodeConfigured = (node: NodeDef) => {
