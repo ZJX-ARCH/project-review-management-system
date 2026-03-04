@@ -52,6 +52,13 @@ const handleUserSearch = (value: string) => {
   }, 300)
 }
 
+onUnmounted(() => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
+})
+
 async function loadDeptTree() {
   deptLoading.value = true
   try {
