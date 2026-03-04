@@ -314,8 +314,6 @@ export enum ProcessType {
 export enum ScopeType {
   /** 指定用户 */
   USER = 'USER',
-  /** 按系统角色 */
-  ROLE = 'ROLE',
   /** 按部门 */
   DEPT = 'DEPT',
 }

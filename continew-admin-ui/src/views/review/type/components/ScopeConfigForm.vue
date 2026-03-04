@@ -12,7 +12,6 @@
               @change="onScopeTypeChange"
             >
               <a-option value="USER">指定用户</a-option>
-              <a-option value="ROLE">按系统角色</a-option>
               <a-option value="DEPT">按部门</a-option>
             </a-select>
           </a-form-item>
@@ -31,15 +30,20 @@
 
       <!-- USER 范围 -->
       <template v-if="local.scopeType === 'USER'">
-        <a-form-item label="用户ID列表">
-          <a-input-tag
+        <a-form-item label="用户范围">
+          <a-select
             v-model="local.parsed.userIds"
+            multiple
+            allow-search
+            allow-clear
             :disabled="disabled"
-            placeholder="输入用户ID后按回车添加"
-            unique-value
+            :options="userOptions"
+            :loading="userOptionsLoading"
+            placeholder="搜索并选择用户（按昵称/用户名）"
+            :filter-option="false"
             style="width: 100%"
+            @search="handleUserSearch"
           />
-          <div class="hint">输入系统用户ID，多个ID逐个添加</div>
         </a-form-item>
       </template>
 
@@ -47,12 +51,16 @@
       <template v-else-if="local.scopeType === 'DEPT'">
         <a-row :gutter="16">
           <a-col :span="16">
-            <a-form-item label="部门ID列表">
-              <a-input-tag
+            <a-form-item label="部门范围">
+              <a-tree-select
                 v-model="local.parsed.deptIds"
+                :data="deptTreeData"
+                :loading="deptLoading"
+                multiple
+                allow-clear
+                allow-search
                 :disabled="disabled"
-                placeholder="输入部门ID后按回车添加"
-                unique-value
+                placeholder="请选择部门"
                 style="width: 100%"
               />
             </a-form-item>
@@ -63,20 +71,6 @@
             </a-form-item>
           </a-col>
         </a-row>
-      </template>
-
-      <!-- ROLE 范围 -->
-      <template v-else-if="local.scopeType === 'ROLE'">
-        <a-form-item label="业务角色">
-          <a-input-tag
-            v-model="local.parsed.businessRoles"
-            :disabled="disabled"
-            placeholder="输入业务角色名后按回车添加，如：REVIEWER"
-            unique-value
-            style="width: 100%"
-          />
-          <div class="hint">填写系统中定义的业务角色标识</div>
-        </a-form-item>
       </template>
 
     </a-form>
@@ -94,7 +88,6 @@ export interface ScopeConfig {
     userIds: string[]
     deptIds: string[]
     includeSub: boolean
-    businessRoles: string[]
   }
 }
 
@@ -106,7 +99,6 @@ export function defaultScopeConfig(): ScopeConfig {
       userIds: [],
       deptIds: [],
       includeSub: false,
-      businessRoles: [],
     },
   }
 }
@@ -118,8 +110,6 @@ export function serializeScopeConfig(config: ScopeConfig): string {
       return JSON.stringify({ userIds: config.parsed.userIds.map(Number).filter(n => !Number.isNaN(n)) })
     case 'DEPT':
       return JSON.stringify({ deptIds: config.parsed.deptIds.map(Number).filter(n => !Number.isNaN(n)), includeSub: config.parsed.includeSub })
-    case 'ROLE':
-      return JSON.stringify({ businessRoles: config.parsed.businessRoles })
     default:
       return '{}'
   }
@@ -130,7 +120,6 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
     userIds: [],
     deptIds: [],
     includeSub: false,
-    businessRoles: [],
   }
   try {
     const obj = JSON.parse(scopeConfig)
@@ -142,9 +131,6 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
         parsed.deptIds = (obj.deptIds || []).map(String)
         parsed.includeSub = obj.includeSub ?? false
         break
-      case 'ROLE':
-        parsed.businessRoles = obj.businessRoles || []
-        break
     }
   }
   catch {
@@ -155,11 +141,17 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
 </script>
 
 <script setup lang="ts">
+import { listUser, listAllUser } from '@/apis/system/user'
+import { listDeptDictTree } from '@/apis/system/dept'
+import type { UserResp } from '@/apis/system/user'
+import type { TreeNodeData } from '@arco-design/web-vue'
+
 // ScopeConfig、defaultScopeConfig 由上方 <script> 块导出，此处直接使用
 
 const props = defineProps<{
   modelValue: ScopeConfig
   disabled?: boolean
+  roleId?: string
 }>()
 
 const emit = defineEmits<{
@@ -167,6 +159,70 @@ const emit = defineEmits<{
 }>()
 
 const local = reactive<ScopeConfig>(defaultScopeConfig())
+
+const userOptions = ref<{ label: string; value: string }[]>([])
+const userOptionsLoading = ref(false)
+
+const deptTreeData = ref<TreeNodeData[]>([])
+const deptLoading = ref(false)
+
+function mergeUserOptions(users: UserResp[]) {
+  const existing = new Map(userOptions.value.map(o => [o.value, o]))
+  for (const u of users) {
+    existing.set(u.id, { label: `${u.nickname}（${u.username}）`, value: u.id })
+  }
+  userOptions.value = Array.from(existing.values())
+}
+
+async function handleUserSearch(value: string) {
+  userOptionsLoading.value = true
+  try {
+    const res = await listUser({
+      description: value || undefined,
+      roleId: props.roleId,
+      sort: ['t1.createTime,desc'],
+      pageNum: 1,
+      pageSize: 20,
+    })
+    mergeUserOptions(res.data.list || [])
+  }
+  finally {
+    userOptionsLoading.value = false
+  }
+}
+
+async function loadDeptTree() {
+  deptLoading.value = true
+  try {
+    const res = await listDeptDictTree({ description: '' })
+    deptTreeData.value = res.data || []
+  }
+  finally {
+    deptLoading.value = false
+  }
+}
+
+watch(
+  () => local.parsed.userIds,
+  async (ids) => {
+    if (!ids || ids.length === 0) return
+    const existingIds = new Set(userOptions.value.map(o => o.value))
+    const missingIds = ids.filter(id => !existingIds.has(id))
+    if (missingIds.length === 0) return
+    try {
+      const res = await listAllUser({ userIds: missingIds })
+      mergeUserOptions(res.data || [])
+    }
+    catch {
+      // 加载失败时忽略
+    }
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  await loadDeptTree()
+})
 
 watch(
   () => props.modelValue,
@@ -204,7 +260,6 @@ const onScopeTypeChange = () => {
     userIds: [],
     deptIds: [],
     includeSub: false,
-    businessRoles: [],
   }
 }
 </script>
@@ -212,11 +267,5 @@ const onScopeTypeChange = () => {
 <style scoped>
 .scope-config-form {
   width: 100%;
-}
-
-.hint {
-  color: var(--color-text-3);
-  font-size: 12px;
-  margin-top: 4px;
 }
 </style>
