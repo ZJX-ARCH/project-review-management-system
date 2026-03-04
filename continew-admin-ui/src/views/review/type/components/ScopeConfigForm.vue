@@ -14,7 +14,6 @@
               <a-option value="USER">指定用户</a-option>
               <a-option value="ROLE">按系统角色</a-option>
               <a-option value="DEPT">按部门</a-option>
-              <a-option value="COMBINED">组合规则</a-option>
             </a-select>
           </a-form-item>
         </a-col>
@@ -80,19 +79,6 @@
         </a-form-item>
       </template>
 
-      <!-- COMBINED 范围 -->
-      <template v-else-if="local.scopeType === 'COMBINED'">
-        <a-form-item label="规则配置（JSON）">
-          <a-textarea
-            v-model="local.parsed.combinedJson"
-            :disabled="disabled"
-            placeholder='{"rule":"UNION","conditions":[...]} 或 {"rule":"PROJECT_DEPT_LEADER"}'
-            :auto-size="{ minRows: 3, maxRows: 6 }"
-            style="width: 100%; font-family: monospace"
-          />
-          <div class="hint">UNION: 并集规则；PROJECT_DEPT_LEADER: 动态规则（项目所在部门负责人）</div>
-        </a-form-item>
-      </template>
     </a-form>
   </div>
 </template>
@@ -109,7 +95,6 @@ export interface ScopeConfig {
     deptIds: string[]
     includeSub: boolean
     businessRoles: string[]
-    combinedJson: string
   }
 }
 
@@ -122,7 +107,6 @@ export function defaultScopeConfig(): ScopeConfig {
       deptIds: [],
       includeSub: false,
       businessRoles: [],
-      combinedJson: '',
     },
   }
 }
@@ -136,8 +120,6 @@ export function serializeScopeConfig(config: ScopeConfig): string {
       return JSON.stringify({ deptIds: config.parsed.deptIds.map(Number).filter(n => !Number.isNaN(n)), includeSub: config.parsed.includeSub })
     case 'ROLE':
       return JSON.stringify({ businessRoles: config.parsed.businessRoles })
-    case 'COMBINED':
-      return config.parsed.combinedJson || '{}'
     default:
       return '{}'
   }
@@ -149,7 +131,6 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
     deptIds: [],
     includeSub: false,
     businessRoles: [],
-    combinedJson: '',
   }
   try {
     const obj = JSON.parse(scopeConfig)
@@ -164,15 +145,10 @@ export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType
       case 'ROLE':
         parsed.businessRoles = obj.businessRoles || []
         break
-      case 'COMBINED':
-        parsed.combinedJson = scopeConfig
-        break
     }
   }
   catch {
-    if (scopeType === 'COMBINED') {
-      parsed.combinedJson = scopeConfig
-    }
+    // 解析失败时保留默认值
   }
   return parsed
 }
@@ -229,7 +205,6 @@ const onScopeTypeChange = () => {
     deptIds: [],
     includeSub: false,
     businessRoles: [],
-    combinedJson: '',
   }
 }
 </script>
