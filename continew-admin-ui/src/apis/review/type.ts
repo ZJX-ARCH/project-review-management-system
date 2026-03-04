@@ -318,18 +318,6 @@ export enum ScopeType {
   ROLE = 'ROLE',
   /** 按部门 */
   DEPT = 'DEPT',
-  /** 组合规则 */
-  COMBINED = 'COMBINED',
-}
-
-/** 可见性类型枚举 */
-export enum VisibilityType {
-  /** 全部可见 */
-  ALL = 'ALL',
-  /** 指定部门 */
-  DEPT = 'DEPT',
-  /** 指定用户 */
-  USER = 'USER',
 }
 
 /** 审批模式枚举 */
@@ -537,23 +525,6 @@ export interface TypeApprovalConfigResp {
   reviewerWeights?: TypeReviewerWeightResp[]
 }
 
-/** 类型可见性配置请求 */
-export interface TypeVisibilityConfigReq {
-  /** 可见类型 ALL/DEPT/USER */
-  visibilityType: VisibilityType
-  /** 目标ID（DEPT时为部门ID，USER时为用户ID，ALL时为null） */
-  targetId?: number
-}
-
-/** 类型可见性配置响应 */
-export interface TypeVisibilityConfigResp {
-  id?: number
-  typeId?: number
-  visibilityType: VisibilityType
-  targetId?: number
-  targetName?: string
-}
-
 /** 项目类型完整配置详情响应 */
 export interface ProjectTypeDetailResp extends ProjectTypeResp {
   /** 流程配置列表（REVIEW + MANAGE 各一条） */
@@ -564,6 +535,4 @@ export interface ProjectTypeDetailResp extends ProjectTypeResp {
   personnelConfigs: TypePersonnelConfigResp[]
   /** 审批规则配置列表 */
   approvalConfigs: TypeApprovalConfigResp[]
-  /** 可见范围配置列表 */
-  visibilityConfigs: TypeVisibilityConfigResp[]
 }

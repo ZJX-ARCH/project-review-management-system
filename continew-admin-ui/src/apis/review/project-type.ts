@@ -8,7 +8,6 @@ import type {
   TypeFormMappingReq,
   TypePersonnelConfigReq,
   TypeProcessConfigReq,
-  TypeVisibilityConfigReq,
 } from './type'
 
 const BASE_URL = '/review/type'
@@ -61,11 +60,6 @@ export function savePersonnel(id: string | number, reqs: TypePersonnelConfigReq[
 /** @desc 步骤5：保存审批规则配置（全量替换） */
 export function saveApproval(id: string | number, reqs: TypeApprovalConfigReq[]) {
   return http.put(`${BASE_URL}/${id}/approval`, reqs)
-}
-
-/** @desc 步骤6：保存可见性配置（至少1条，全量替换） */
-export function saveVisibility(id: string | number, reqs: TypeVisibilityConfigReq[]) {
-  return http.put(`${BASE_URL}/${id}/visibility`, reqs)
 }
 
 /** @desc 启用类型（触发第3层全量验证） */
