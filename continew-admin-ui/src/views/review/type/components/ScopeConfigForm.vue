@@ -40,7 +40,7 @@ const handleUserSearch = (value: string) => {
     try {
       const res = await listUser({
         description: value || undefined,
-        roleId: props.roleId,
+        roleId: props.roleId || undefined,
         sort: ['t1.createTime,desc'],
         pageNum: 1,
         pageSize: 20,

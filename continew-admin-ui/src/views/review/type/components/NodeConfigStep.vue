@@ -138,8 +138,7 @@ import { Message } from '@arco-design/web-vue'
 import ScopeRuleList from './ScopeRuleList.vue'
 import { type ScopeConfig, defaultScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
 import ApprovalNodeForm from './ApprovalNodeForm.vue'
-import { listRole } from '@/apis/system/role'
-import type { RoleResp } from '@/apis/system/role'
+import { type RoleResp, listRole } from '@/apis/system/role'
 import {
   type FormTemplateResp,
   type ManagementTemplateResp,
@@ -209,8 +208,7 @@ const loadRoles = async () => {
       map[role.code] = role.id
     }
     roleCodeToId.value = map
-  }
-  catch (error) {
+  } catch (error) {
     console.error('加载角色列表失败:', error)
   }
 }
@@ -236,7 +234,7 @@ const allNodes = computed<NodeDef[]>(() => {
       hasApproval: false,
       approvalNodeScope: '',
       roleCode: 'APPLICANT',
-      roleId: roleCodeToId.value['APPLICANT'] || '',
+      roleId: roleCodeToId.value.APPLICANT || '',
     })
 
     for (let i = 1; i <= (t.auditRounds || 0); i++) {
@@ -252,7 +250,7 @@ const allNodes = computed<NodeDef[]>(() => {
         hasApproval: true,
         approvalNodeScope: `AUDIT_${i}`,
         roleCode: 'AUDITOR',
-        roleId: roleCodeToId.value['AUDITOR'] || '',
+        roleId: roleCodeToId.value.AUDITOR || '',
       })
     }
 
@@ -269,7 +267,7 @@ const allNodes = computed<NodeDef[]>(() => {
         hasApproval: true,
         approvalNodeScope: `REVIEW_${i}`,
         roleCode: 'REVIEWER',
-        roleId: roleCodeToId.value['REVIEWER'] || '',
+        roleId: roleCodeToId.value.REVIEWER || '',
       })
     }
 
@@ -286,7 +284,7 @@ const allNodes = computed<NodeDef[]>(() => {
         hasApproval: true,
         approvalNodeScope: `DECISION_${i}`,
         roleCode: 'DECISION_MAKER',
-        roleId: roleCodeToId.value['DECISION_MAKER'] || '',
+        roleId: roleCodeToId.value.DECISION_MAKER || '',
       })
     }
   }
