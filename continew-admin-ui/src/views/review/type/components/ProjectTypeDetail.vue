@@ -57,13 +57,13 @@
         <a-empty v-else description="暂未配置表单映射" />
 
         <!-- 人员范围 -->
-        <a-divider orientation="left">人员范围配置（{{ detail.personnelConfigs?.length || 0 }}/5 角色）</a-divider>
+        <a-divider orientation="left">人员范围配置（{{ detail.personnelConfigs?.length || 0 }} 条规则）</a-divider>
         <template v-if="detail.personnelConfigs?.length">
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item
               v-for="pc in detail.personnelConfigs"
-              :key="pc.roleType"
-              :label="roleLabel(pc.roleType)"
+              :key="`${pc.nodeType}-${pc.nodeSequence}`"
+              :label="nodePersonnelLabel(pc)"
             >
               <a-space>
                 <a-tag>{{ scopeTypeLabel(pc.scopeType) }}</a-tag>
@@ -97,20 +97,6 @@
         </template>
         <a-empty v-else description="暂未配置审批规则" />
 
-        <!-- 可见性 -->
-        <a-divider orientation="left">可见性配置（{{ detail.visibilityConfigs?.length || 0 }} 条）</a-divider>
-        <template v-if="detail.visibilityConfigs?.length">
-          <div class="tag-list">
-            <a-tag
-              v-for="vc in detail.visibilityConfigs"
-              :key="`${vc.visibilityType}-${vc.targetId}`"
-              :color="vc.visibilityType === 'ALL' ? 'green' : vc.visibilityType === 'DEPT' ? 'blue' : 'orange'"
-            >
-              {{ visibilityLabel(vc) }}
-            </a-tag>
-          </div>
-        </template>
-        <a-empty v-else description="暂未配置可见性" />
       </template>
     </a-spin>
 
@@ -177,13 +163,8 @@ watch(
 )
 
 // 辅助函数
-const roleLabel = (type: string) => ({
-  AUDITOR: '审核人', REVIEWER: '评审人', DECISION_MAKER: '决策人',
-  MANAGER: '管理员', ACCEPTANCE_INSPECTOR: '验收人',
-}[type] ?? type)
-
 const scopeTypeLabel = (type: string) => ({
-  USER: '指定用户', ROLE: '按角色', DEPT: '按部门', COMBINED: '组合规则',
+  USER: '指定用户', ROLE: '按角色', DEPT: '按部门',
 }[type] ?? type)
 
 const approvalModeLabel = (mode: string) => ({
@@ -202,10 +183,9 @@ const formMappingLabel = (fm: { mappingType: string; nodeType: string; nodeSeque
   return `${nodeLabel}${seq}`
 }
 
-const visibilityLabel = (vc: { visibilityType: string; targetId?: number }) => {
-  if (vc.visibilityType === 'ALL') return '全部可见'
-  if (vc.visibilityType === 'DEPT') return `部门(${vc.targetId})`
-  return `用户(${vc.targetId})`
+const nodePersonnelLabel = (pc: { nodeType: string; nodeSequence?: number }) => {
+  const base = { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策', STAGE: '阶段' }[pc.nodeType] ?? pc.nodeType
+  return pc.nodeSequence ? `${base} 第${pc.nodeSequence}轮` : base
 }
 </script>
 

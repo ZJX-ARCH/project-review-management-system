@@ -92,7 +92,6 @@
             <a-step title="基本信息" />
             <a-step title="流程模板" />
             <a-step title="节点配置" />
-            <a-step title="可见性" />
           </a-steps>
 
           <!-- 步骤内容 -->
@@ -159,23 +158,13 @@
               <a-alert v-else type="warning">请先完成【流程模板】步骤的配置并保存。</a-alert>
             </template>
 
-            <!-- Step 3: 可见性 -->
-            <template v-else-if="currentStep === 3">
-              <VisibilityTab
-                v-if="typeId"
-                :type-id="typeId"
-                :visibility-configs="detail?.visibilityConfigs || []"
-                :disabled="detail?.status === 1"
-                @saved="onSubConfigSaved"
-              />
-            </template>
           </div>
 
           <!-- 底部导航 -->
           <div class="step-nav">
             <a-button v-if="currentStep > 0" @click="currentStep--">上一步</a-button>
             <div v-else></div>
-            <a-button v-if="currentStep < 3" type="primary" @click="currentStep++">下一步</a-button>
+            <a-button v-if="currentStep < 2" type="primary" @click="currentStep++">下一步</a-button>
           </div>
         </template>
       </div>
@@ -188,7 +177,6 @@ import { Message, Modal } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import ProcessTab from './components/ProcessTab.vue'
 import NodeConfigStep from './components/NodeConfigStep.vue'
-import VisibilityTab from './components/VisibilityTab.vue'
 import {
   createProjectType,
   disableProjectType,
@@ -220,7 +208,7 @@ const saveBasicLoading = ref(false)
 const enableLoading = ref(false)
 const disableLoading = ref(false)
 
-// 当前步骤（0-indexed: 0=基本信息, 1=流程模板, 2=节点配置, 3=可见性）
+// 当前步骤（0-indexed: 0=基本信息, 1=流程模板, 2=节点配置）
 const currentStep = ref(0)
 
 // 类型详情
@@ -391,7 +379,7 @@ const onSubConfigSaved = async () => {
 const handleEnable = async () => {
   Modal.confirm({
     title: '确认启用',
-    content: '启用前将对类型配置进行全量验证（流程模板、表单映射、人员范围、审批规则、可见性），配置不完整将无法启用。确定继续？',
+    content: '启用前将对类型配置进行全量验证（流程模板、表单映射、人员范围、审批规则），配置不完整将无法启用。确定继续？',
     onOk: async () => {
       enableLoading.value = true
       try {
