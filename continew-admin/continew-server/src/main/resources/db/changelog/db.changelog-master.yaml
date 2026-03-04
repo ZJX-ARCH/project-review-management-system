@@ -42,6 +42,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/mysql/plugin/type/review_type_personnel_v2.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/mysql/plugin/type/review_type_visibility_drop.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql
