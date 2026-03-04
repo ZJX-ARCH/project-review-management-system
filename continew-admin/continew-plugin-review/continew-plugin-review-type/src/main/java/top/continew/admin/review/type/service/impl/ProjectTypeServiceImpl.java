@@ -54,7 +54,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
     private final TypePersonnelConfigMapper personnelConfigMapper;
     private final TypeApprovalConfigMapper approvalConfigMapper;
     private final TypeReviewerWeightMapper reviewerWeightMapper;
-    private final TypeVisibilityConfigMapper visibilityConfigMapper;
     private final ProcessTemplateService processTemplateService;
     private final ManagementTemplateService managementTemplateService;
     private final FormTemplateService formTemplateService;
@@ -161,10 +160,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
         approvalWrapper.in("type_id", ids);
         approvalConfigMapper.delete(approvalWrapper);
 
-        QueryWrapper<TypeVisibilityConfigDO> visibilityWrapper = new QueryWrapper<>();
-        visibilityWrapper.in("type_id", ids);
-        visibilityConfigMapper.delete(visibilityWrapper);
-
         QueryWrapper<TypePersonnelConfigDO> personnelWrapper = new QueryWrapper<>();
         personnelWrapper.in("type_id", ids);
         personnelConfigMapper.delete(personnelWrapper);
@@ -251,12 +246,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             approvalResp.setReviewerWeights(BeanUtil.copyToList(weights, TypeReviewerWeightResp.class));
         }
         detail.setApprovalConfigs(approvalRespList);
-
-        // 步骤2e：可见范围配置
-        QueryWrapper<TypeVisibilityConfigDO> visibilityWrapper = new QueryWrapper<>();
-        visibilityWrapper.eq("type_id", id).eq("deleted", 0);
-        List<TypeVisibilityConfigDO> visibilityConfigs = visibilityConfigMapper.selectList(visibilityWrapper);
-        detail.setVisibilityConfigs(BeanUtil.copyToList(visibilityConfigs, TypeVisibilityConfigResp.class));
 
         return detail;
     }
@@ -475,47 +464,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void saveVisibility(Long id, List<TypeVisibilityConfigReq> reqs) {
-        // 步骤1：存在 + 非启用状态校验
-        ProjectTypeDO existing = requireType(id);
-        if (TypeStatusEnum.ENABLED == existing.getStatus()) {
-            throw new BusinessException("已启用的类型不允许直接修改可见性配置，请先禁用");
-        }
-
-        // 步骤2：业务规则校验
-        if (CollUtil.isEmpty(reqs)) {
-            throw new BadRequestException("可见性配置不能为空");
-        }
-        long allCount = reqs.stream()
-                .filter(r -> VisibilityTypeEnum.ALL == r.getVisibilityType()).count();
-        if (allCount > 1) {
-            throw new BadRequestException("ALL类型可见性配置最多只能有1条");
-        }
-        for (TypeVisibilityConfigReq req : reqs) {
-            if (VisibilityTypeEnum.DEPT == req.getVisibilityType()
-                    || VisibilityTypeEnum.USER == req.getVisibilityType()) {
-                if (ObjectUtil.isNull(req.getTargetId())) {
-                    throw new BadRequestException(StrUtil.format("可见性类型[{}]的目标ID不能为空",
-                            req.getVisibilityType().getDescription()));
-                }
-            }
-        }
-
-        // 步骤3：全量替换 visibility_config
-        visibilityConfigMapper.delete(new QueryWrapper<TypeVisibilityConfigDO>().eq("type_id", id));
-        List<TypeVisibilityConfigDO> entities = new ArrayList<>(reqs.size());
-        for (TypeVisibilityConfigReq req : reqs) {
-            TypeVisibilityConfigDO entity = BeanUtil.toBean(req, TypeVisibilityConfigDO.class);
-            entity.setTypeId(id);
-            entities.add(entity);
-        }
-        visibilityConfigMapper.insertBatch(entities);
-
-        log.info("保存可见性配置成功，type_id={}, 共{}条", id, reqs.size());
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public void enable(Long id) {
         // 步骤1：存在性校验，状态不能已是 ENABLED
         ProjectTypeDO entity = requireType(id);
@@ -682,14 +630,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
         }
 
-        // 验证E - 可见性：至少配置一条
-        QueryWrapper<TypeVisibilityConfigDO> visibilityWrapper = new QueryWrapper<>();
-        visibilityWrapper.eq("type_id", id).eq("deleted", 0);
-        long visibilityCount = visibilityConfigMapper.selectCount(visibilityWrapper);
-        if (visibilityCount == 0) {
-            errors.add("未配置可见性，请至少配置一条");
-        }
-
         // 汇总错误，一次性抛出
         if (!errors.isEmpty()) {
             throw new BusinessException("启用校验失败：\n" + String.join("\n", errors));
@@ -720,42 +660,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
         baseMapper.updateById(updateEntity);
 
         log.info("禁用项目类型成功，ID={}", id);
-    }
-
-    @Override
-    public List<ProjectTypeResp> listVisible() {
-        // 步骤1：获取当前用户 userId 和 deptId
-        Long userId = UserContextHolder.getContext().getId();
-        Long deptId = UserContextHolder.getContext().getDeptId();
-
-        // 步骤2：查询覆盖当前用户的所有可见配置（ALL + 当前 DEPT + 当前 USER）
-        QueryWrapper<TypeVisibilityConfigDO> visibilityWrapper = new QueryWrapper<>();
-        visibilityWrapper.eq("deleted", 0);
-        visibilityWrapper.and(w -> w
-                .eq("visibility_type", VisibilityTypeEnum.ALL.getValue())
-                .or(sub -> sub.eq("visibility_type", VisibilityTypeEnum.DEPT.getValue())
-                        .eq("target_id", deptId))
-                .or(sub -> sub.eq("visibility_type", VisibilityTypeEnum.USER.getValue())
-                        .eq("target_id", userId)));
-        List<TypeVisibilityConfigDO> visibilityConfigs = visibilityConfigMapper.selectList(visibilityWrapper);
-
-        Set<Long> visibleTypeIds = visibilityConfigs.stream()
-                .map(TypeVisibilityConfigDO::getTypeId).collect(Collectors.toSet());
-
-        // 步骤3：可见 ID 集合为空则短路返回
-        if (CollUtil.isEmpty(visibleTypeIds)) {
-            return Collections.emptyList();
-        }
-
-        // 步骤4：查主表（ENABLED + 在可见 ID 范围内）
-        QueryWrapper<ProjectTypeDO> typeWrapper = new QueryWrapper<>();
-        typeWrapper.in("id", visibleTypeIds)
-                .eq("status", TypeStatusEnum.ENABLED)
-                .eq("deleted", 0)
-                .orderByAsc("sort_order");
-        List<ProjectTypeDO> types = baseMapper.selectList(typeWrapper);
-
-        return BeanUtil.copyToList(types, ProjectTypeResp.class);
     }
 
     // ======================== 私有辅助方法 ========================

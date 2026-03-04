@@ -102,14 +102,6 @@ public interface ProjectTypeService extends IService<ProjectTypeDO> {
      */
     void saveApproval(Long id, List<TypeApprovalConfigReq> reqs);
 
-    /**
-     * 步骤6：保存可见性配置（全量替换，至少1条）
-     *
-     * @param id   类型 ID
-     * @param reqs 可见性配置列表
-     */
-    void saveVisibility(Long id, List<TypeVisibilityConfigReq> reqs);
-
     // ===== 状态管理 =====
 
     /**
@@ -126,12 +118,4 @@ public interface ProjectTypeService extends IService<ProjectTypeDO> {
      */
     void disable(Long id);
 
-    // ===== 申请人视角 =====
-
-    /**
-     * 查询当前用户可见的类型列表（申请人用，按可见性配置过滤）
-     *
-     * @return 可见类型列表
-     */
-    List<ProjectTypeResp> listVisible();
 }

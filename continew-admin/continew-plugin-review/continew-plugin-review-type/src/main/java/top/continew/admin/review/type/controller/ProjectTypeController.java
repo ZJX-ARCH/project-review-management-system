@@ -151,18 +151,6 @@ public class ProjectTypeController {
         return R.ok();
     }
 
-    /**
-     * 步骤6：保存可见性配置（至少 1 条，全量替换）
-     */
-    @PutMapping("/{id}/visibility")
-    @Operation(summary = "保存可见性配置")
-    @SaCheckPermission("review:type:update")
-    public R<Void> saveVisibility(@PathVariable Long id,
-                                   @Valid @RequestBody List<TypeVisibilityConfigReq> reqs) {
-        projectTypeService.saveVisibility(id, reqs);
-        return R.ok();
-    }
-
     // ===== 状态管理 =====
 
     /**
@@ -187,15 +175,4 @@ public class ProjectTypeController {
         return R.ok();
     }
 
-    // ===== 申请人视角 =====
-
-    /**
-     * 查询当前用户可见的类型列表（申请人用，按可见性配置过滤，无需权限）
-     */
-    @GetMapping("/visible")
-    @Operation(summary = "查询当前用户可见的类型列表")
-    public R<List<ProjectTypeResp>> listVisible() {
-        List<ProjectTypeResp> list = projectTypeService.listVisible();
-        return R.ok(list);
-    }
 }

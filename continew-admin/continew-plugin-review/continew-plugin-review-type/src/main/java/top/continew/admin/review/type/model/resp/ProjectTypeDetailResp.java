@@ -85,9 +85,4 @@ public class ProjectTypeDetailResp extends BaseDetailResp {
     @Schema(description = "审批规则配置列表")
     private List<TypeApprovalConfigResp> approvalConfigs;
 
-    /**
-     * 可见范围配置
-     */
-    @Schema(description = "可见范围配置列表")
-    private List<TypeVisibilityConfigResp> visibilityConfigs;
 }
