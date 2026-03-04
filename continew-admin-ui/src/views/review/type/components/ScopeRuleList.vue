@@ -37,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import ScopeConfigForm, { type ScopeConfig, defaultScopeConfig } from './ScopeConfigForm.vue'
+import ScopeConfigForm from './ScopeConfigForm.vue'
+import { type ScopeConfig, defaultScopeConfig } from './scope-config'
 
 const props = defineProps<{
   modelValue: ScopeConfig[]
@@ -56,7 +57,7 @@ watch(
   (v) => {
     const val = v ?? []
     if (JSON.stringify(val) !== JSON.stringify(localRules.value)) {
-      localRules.value = val.map(r => ({ ...r, parsed: { ...r.parsed } }))
+      localRules.value = val.map((r) => ({ ...r, parsed: { ...r.parsed } }))
     }
   },
   { immediate: true, deep: true },
@@ -66,7 +67,7 @@ watch(
 watch(
   localRules,
   (v) => {
-    emit('update:modelValue', v.map(r => ({ ...r, parsed: { ...r.parsed } })))
+    emit('update:modelValue', v.map((r) => ({ ...r, parsed: { ...r.parsed } })))
   },
   { deep: true },
 )
@@ -80,7 +81,7 @@ const removeRule = (idx: number) => {
 }
 
 const scopeTypeLabel = (t?: string) =>
-  ({ USER: '指定用户', ROLE: '按角色', DEPT: '按部门' }[t ?? ''] ?? '未设置')
+  ({ USER: '指定用户', DEPT: '按部门' }[t ?? ''] ?? '未设置')
 </script>
 
 <style scoped>

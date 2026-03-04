@@ -29,39 +29,38 @@
                 <a-tag v-else color="arcoblue" size="small">待配置</a-tag>
               </a-space>
             </template>
-            <a-row :gutter="[16, 0]">
-              <a-col :span="node.hasApproval ? 12 : 24">
-                <a-form layout="vertical">
-                  <a-form-item label="表单模板">
-                    <a-select
-                      v-model="formSelections[node.key]"
-                      :options="formOptions[node.templateType] || []"
-                      :disabled="disabled"
-                      allow-clear
-                      placeholder="请选择表单模板"
-                      style="width: 100%"
-                    />
-                  </a-form-item>
-                </a-form>
-                <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
-                <ScopeRuleList
-                  v-model="nodePersonnel[node.key]"
+            <!-- 表单模板：独占一行 -->
+            <a-form layout="vertical" style="margin-bottom: 4px">
+              <a-form-item label="表单模板">
+                <a-select
+                  v-model="formSelections[node.key]"
+                  :options="formOptions[node.templateType] || []"
                   :disabled="disabled"
+                  allow-clear
+                  placeholder="请选择表单模板"
+                  style="width: 100%"
                 />
-              </a-col>
-              <a-col v-if="node.hasApproval" :span="12">
-                <a-divider orientation="left">审批规则</a-divider>
-                <ApprovalNodeForm
-                  :node-scope="node.approvalNodeScope"
-                  :node-label="node.label"
-                  :is-acceptance="node.stageType === 'ACCEPTANCE'"
-                  :manage-stages="props.manageTemplate?.stages || []"
-                  :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
-                  :disabled="disabled"
-                  @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
-                />
-              </a-col>
-            </a-row>
+              </a-form-item>
+            </a-form>
+            <!-- 人员范围 -->
+            <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+            <ScopeRuleList
+              v-model="nodePersonnel[node.key]"
+              :disabled="disabled"
+            />
+            <!-- 审批规则 -->
+            <template v-if="node.hasApproval">
+              <a-divider orientation="left">审批规则</a-divider>
+              <ApprovalNodeForm
+                :node-scope="node.approvalNodeScope"
+                :node-label="node.label"
+                :is-acceptance="node.stageType === 'ACCEPTANCE'"
+                :manage-stages="props.manageTemplate?.stages || []"
+                :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
+                :disabled="disabled"
+                @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
+              />
+            </template>
           </a-collapse-item>
         </a-collapse>
       </template>
@@ -86,39 +85,38 @@
                 <a-tag v-else color="arcoblue" size="small">待配置</a-tag>
               </a-space>
             </template>
-            <a-row :gutter="[16, 0]">
-              <a-col :span="node.hasApproval ? 12 : 24">
-                <a-form layout="vertical">
-                  <a-form-item label="表单模板">
-                    <a-select
-                      v-model="formSelections[node.key]"
-                      :options="formOptions[node.templateType] || []"
-                      :disabled="disabled"
-                      allow-clear
-                      placeholder="请选择表单模板"
-                      style="width: 100%"
-                    />
-                  </a-form-item>
-                </a-form>
-                <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
-                <ScopeRuleList
-                  v-model="nodePersonnel[node.key]"
+            <!-- 表单模板：独占一行 -->
+            <a-form layout="vertical" style="margin-bottom: 4px">
+              <a-form-item label="表单模板">
+                <a-select
+                  v-model="formSelections[node.key]"
+                  :options="formOptions[node.templateType] || []"
                   :disabled="disabled"
+                  allow-clear
+                  placeholder="请选择表单模板"
+                  style="width: 100%"
                 />
-              </a-col>
-              <a-col v-if="node.hasApproval" :span="12">
-                <a-divider orientation="left">审批规则</a-divider>
-                <ApprovalNodeForm
-                  :node-scope="node.approvalNodeScope"
-                  :node-label="node.label"
-                  :is-acceptance="node.stageType === 'ACCEPTANCE'"
-                  :manage-stages="props.manageTemplate?.stages || []"
-                  :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
-                  :disabled="disabled"
-                  @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
-                />
-              </a-col>
-            </a-row>
+              </a-form-item>
+            </a-form>
+            <!-- 人员范围 -->
+            <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+            <ScopeRuleList
+              v-model="nodePersonnel[node.key]"
+              :disabled="disabled"
+            />
+            <!-- 审批规则 -->
+            <template v-if="node.hasApproval">
+              <a-divider orientation="left">审批规则</a-divider>
+              <ApprovalNodeForm
+                :node-scope="node.approvalNodeScope"
+                :node-label="node.label"
+                :is-acceptance="node.stageType === 'ACCEPTANCE'"
+                :manage-stages="props.manageTemplate?.stages || []"
+                :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
+                :disabled="disabled"
+                @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
+              />
+            </template>
           </a-collapse-item>
         </a-collapse>
       </template>
@@ -135,23 +133,23 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
+import ScopeRuleList from './ScopeRuleList.vue'
+import { type ScopeConfig, defaultScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
+import ApprovalNodeForm from './ApprovalNodeForm.vue'
 import {
-  listEnabledFormTemplate,
-  saveFormMapping,
-  savePersonnel,
-  saveApproval,
+  type FormTemplateResp,
+  type ManagementTemplateResp,
+  type ProcessTemplateResp,
   TemplateType,
+  type TypeApprovalConfigReq,
+  type TypeApprovalConfigResp,
   type TypeFormMappingResp,
   type TypePersonnelConfigResp,
-  type TypeApprovalConfigResp,
-  type TypeApprovalConfigReq,
-  type ProcessTemplateResp,
-  type ManagementTemplateResp,
-  type FormTemplateResp,
+  listEnabledFormTemplate,
+  saveApproval,
+  saveFormMapping,
+  savePersonnel,
 } from '@/apis/review'
-import ScopeRuleList from './ScopeRuleList.vue'
-import { type ScopeConfig, defaultScopeConfig, serializeScopeConfig, deserializeScopeConfig } from './ScopeConfigForm.vue'
-import ApprovalNodeForm from './ApprovalNodeForm.vue'
 
 interface NodeDef {
   key: string
@@ -181,7 +179,7 @@ const emit = defineEmits<{
 }>()
 
 // 表单模板选项（按 templateType 分组）
-const formOptions = ref<Record<number, { label: string; value: number }[]>>({})
+const formOptions = ref<Record<number, { label: string, value: number }[]>>({})
 
 // 表单选择（key -> formTemplateId）
 const formSelections = reactive<Record<string, number | undefined>>({})
@@ -217,7 +215,7 @@ const allNodes = computed<NodeDef[]>(() => {
     })
 
     for (let i = 1; i <= (t.auditRounds || 0); i++) {
-      const rn = t.roundNames?.find(r => r.roundType === 'AUDIT' && r.roundSequence === i)
+      const rn = t.roundNames?.find((r) => r.roundType === 'AUDIT' && r.roundSequence === i)
       nodes.push({
         key: `AUDIT_${i}`,
         label: rn ? `审核第${i}轮：${rn.roundName}` : `审核第${i}轮`,
@@ -232,7 +230,7 @@ const allNodes = computed<NodeDef[]>(() => {
     }
 
     for (let i = 1; i <= (t.reviewRounds || 0); i++) {
-      const rn = t.roundNames?.find(r => r.roundType === 'REVIEW' && r.roundSequence === i)
+      const rn = t.roundNames?.find((r) => r.roundType === 'REVIEW' && r.roundSequence === i)
       nodes.push({
         key: `REVIEW_${i}`,
         label: rn ? `评审第${i}轮：${rn.roundName}` : `评审第${i}轮`,
@@ -247,7 +245,7 @@ const allNodes = computed<NodeDef[]>(() => {
     }
 
     for (let i = 1; i <= (t.decisionRounds || 0); i++) {
-      const rn = t.roundNames?.find(r => r.roundType === 'DECISION' && r.roundSequence === i)
+      const rn = t.roundNames?.find((r) => r.roundType === 'DECISION' && r.roundSequence === i)
       nodes.push({
         key: `DECISION_${i}`,
         label: rn ? `决策第${i}轮：${rn.roundName}` : `决策第${i}轮`,
@@ -291,10 +289,10 @@ const allNodes = computed<NodeDef[]>(() => {
 })
 
 /** 评审阶段节点（APPLICATION / AUDIT / REVIEW / DECISION） */
-const reviewNodes = computed(() => allNodes.value.filter(n => n.mappingType === 'REVIEW'))
+const reviewNodes = computed(() => allNodes.value.filter((n) => n.mappingType === 'REVIEW'))
 
 /** 管理阶段节点（STAGE） */
-const manageNodes = computed(() => allNodes.value.filter(n => n.mappingType === 'MANAGE'))
+const manageNodes = computed(() => allNodes.value.filter((n) => n.mappingType === 'MANAGE'))
 
 /** 加载表单模板选项 */
 const loadFormOptions = async () => {
@@ -308,15 +306,14 @@ const loadFormOptions = async () => {
     TemplateType.ACCEPTANCE,
   ]
   try {
-    const results = await Promise.all(types.map(t => listEnabledFormTemplate(t)))
-    const options: Record<number, { label: string; value: number }[]> = {}
+    const results = await Promise.all(types.map((t) => listEnabledFormTemplate(t)))
+    const options: Record<number, { label: string, value: number }[]> = {}
     types.forEach((t, idx) => {
       const data: FormTemplateResp[] = results[idx].data || []
-      options[t] = data.map(f => ({ label: f.templateName, value: f.id }))
+      options[t] = data.map((f) => ({ label: f.templateName, value: f.id }))
     })
     formOptions.value = options
-  }
-  catch (error) {
+  } catch (error) {
     console.error('加载表单模板选项失败:', error)
   }
 }
@@ -325,7 +322,7 @@ const loadFormOptions = async () => {
 const fillFromProps = () => {
   for (const node of allNodes.value) {
     // 表单映射
-    const fm = props.formMappings.find(m =>
+    const fm = props.formMappings.find((m) =>
       m.mappingType === node.mappingType
       && m.nodeType === node.nodeType
       && (m.nodeSequence ?? null) === (node.nodeSequence ?? null),
@@ -333,24 +330,22 @@ const fillFromProps = () => {
     formSelections[node.key] = fm?.formTemplateId
 
     // 人员范围：按 nodeKey 分组，一个节点可对应多条规则
-    const pcs = props.personnelConfigs.filter(p =>
+    const pcs = props.personnelConfigs.filter((p) =>
       p.nodeType === node.nodeType
       && (p.nodeSequence ?? null) === (node.nodeSequence ?? null),
     )
     if (pcs.length > 0) {
-      const newRules: ScopeConfig[] = pcs.map(pc => ({
+      const newRules: ScopeConfig[] = pcs.map((pc) => ({
         scopeType: pc.scopeType,
         remark: pc.remark || '',
         parsed: deserializeScopeConfig(pc.scopeConfig, pc.scopeType),
       }))
       if (nodePersonnel[node.key]) {
         nodePersonnel[node.key].splice(0, nodePersonnel[node.key].length, ...newRules)
-      }
-      else {
+      } else {
         nodePersonnel[node.key] = newRules
       }
-    }
-    else {
+    } else {
       if (!nodePersonnel[node.key]) {
         nodePersonnel[node.key] = []
       }
@@ -359,7 +354,7 @@ const fillFromProps = () => {
 
     // 审批规则
     if (node.hasApproval) {
-      const ac = props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)
+      const ac = props.approvalConfigs.find((a) => a.nodeScope === node.approvalNodeScope)
       nodeApproval[node.approvalNodeScope] = ac ?? null
     }
   }
@@ -385,7 +380,7 @@ const nodeTagLabel = (node: NodeDef): string => {
 const isNodeConfigured = (node: NodeDef) => {
   const hasForm = !!formSelections[node.key]
   const rules: ScopeConfig[] = nodePersonnel[node.key] || []
-  const hasPersonnel = rules.length > 0 && rules.some(r => !!r.scopeType)
+  const hasPersonnel = rules.length > 0 && rules.some((r) => !!r.scopeType)
   return hasForm && hasPersonnel
 }
 
@@ -393,8 +388,8 @@ const isNodeConfigured = (node: NodeDef) => {
 const handleSave = async () => {
   // 构建表单映射请求
   const formReqs = allNodes.value
-    .filter(n => formSelections[n.key])
-    .map(n => ({
+    .filter((n) => formSelections[n.key])
+    .map((n) => ({
       mappingType: n.mappingType,
       nodeType: n.nodeType,
       nodeSequence: n.nodeSequence,
@@ -429,12 +424,10 @@ const handleSave = async () => {
     ])
     Message.success('节点配置保存成功')
     emit('saved')
-  }
-  catch (error) {
+  } catch (error) {
     console.error('保存失败:', error)
     Message.error('保存失败，请检查网络或联系管理员')
-  }
-  finally {
+  } finally {
     saveLoading.value = false
   }
 }

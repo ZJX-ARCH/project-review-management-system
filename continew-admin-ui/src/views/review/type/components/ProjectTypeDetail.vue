@@ -96,7 +96,6 @@
           </a-descriptions>
         </template>
         <a-empty v-else description="暂未配置审批规则" />
-
       </template>
     </a-spin>
 
@@ -113,7 +112,7 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
-import { getProjectType, type ProjectTypeDetailResp } from '@/apis/review'
+import { type ProjectTypeDetailResp, getProjectType } from '@/apis/review'
 
 const props = defineProps<{
   visible: boolean
@@ -142,12 +141,10 @@ const loadDetail = async (id: string | number) => {
   try {
     const res = await getProjectType(id)
     detail.value = res.data
-  }
-  catch (error) {
+  } catch (error) {
     console.error('加载详情失败:', error)
     Message.error('加载详情失败')
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -159,31 +156,36 @@ watch(
       loadDetail(id)
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // 辅助函数
 const scopeTypeLabel = (type: string) => ({
-  USER: '指定用户', ROLE: '按角色', DEPT: '按部门',
+  USER: '指定用户',
+  DEPT: '按部门',
 }[type] ?? type)
 
 const approvalModeLabel = (mode: string) => ({
-  VOTE_ALL_PASS: '全部通过', VOTE_MAJORITY_PASS: '多数通过',
-  VOTE_ONE_PASS: '一票通过', SCORE_PASS: '评分通过',
+  VOTE_ALL_PASS: '全部通过',
+  VOTE_MAJORITY_PASS: '多数通过',
+  VOTE_ONE_PASS: '一票通过',
+  SCORE_PASS: '评分通过',
 }[mode] ?? mode)
 
 const approvalModeColor = (mode: string) => ({
-  VOTE_ALL_PASS: 'orange', VOTE_MAJORITY_PASS: 'blue',
-  VOTE_ONE_PASS: 'green', SCORE_PASS: 'red',
+  VOTE_ALL_PASS: 'orange',
+  VOTE_MAJORITY_PASS: 'blue',
+  VOTE_ONE_PASS: 'green',
+  SCORE_PASS: 'red',
 }[mode] ?? 'gray')
 
-const formMappingLabel = (fm: { mappingType: string; nodeType: string; nodeSequence?: number; formTemplateName?: string }) => {
+const formMappingLabel = (fm: { mappingType: string, nodeType: string, nodeSequence?: number, formTemplateName?: string }) => {
   const nodeLabel = { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策', STAGE: '阶段' }[fm.nodeType] ?? fm.nodeType
   const seq = fm.nodeSequence ? `_${fm.nodeSequence}` : ''
   return `${nodeLabel}${seq}`
 }
 
-const nodePersonnelLabel = (pc: { nodeType: string; nodeSequence?: number }) => {
+const nodePersonnelLabel = (pc: { nodeType: string, nodeSequence?: number }) => {
   const base = { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策', STAGE: '阶段' }[pc.nodeType] ?? pc.nodeType
   return pc.nodeSequence ? `${base} 第${pc.nodeSequence}轮` : base
 }

@@ -1,3 +1,128 @@
+<script setup lang="ts">
+import type { TreeNodeData } from '@arco-design/web-vue'
+import { type ScopeConfig, defaultScopeConfig } from './scope-config'
+import { listAllUser, listUser } from '@/apis/system/user'
+import { listDeptDictTree } from '@/apis/system/dept'
+import type { UserResp } from '@/apis/system/user'
+
+const props = defineProps<{
+  modelValue: ScopeConfig
+  disabled?: boolean
+  roleId?: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: ScopeConfig): void
+}>()
+
+const local = reactive<ScopeConfig>(defaultScopeConfig())
+
+const userOptions = ref<{ label: string, value: string }[]>([])
+const userOptionsLoading = ref(false)
+
+const deptTreeData = ref<TreeNodeData[]>([])
+const deptLoading = ref(false)
+
+function mergeUserOptions(users: UserResp[]) {
+  const existing = new Map(userOptions.value.map((o) => [o.value, o]))
+  for (const u of users) {
+    existing.set(u.id, { label: `${u.nickname}（${u.username}）`, value: u.id })
+  }
+  userOptions.value = Array.from(existing.values())
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const handleUserSearch = (value: string) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    userOptionsLoading.value = true
+    try {
+      const res = await listUser({
+        description: value || undefined,
+        roleId: props.roleId,
+        sort: ['t1.createTime,desc'],
+        pageNum: 1,
+        pageSize: 20,
+      })
+      mergeUserOptions((res.data?.list || []) as UserResp[])
+    } catch { /* ignore */ } finally {
+      userOptionsLoading.value = false
+    }
+  }, 300)
+}
+
+async function loadDeptTree() {
+  deptLoading.value = true
+  try {
+    const res = await listDeptDictTree({ description: '' })
+    deptTreeData.value = res.data || []
+  } finally {
+    deptLoading.value = false
+  }
+}
+
+watch(
+  () => local.parsed.userIds,
+  async (ids) => {
+    if (!ids || ids.length === 0) return
+    const existingIds = new Set(userOptions.value.map((o) => o.value))
+    const missingIds = ids.filter((id) => !existingIds.has(id))
+    if (missingIds.length === 0) return
+    try {
+      const res = await listAllUser({ userIds: missingIds })
+      mergeUserOptions(res.data || [])
+    } catch {
+      // 加载失败时忽略
+    }
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  await loadDeptTree()
+})
+
+watch(
+  () => props.modelValue,
+  (v) => {
+    // 值比对防护，阻断 watch 循环
+    if (
+      local.scopeType === v.scopeType
+      && local.remark === v.remark
+      && JSON.stringify(local.parsed) === JSON.stringify(v.parsed)
+    ) {
+      return
+    }
+    Object.assign(local, {
+      scopeType: v.scopeType,
+      remark: v.remark,
+      parsed: { ...v.parsed },
+    })
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  local,
+  () => {
+    emit('update:modelValue', {
+      ...local,
+      parsed: { ...local.parsed },
+    })
+  },
+  { deep: true },
+)
+
+const onScopeTypeChange = () => {
+  local.parsed = {
+    userIds: [],
+    deptIds: [],
+    includeSub: false,
+  }
+}
+</script>
+
 <template>
   <div class="scope-config-form">
     <a-form layout="vertical">
@@ -72,197 +197,9 @@
           </a-col>
         </a-row>
       </template>
-
     </a-form>
   </div>
 </template>
-
-<!-- 导出供外部使用的接口和工具函数（<script setup> 不支持 export，须放独立 <script> 块） -->
-<script lang="ts">
-import { ScopeType } from '@/apis/review'
-
-export interface ScopeConfig {
-  scopeType: ScopeType | undefined
-  remark: string
-  parsed: {
-    userIds: string[]
-    deptIds: string[]
-    includeSub: boolean
-  }
-}
-
-export function defaultScopeConfig(): ScopeConfig {
-  return {
-    scopeType: undefined,
-    remark: '',
-    parsed: {
-      userIds: [],
-      deptIds: [],
-      includeSub: false,
-    },
-  }
-}
-
-export function serializeScopeConfig(config: ScopeConfig): string {
-  if (!config.scopeType) return '{}'
-  switch (config.scopeType) {
-    case 'USER':
-      return JSON.stringify({ userIds: config.parsed.userIds.map(Number).filter(n => !Number.isNaN(n)) })
-    case 'DEPT':
-      return JSON.stringify({ deptIds: config.parsed.deptIds.map(Number).filter(n => !Number.isNaN(n)), includeSub: config.parsed.includeSub })
-    default:
-      return '{}'
-  }
-}
-
-export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType): ScopeConfig['parsed'] {
-  const parsed: ScopeConfig['parsed'] = {
-    userIds: [],
-    deptIds: [],
-    includeSub: false,
-  }
-  try {
-    const obj = JSON.parse(scopeConfig)
-    switch (scopeType) {
-      case 'USER':
-        parsed.userIds = (obj.userIds || []).map(String)
-        break
-      case 'DEPT':
-        parsed.deptIds = (obj.deptIds || []).map(String)
-        parsed.includeSub = obj.includeSub ?? false
-        break
-    }
-  }
-  catch {
-    // 解析失败时保留默认值
-  }
-  return parsed
-}
-</script>
-
-<script setup lang="ts">
-import { listUser, listAllUser } from '@/apis/system/user'
-import { listDeptDictTree } from '@/apis/system/dept'
-import type { UserResp } from '@/apis/system/user'
-import type { TreeNodeData } from '@arco-design/web-vue'
-
-// ScopeConfig、defaultScopeConfig 由上方 <script> 块导出，此处直接使用
-
-const props = defineProps<{
-  modelValue: ScopeConfig
-  disabled?: boolean
-  roleId?: string
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', v: ScopeConfig): void
-}>()
-
-const local = reactive<ScopeConfig>(defaultScopeConfig())
-
-const userOptions = ref<{ label: string; value: string }[]>([])
-const userOptionsLoading = ref(false)
-
-const deptTreeData = ref<TreeNodeData[]>([])
-const deptLoading = ref(false)
-
-function mergeUserOptions(users: UserResp[]) {
-  const existing = new Map(userOptions.value.map(o => [o.value, o]))
-  for (const u of users) {
-    existing.set(u.id, { label: `${u.nickname}（${u.username}）`, value: u.id })
-  }
-  userOptions.value = Array.from(existing.values())
-}
-
-async function handleUserSearch(value: string) {
-  userOptionsLoading.value = true
-  try {
-    const res = await listUser({
-      description: value || undefined,
-      roleId: props.roleId,
-      sort: ['t1.createTime,desc'],
-      pageNum: 1,
-      pageSize: 20,
-    })
-    mergeUserOptions(res.data.list || [])
-  }
-  finally {
-    userOptionsLoading.value = false
-  }
-}
-
-async function loadDeptTree() {
-  deptLoading.value = true
-  try {
-    const res = await listDeptDictTree({ description: '' })
-    deptTreeData.value = res.data || []
-  }
-  finally {
-    deptLoading.value = false
-  }
-}
-
-watch(
-  () => local.parsed.userIds,
-  async (ids) => {
-    if (!ids || ids.length === 0) return
-    const existingIds = new Set(userOptions.value.map(o => o.value))
-    const missingIds = ids.filter(id => !existingIds.has(id))
-    if (missingIds.length === 0) return
-    try {
-      const res = await listAllUser({ userIds: missingIds })
-      mergeUserOptions(res.data || [])
-    }
-    catch {
-      // 加载失败时忽略
-    }
-  },
-  { immediate: true },
-)
-
-onMounted(async () => {
-  await loadDeptTree()
-})
-
-watch(
-  () => props.modelValue,
-  (v) => {
-    // 值比对防护，阻断 watch 循环
-    if (
-      local.scopeType === v.scopeType
-      && local.remark === v.remark
-      && JSON.stringify(local.parsed) === JSON.stringify(v.parsed)
-    ) {
-      return
-    }
-    Object.assign(local, {
-      scopeType: v.scopeType,
-      remark: v.remark,
-      parsed: { ...v.parsed },
-    })
-  },
-  { immediate: true, deep: true },
-)
-
-watch(
-  local,
-  () => {
-    emit('update:modelValue', {
-      ...local,
-      parsed: { ...local.parsed },
-    })
-  },
-  { deep: true },
-)
-
-const onScopeTypeChange = () => {
-  local.parsed = {
-    userIds: [],
-    deptIds: [],
-    includeSub: false,
-  }
-}
-</script>
 
 <style scoped>
 .scope-config-form {

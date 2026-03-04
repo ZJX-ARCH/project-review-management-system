@@ -157,7 +157,6 @@
               />
               <a-alert v-else type="warning">请先完成【流程模板】步骤的配置并保存。</a-alert>
             </template>
-
           </div>
 
           <!-- 底部导航 -->
@@ -178,18 +177,18 @@ import type { FormInstance } from '@arco-design/web-vue'
 import ProcessTab from './components/ProcessTab.vue'
 import NodeConfigStep from './components/NodeConfigStep.vue'
 import {
+  type ManagementTemplateResp,
+  type ProcessTemplateResp,
+  type ProjectTypeDetailResp,
+  type ProjectTypeReq,
   createProjectType,
   disableProjectType,
   enableProjectType,
   generateTypeCode,
+  getManagementTemplate,
+  getProcessTemplate,
   getProjectType,
   updateProjectType,
-  getProcessTemplate,
-  getManagementTemplate,
-  type ProjectTypeDetailResp,
-  type ProjectTypeReq,
-  type ProcessTemplateResp,
-  type ManagementTemplateResp,
 } from '@/apis/review'
 
 defineOptions({ name: 'ReviewTypeConfigure' })
@@ -246,7 +245,10 @@ const basicFormRules = {
   typeCode: [
     {
       validator: (value: string, callback: (error?: string) => void) => {
-        if (!value) { callback(); return }
+        if (!value) {
+          callback()
+          return
+        }
         const pattern = /^TYPE_[A-Z0-9_]*$/
         if (!pattern.test(value)) {
           callback('类型编码必须以TYPE_开头，后续只能包含大写字母、数字和下划线')
@@ -276,8 +278,7 @@ const handleGenerateCode = async () => {
         generateCodeDisabled.value = false
       }
     }, 1000)
-  }
-  catch (error) {
+  } catch (error) {
     console.error('生成编码失败:', error)
   }
 }
@@ -299,8 +300,8 @@ const loadDetail = async () => {
     })
 
     // 加载关联的流程模板（供 NodeConfigStep 使用）
-    const reviewConfig = res.data.processConfigs?.find(c => c.processType === 'REVIEW')
-    const manageConfig = res.data.processConfigs?.find(c => c.processType === 'MANAGE')
+    const reviewConfig = res.data.processConfigs?.find((c) => c.processType === 'REVIEW')
+    const manageConfig = res.data.processConfigs?.find((c) => c.processType === 'MANAGE')
 
     const [ptRes, mtRes] = await Promise.allSettled([
       reviewConfig ? getProcessTemplate(reviewConfig.templateId) : Promise.resolve(null),
@@ -309,12 +310,10 @@ const loadDetail = async () => {
 
     reviewTemplate.value = ptRes.status === 'fulfilled' && ptRes.value ? ptRes.value.data : null
     manageTemplate.value = mtRes.status === 'fulfilled' && mtRes.value ? mtRes.value.data : null
-  }
-  catch (error) {
+  } catch (error) {
     console.error('加载详情失败:', error)
     Message.error('加载详情失败')
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -323,8 +322,7 @@ const loadDetail = async () => {
 const handleCreateAndContinue = async () => {
   try {
     await basicFormRef.value?.validate()
-  }
-  catch {
+  } catch {
     Message.warning('请检查表单填写是否完整')
     return
   }
@@ -334,11 +332,9 @@ const handleCreateAndContinue = async () => {
     const newId = res.data
     Message.success('创建成功，请继续配置各项参数')
     router.replace(`/review/type/configure/${newId}`)
-  }
-  catch (error) {
+  } catch (error) {
     console.error('创建失败:', error)
-  }
-  finally {
+  } finally {
     saveBasicLoading.value = false
   }
 }
@@ -347,8 +343,7 @@ const handleCreateAndContinue = async () => {
 const handleSaveBasic = async () => {
   try {
     await basicFormRef.value?.validate()
-  }
-  catch {
+  } catch {
     Message.warning('请检查表单填写是否完整')
     return
   }
@@ -361,11 +356,9 @@ const handleSaveBasic = async () => {
     })
     Message.success('保存成功')
     await loadDetail()
-  }
-  catch (error) {
+  } catch (error) {
     console.error('保存失败:', error)
-  }
-  finally {
+  } finally {
     saveBasicLoading.value = false
   }
 }
@@ -386,11 +379,9 @@ const handleEnable = async () => {
         await enableProjectType(typeId.value!)
         Message.success('启用成功')
         await loadDetail()
-      }
-      catch (error) {
+      } catch (error) {
         console.error('启用失败:', error)
-      }
-      finally {
+      } finally {
         enableLoading.value = false
       }
     },
@@ -408,11 +399,9 @@ const handleDisable = async () => {
         await disableProjectType(typeId.value!)
         Message.success('禁用成功')
         await loadDetail()
-      }
-      catch (error) {
+      } catch (error) {
         console.error('禁用失败:', error)
-      }
-      finally {
+      } finally {
         disableLoading.value = false
       }
     },
@@ -431,8 +420,7 @@ onMounted(async () => {
   if (isCreate.value) {
     // 新建模式：自动生成编码
     await handleGenerateCode()
-  }
-  else {
+  } else {
     await loadDetail()
   }
 })
