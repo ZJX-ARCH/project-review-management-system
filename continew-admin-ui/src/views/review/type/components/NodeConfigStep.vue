@@ -44,8 +44,7 @@
                   </a-form-item>
                 </a-form>
                 <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
-                <ScopeConfigForm
-                  v-if="nodePersonnel[node.key]"
+                <ScopeRuleList
                   v-model="nodePersonnel[node.key]"
                   :disabled="disabled"
                 />
@@ -102,8 +101,7 @@
                   </a-form-item>
                 </a-form>
                 <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
-                <ScopeConfigForm
-                  v-if="nodePersonnel[node.key]"
+                <ScopeRuleList
                   v-model="nodePersonnel[node.key]"
                   :disabled="disabled"
                 />
@@ -151,12 +149,8 @@ import {
   type ManagementTemplateResp,
   type FormTemplateResp,
 } from '@/apis/review'
-import ScopeConfigForm, {
-  type ScopeConfig,
-  defaultScopeConfig,
-  serializeScopeConfig,
-  deserializeScopeConfig,
-} from './ScopeConfigForm.vue'
+import ScopeRuleList from './ScopeRuleList.vue'
+import { type ScopeConfig, defaultScopeConfig, serializeScopeConfig, deserializeScopeConfig } from './ScopeConfigForm.vue'
 import ApprovalNodeForm from './ApprovalNodeForm.vue'
 
 interface NodeDef {
@@ -192,8 +186,8 @@ const formOptions = ref<Record<number, { label: string; value: number }[]>>({})
 // 表单选择（key -> formTemplateId）
 const formSelections = reactive<Record<string, number | undefined>>({})
 
-// 人员范围（key -> ScopeConfig）
-const nodePersonnel = reactive<Record<string, ScopeConfig>>({})
+// 人员范围（key -> ScopeConfig[]，一个节点可配置多条规则）
+const nodePersonnel = reactive<Record<string, ScopeConfig[]>>({})
 
 // 审批规则（nodeScope -> TypeApprovalConfigReq | null）
 const nodeApproval = reactive<Record<string, TypeApprovalConfigReq | null>>({})
@@ -338,27 +332,27 @@ const fillFromProps = () => {
     )
     formSelections[node.key] = fm?.formTemplateId
 
-    // 人员范围
-    const pc = props.personnelConfigs.find(p =>
+    // 人员范围：按 nodeKey 分组，一个节点可对应多条规则
+    const pcs = props.personnelConfigs.filter(p =>
       p.nodeType === node.nodeType
       && (p.nodeSequence ?? null) === (node.nodeSequence ?? null),
     )
-    if (pc) {
-      const newVal: ScopeConfig = {
+    if (pcs.length > 0) {
+      const newRules: ScopeConfig[] = pcs.map(pc => ({
         scopeType: pc.scopeType,
         remark: pc.remark || '',
         parsed: deserializeScopeConfig(pc.scopeConfig, pc.scopeType),
-      }
+      }))
       if (nodePersonnel[node.key]) {
-        Object.assign(nodePersonnel[node.key], newVal)
+        nodePersonnel[node.key].splice(0, nodePersonnel[node.key].length, ...newRules)
       }
       else {
-        nodePersonnel[node.key] = newVal
+        nodePersonnel[node.key] = newRules
       }
     }
     else {
       if (!nodePersonnel[node.key]) {
-        nodePersonnel[node.key] = defaultScopeConfig()
+        nodePersonnel[node.key] = []
       }
       // 已存在时不重置（保留用户的未保存编辑）
     }
@@ -390,7 +384,8 @@ const nodeTagLabel = (node: NodeDef): string => {
 /** 判断节点是否已完成基本配置 */
 const isNodeConfigured = (node: NodeDef) => {
   const hasForm = !!formSelections[node.key]
-  const hasPersonnel = !!nodePersonnel[node.key]?.scopeType
+  const rules: ScopeConfig[] = nodePersonnel[node.key] || []
+  const hasPersonnel = rules.length > 0 && rules.some(r => !!r.scopeType)
   return hasForm && hasPersonnel
 }
 
@@ -406,19 +401,19 @@ const handleSave = async () => {
       formTemplateId: formSelections[n.key]!,
     }))
 
-  // 构建人员范围请求（只有配置了 scopeType 的节点）
-  const personnelReqs = allNodes.value
-    .filter(n => nodePersonnel[n.key]?.scopeType)
-    .map((n) => {
-      const p = nodePersonnel[n.key]
-      return {
+  // 构建人员范围请求（展开每个节点的多条规则，过滤未设置 scopeType 的条目）
+  const personnelReqs = allNodes.value.flatMap((n: NodeDef) => {
+    const rules: ScopeConfig[] = nodePersonnel[n.key] || []
+    return rules
+      .filter((r: ScopeConfig) => r.scopeType)
+      .map((r: ScopeConfig) => ({
         nodeType: n.nodeType,
         nodeSequence: n.nodeSequence,
-        scopeType: p.scopeType!,
-        scopeConfig: serializeScopeConfig(p),
-        remark: p.remark,
-      }
-    })
+        scopeType: r.scopeType!,
+        scopeConfig: serializeScopeConfig(r),
+        remark: r.remark,
+      }))
+  })
 
   // 构建审批规则请求（过滤掉未设置的）
   const approvalReqs = Object.entries(nodeApproval)
