@@ -17,7 +17,7 @@
             <template #icon><icon-delete /></template>
           </a-button>
         </template>
-        <ScopeConfigForm v-model="localRules[idx]" :disabled="disabled" />
+        <ScopeConfigForm v-model="localRules[idx]" :disabled="disabled" :role-id="roleId" />
       </a-collapse-item>
     </a-collapse>
 
@@ -43,6 +43,7 @@ import { type ScopeConfig, defaultScopeConfig } from './scope-config'
 const props = defineProps<{
   modelValue: ScopeConfig[]
   disabled?: boolean
+  roleId?: string
 }>()
 
 const emit = defineEmits<{

@@ -47,6 +47,7 @@
             <ScopeRuleList
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
+              :role-id="node.roleId"
             />
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
@@ -103,6 +104,7 @@
             <ScopeRuleList
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
+              :role-id="node.roleId"
             />
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
@@ -136,6 +138,8 @@ import { Message } from '@arco-design/web-vue'
 import ScopeRuleList from './ScopeRuleList.vue'
 import { type ScopeConfig, defaultScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
 import ApprovalNodeForm from './ApprovalNodeForm.vue'
+import { listRole } from '@/apis/system/role'
+import type { RoleResp } from '@/apis/system/role'
 import {
   type FormTemplateResp,
   type ManagementTemplateResp,
@@ -162,6 +166,8 @@ interface NodeDef {
   personnelLabel: string
   hasApproval: boolean
   approvalNodeScope: string
+  roleCode: string
+  roleId: string
 }
 
 const props = defineProps<{
@@ -192,6 +198,23 @@ const nodeApproval = reactive<Record<string, TypeApprovalConfigReq | null>>({})
 
 const saveLoading = ref(false)
 
+// 角色编码 → 角色ID 映射（从后端加载）
+const roleCodeToId = ref<Record<string, string>>({})
+
+const loadRoles = async () => {
+  try {
+    const res = await listRole({ sort: [] })
+    const map: Record<string, string> = {}
+    for (const role of (res.data || []) as RoleResp[]) {
+      map[role.code] = role.id
+    }
+    roleCodeToId.value = map
+  }
+  catch (error) {
+    console.error('加载角色列表失败:', error)
+  }
+}
+
 // 折叠面板展开状态（key 为 string | number，与 Arco Design 类型一致）
 const expandedReviewKeys = ref<(string | number)[]>([])
 const expandedManageKeys = ref<(string | number)[]>([])
@@ -212,6 +235,8 @@ const allNodes = computed<NodeDef[]>(() => {
       personnelLabel: '申请人范围',
       hasApproval: false,
       approvalNodeScope: '',
+      roleCode: 'APPLICANT',
+      roleId: roleCodeToId.value['APPLICANT'] || '',
     })
 
     for (let i = 1; i <= (t.auditRounds || 0); i++) {
@@ -226,6 +251,8 @@ const allNodes = computed<NodeDef[]>(() => {
         personnelLabel: '审核人范围',
         hasApproval: true,
         approvalNodeScope: `AUDIT_${i}`,
+        roleCode: 'AUDITOR',
+        roleId: roleCodeToId.value['AUDITOR'] || '',
       })
     }
 
@@ -241,6 +268,8 @@ const allNodes = computed<NodeDef[]>(() => {
         personnelLabel: '评审人范围',
         hasApproval: true,
         approvalNodeScope: `REVIEW_${i}`,
+        roleCode: 'REVIEWER',
+        roleId: roleCodeToId.value['REVIEWER'] || '',
       })
     }
 
@@ -256,6 +285,8 @@ const allNodes = computed<NodeDef[]>(() => {
         personnelLabel: '决策人范围',
         hasApproval: true,
         approvalNodeScope: `DECISION_${i}`,
+        roleCode: 'DECISION_MAKER',
+        roleId: roleCodeToId.value['DECISION_MAKER'] || '',
       })
     }
   }
@@ -271,6 +302,12 @@ const allNodes = computed<NodeDef[]>(() => {
       EXECUTION: '管理人范围',
       ACCEPTANCE: '验收人范围',
     }
+    const stageRoleCodeMap: Record<string, string> = {
+      KICKOFF: 'MANAGER',
+      EXECUTION: 'MANAGER',
+      ACCEPTANCE: 'ACCEPTANCE_INSPECTOR',
+    }
+    const stageRoleCode = stageRoleCodeMap[stage.stageType] ?? 'MANAGER'
     nodes.push({
       key: `STAGE_${stage.stageOrder}`,
       label: stage.stageName,
@@ -282,6 +319,8 @@ const allNodes = computed<NodeDef[]>(() => {
       personnelLabel: personnelLabelMap[stage.stageType] ?? '管理人范围',
       hasApproval: stage.stageType === 'ACCEPTANCE',
       approvalNodeScope: stage.stageType === 'ACCEPTANCE' ? 'ACCEPTANCE' : '',
+      roleCode: stageRoleCode,
+      roleId: roleCodeToId.value[stageRoleCode] || '',
     })
   }
 
@@ -433,6 +472,7 @@ const handleSave = async () => {
 }
 
 onMounted(async () => {
+  await loadRoles()
   await loadFormOptions()
   fillFromProps()
 })
