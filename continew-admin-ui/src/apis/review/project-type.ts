@@ -71,8 +71,3 @@ export function enableProjectType(id: string | number) {
 export function disableProjectType(id: string | number) {
   return http.put(`${BASE_URL}/${id}/disable`)
 }
-
-/** @desc 查询当前用户可见的类型列表（申请人用） */
-export function listVisibleProjectType() {
-  return http.get<ProjectTypeResp[]>(`${BASE_URL}/visible`)
-}
