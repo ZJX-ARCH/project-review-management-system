@@ -154,7 +154,7 @@ public class ProjectTypeController {
     // ===== 状态管理 =====
 
     /**
-     * 启用类型（触发第3层全量验证：流程/表单/人员/审批规则/可见性均须完整）
+     * 启用类型（触发第3层全量验证：流程/表单/人员/审批规则均须完整）
      */
     @PutMapping("/{id}/enable")
     @Operation(summary = "启用类型")
