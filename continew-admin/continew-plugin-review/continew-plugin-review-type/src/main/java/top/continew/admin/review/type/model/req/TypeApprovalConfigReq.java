@@ -40,6 +40,12 @@ public class TypeApprovalConfigReq implements Serializable {
     private String nodeScope;
 
     /**
+     * 所需审批人数（用于校验人员范围是否满足要求）
+     */
+    @Schema(description = "所需审批人数", example = "3")
+    private Integer requiredReviewerCount;
+
+    /**
      * 审批模式（VOTE_ALL_PASS/VOTE_MAJORITY_PASS/VOTE_ONE_PASS/SCORE_PASS）
      */
     @Schema(description = "审批模式", example = "VOTE_MAJORITY_PASS")

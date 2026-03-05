@@ -6,10 +6,12 @@ import top.continew.admin.review.type.model.query.ProjectTypeQuery;
 import top.continew.admin.review.type.model.req.*;
 import top.continew.admin.review.type.model.resp.ProjectTypeDetailResp;
 import top.continew.admin.review.type.model.resp.ProjectTypeResp;
+import top.continew.admin.review.type.model.resp.ReviewPersonResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 项目类型 Service
@@ -117,5 +119,49 @@ public interface ProjectTypeService extends IService<ProjectTypeDO> {
      * @param id 类型 ID
      */
     void disable(Long id);
+
+    // ===== 辅助查询 =====
+
+    /**
+     * 查询业务角色编码 → ID 映射（供前端节点配置人员范围时按角色过滤用户）
+     *
+     * @param codes 角色编码列表
+     * @return Map&lt;code, id&gt;
+     */
+    Map<String, Long> getRoleMap(List<String> codes);
+
+    /**
+     * 搜索拥有指定角色的人员（USER 范围选择器）
+     * 与系统 listUser(roleId) 语义相反：此处返回"已拥有该角色"的用户
+     *
+     * @param roleId  角色 ID（null 时不按角色过滤）
+     * @param keyword 昵称/用户名关键词（null 时不过滤）
+     * @param limit   最大返回条数
+     * @return 人员列表
+     */
+    List<ReviewPersonResp> searchPersons(Long roleId, String keyword, int limit);
+
+    /**
+     * 根据 ID 列表批量查询人员（用于回显已选用户）
+     *
+     * @param ids 用户 ID 列表
+     * @return 人员列表
+     */
+    List<ReviewPersonResp> getPersonsByIds(List<Long> ids);
+
+    /**
+     * 查询当前用户所在部门及其全部子孙部门树（DEPT 范围选择器）
+     *
+     * @return 部门树节点列表（key=id, title=name）
+     */
+    List<Map<String, Object>> getDeptTree();
+
+    /**
+     * 统计指定范围内拥有指定角色的人员数量（多条规则取并集）
+     *
+     * @param req 范围请求（roleId + 多条规则）
+     * @return 符合条件的人员数量
+     */
+    int countScope(CountScopeReq req);
 
 }

@@ -33,6 +33,13 @@
             <artifactId>continew-plugin-review-form</artifactId>
         </dependency>
 
+        <!-- 系统模块（查询 sys_role 表获取业务角色 code→id 映射，optional 避免循环打包） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-system</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- MyBatis Plus -->
         <dependency>
             <groupId>top.continew.starter</groupId>

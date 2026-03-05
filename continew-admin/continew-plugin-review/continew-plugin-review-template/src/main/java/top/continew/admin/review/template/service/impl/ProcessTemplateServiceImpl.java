@@ -31,6 +31,7 @@ import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -282,14 +283,15 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
         QueryWrapper<ProcessTemplateRoundNameDO> roundNameWrapper = new QueryWrapper<>();
         roundNameWrapper.eq("template_id", id);
         roundNameWrapper.eq("deleted", 0);
-        // 按轮次类型和序号排序，确保返回顺序正确
-        roundNameWrapper.orderByAsc("round_type", "round_sequence");
+        // 仅按序号升序查询，类型顺序在 Java 层按业务语义（AUDIT→REVIEW→DECISION）排序
+        roundNameWrapper.orderByAsc("round_sequence");
         List<ProcessTemplateRoundNameDO> roundNameEntities = roundNameMapper.selectList(
             roundNameWrapper);
 
-        // 将轮次名称实体转换为响应对象
+        // 将轮次名称实体转换为响应对象，并按业务顺序排序
         List<RoundNameResp> roundNameList = BeanUtil.copyToList(roundNameEntities,
             RoundNameResp.class);
+        sortRoundNames(roundNameList);
 
         // 步骤3: 组装响应对象
         ProcessTemplateResp resp = BeanUtil.toBean(entity, ProcessTemplateResp.class);
@@ -352,11 +354,12 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
             QueryWrapper<ProcessTemplateRoundNameDO> roundNameWrapper = new QueryWrapper<>();
             roundNameWrapper.eq("template_id", resp.getId());
             roundNameWrapper.eq("deleted", 0);
-            roundNameWrapper.orderByAsc("round_type", "round_sequence");
+            roundNameWrapper.orderByAsc("round_sequence");
             List<ProcessTemplateRoundNameDO> roundNameEntities = roundNameMapper.selectList(
                 roundNameWrapper);
             List<RoundNameResp> roundNameList = BeanUtil.copyToList(roundNameEntities,
                 RoundNameResp.class);
+            sortRoundNames(roundNameList);
             resp.setRoundNames(roundNameList);
         }
 
@@ -467,11 +470,25 @@ public class ProcessTemplateServiceImpl extends ServiceImpl<ProcessTemplateMappe
             QueryWrapper<ProcessTemplateRoundNameDO> roundWrapper = new QueryWrapper<>();
             roundWrapper.eq("template_id", resp.getId());
             roundWrapper.eq("deleted", 0);
-            roundWrapper.orderByAsc("round_type", "round_sequence");
+            roundWrapper.orderByAsc("round_sequence");
             List<ProcessTemplateRoundNameDO> roundEntities = roundNameMapper.selectList(roundWrapper);
-            resp.setRoundNames(BeanUtil.copyToList(roundEntities, RoundNameResp.class));
+            List<RoundNameResp> roundNameList = BeanUtil.copyToList(roundEntities, RoundNameResp.class);
+            sortRoundNames(roundNameList);
+            resp.setRoundNames(roundNameList);
         }
         return respList;
+    }
+
+    /**
+     * 按业务语义排序轮次列表：AUDIT → REVIEW → DECISION，同类型内按序号升序
+     * <p>SQL 中 round_type 字符串字典序为 AUDIT < DECISION < REVIEW，与业务顺序不符，
+     * 故在 Java 层使用枚举 ordinal() 排序来保证正确顺序。</p>
+     *
+     * @param roundNames 待排序的轮次列表（原地修改）
+     */
+    private static void sortRoundNames(List<RoundNameResp> roundNames) {
+        roundNames.sort(Comparator.comparingInt((RoundNameResp r) -> r.getRoundType().ordinal())
+            .thenComparingInt(RoundNameResp::getRoundSequence));
     }
 
     /**

@@ -15,6 +15,14 @@ import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.form.model.entity.FormTemplateDO;
 import top.continew.admin.review.form.service.FormTemplateService;
+import top.continew.admin.system.mapper.DeptMapper;
+import top.continew.admin.system.mapper.RoleMapper;
+import top.continew.admin.system.mapper.UserRoleMapper;
+import top.continew.admin.system.model.entity.DeptDO;
+import top.continew.admin.system.model.entity.RoleDO;
+import top.continew.admin.system.model.entity.UserRoleDO;
+import top.continew.admin.system.model.entity.user.UserDO;
+import top.continew.admin.system.mapper.user.UserMapper;
 import top.continew.admin.review.template.mapper.ManagementStageMapper;
 import top.continew.admin.review.template.model.entity.ManagementStageDO;
 import top.continew.admin.review.template.model.entity.ManagementTemplateDO;
@@ -58,6 +66,10 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
     private final ManagementTemplateService managementTemplateService;
     private final FormTemplateService formTemplateService;
     private final ManagementStageMapper stageMapper;
+    private final RoleMapper roleMapper;
+    private final UserMapper userMapper;
+    private final UserRoleMapper userRoleMapper;
+    private final DeptMapper deptMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -418,9 +430,8 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             throw new BusinessException("已启用的类型不允许直接修改审批规则配置，请先禁用");
         }
 
-        // 步骤2：业务规则校验，同时收集 PRESET 权重
+        // 步骤2：业务规则校验
         Set<String> nodeScopeSet = new HashSet<>();
-        List<TypeReviewerWeightDO> allWeights = new ArrayList<>();
         for (TypeApprovalConfigReq req : reqs) {
             // nodeScope 不重复
             if (!nodeScopeSet.add(req.getNodeScope())) {
@@ -428,22 +439,10 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
             // approvalMode 分支合法性校验
             validateApprovalReq(req);
-            // 收集 PRESET 模式的权重记录
-            if (ApprovalModeEnum.SCORE_PASS == req.getApprovalMode()
-                    && WeightModeEnum.PRESET == req.getWeightMode()
-                    && CollUtil.isNotEmpty(req.getReviewerWeights())) {
-                for (TypeReviewerWeightReq wr : req.getReviewerWeights()) {
-                    TypeReviewerWeightDO wd = BeanUtil.toBean(wr, TypeReviewerWeightDO.class);
-                    wd.setTypeId(id);
-                    wd.setNodeScope(req.getNodeScope());
-                    allWeights.add(wd);
-                }
-            }
         }
 
-        // 步骤3：全量替换 approval_config + reviewer_weight
+        // 步骤3：全量替换 approval_config
         approvalConfigMapper.delete(new QueryWrapper<TypeApprovalConfigDO>().eq("type_id", id));
-        reviewerWeightMapper.delete(new QueryWrapper<TypeReviewerWeightDO>().eq("type_id", id));
 
         if (CollUtil.isNotEmpty(reqs)) {
             List<TypeApprovalConfigDO> entities = new ArrayList<>(reqs.size());
@@ -454,12 +453,8 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
             approvalConfigMapper.insertBatch(entities);
         }
-        if (CollUtil.isNotEmpty(allWeights)) {
-            reviewerWeightMapper.insertBatch(allWeights);
-        }
 
-        log.info("保存审批规则配置成功，type_id={}, 共{}条审批规则，{}条权重配置",
-                id, reqs.size(), allWeights.size());
+        log.info("保存审批规则配置成功，type_id={}, 共{}条", id, reqs.size());
     }
 
     @Override
@@ -730,27 +725,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
                     throw new BadRequestException(StrUtil.format(
                             "节点[{}] SCORE_PASS 模式下 passThreshold 不能为空", req.getNodeScope()));
                 }
-                if (ObjectUtil.isNull(req.getScoreCalcMethod())) {
-                    throw new BadRequestException(StrUtil.format(
-                            "节点[{}] SCORE_PASS 模式下 scoreCalcMethod 不能为空", req.getNodeScope()));
-                }
-                if (ObjectUtil.isNull(req.getWeightMode())) {
-                    throw new BadRequestException(StrUtil.format(
-                            "节点[{}] SCORE_PASS 模式下 weightMode 不能为空", req.getNodeScope()));
-                }
-                if (WeightModeEnum.PRESET == req.getWeightMode()) {
-                    if (CollUtil.isEmpty(req.getReviewerWeights())) {
-                        throw new BadRequestException(StrUtil.format(
-                                "节点[{}] PRESET 权重模式下 reviewerWeights 不能为空", req.getNodeScope()));
-                    }
-                    BigDecimal total = req.getReviewerWeights().stream()
-                            .map(TypeReviewerWeightReq::getWeight)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    if (total.subtract(BigDecimal.ONE).abs().compareTo(new BigDecimal("0.0001")) > 0) {
-                        throw new BadRequestException(StrUtil.format(
-                                "节点[{}]评审人权重之和必须为1.0（当前={}）", req.getNodeScope(), total));
-                    }
-                }
                 // 多个 SCORE_TABLE 字段间权重之和必须为 1.0
                 if (CollUtil.isNotEmpty(req.getScoreTableWeights())
                         && req.getScoreTableWeights().size() > 1) {
@@ -792,5 +766,204 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
      */
     private static String buildNodeKey(String nodeType, Integer nodeSequence) {
         return nodeType + (nodeSequence != null ? "_" + nodeSequence : "");
+    }
+
+    @Override
+    public Map<String, Long> getRoleMap(List<String> codes) {
+        if (CollUtil.isEmpty(codes)) {
+            return Collections.emptyMap();
+        }
+        QueryWrapper<RoleDO> wrapper = new QueryWrapper<>();
+        wrapper.in("code", codes).eq("deleted", 0);
+        List<RoleDO> roles = roleMapper.selectList(wrapper);
+        return roles.stream().collect(Collectors.toMap(RoleDO::getCode, RoleDO::getId));
+    }
+
+    @Override
+    public List<ReviewPersonResp> searchPersons(Long roleId, String keyword, int limit) {
+        // 步骤1：若指定角色，先查出拥有该角色的 userId 集合
+        Set<Long> roleUserIds = null;
+        if (roleId != null) {
+            QueryWrapper<UserRoleDO> urWrapper = new QueryWrapper<>();
+            urWrapper.eq("role_id", roleId).select("user_id");
+            List<UserRoleDO> userRoles = userRoleMapper.selectList(urWrapper);
+            roleUserIds = userRoles.stream().map(UserRoleDO::getUserId).collect(Collectors.toSet());
+            if (roleUserIds.isEmpty()) {
+                return Collections.emptyList();
+            }
+        }
+
+        // 步骤2：查询用户表（不走 @DataPermission，避免权限拦截）
+        QueryWrapper<UserDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("deleted", 0).eq("status", DisEnableStatusEnum.ENABLE.getValue());
+        if (roleUserIds != null) {
+            wrapper.in("id", roleUserIds);
+        }
+        if (StrUtil.isNotBlank(keyword)) {
+            wrapper.and(w -> w.like("nickname", keyword).or().like("username", keyword));
+        }
+        wrapper.last("LIMIT " + limit);
+
+        List<UserDO> users = userMapper.selectList(wrapper);
+        return users.stream()
+                .map(u -> new ReviewPersonResp(String.valueOf(u.getId()), u.getNickname(), u.getUsername()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ReviewPersonResp> getPersonsByIds(List<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return Collections.emptyList();
+        }
+        QueryWrapper<UserDO> wrapper = new QueryWrapper<>();
+        wrapper.in("id", ids).eq("deleted", 0);
+        List<UserDO> users = userMapper.selectList(wrapper);
+        return users.stream()
+                .map(u -> new ReviewPersonResp(String.valueOf(u.getId()), u.getNickname(), u.getUsername()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Map<String, Object>> getDeptTree() {
+        Long currentDeptId = UserContextHolder.getContext().getDeptId();
+        if (currentDeptId == null) {
+            return Collections.emptyList();
+        }
+
+        // 查询当前部门及其全部子孙部门（通过 ancestors 字段中包含 currentDeptId 判断是否为后代）
+        // 注意：不按 status 过滤——禁用状态的部门仍需显示，与系统 listChildren 行为保持一致
+        QueryWrapper<DeptDO> wrapper = new QueryWrapper<>();
+        wrapper.and(w -> w.eq("id", currentDeptId)
+                        .or().apply("FIND_IN_SET({0}, ancestors)", currentDeptId))
+                .eq("deleted", 0)
+                .orderByAsc("parent_id", "sort");
+        List<DeptDO> depts = deptMapper.selectList(wrapper);
+
+        return buildDeptTree(depts);
+    }
+
+    /**
+     * 将扁平部门列表构建为树形结构
+     */
+    private List<Map<String, Object>> buildDeptTree(List<DeptDO> depts) {
+        Set<Long> allIds = depts.stream().map(DeptDO::getId).collect(Collectors.toSet());
+        Map<Long, List<DeptDO>> childrenMap = new HashMap<>();
+        for (DeptDO dept : depts) {
+            childrenMap.computeIfAbsent(dept.getParentId(), k -> new ArrayList<>()).add(dept);
+        }
+        // 根节点：parentId 不在结果集内（即当前用户所在部门自身）
+        List<Map<String, Object>> roots = new ArrayList<>();
+        for (DeptDO dept : depts) {
+            if (!allIds.contains(dept.getParentId())) {
+                roots.add(toDeptNode(dept, childrenMap));
+            }
+        }
+        return roots;
+    }
+
+    @Override
+    public int countScope(CountScopeReq req) {
+        if (CollUtil.isEmpty(req.getRules())) {
+            return 0;
+        }
+
+        // 步骤1：收集所有规则的候选用户ID（并集）
+        Set<Long> candidateUserIds = collectCandidateUserIds(req.getRules());
+        if (candidateUserIds.isEmpty()) {
+            return 0;
+        }
+
+        // 步骤2：若指定角色，与角色用户集取交集
+        if (req.getRoleId() != null) {
+            QueryWrapper<UserRoleDO> urWrapper = new QueryWrapper<>();
+            urWrapper.eq("role_id", req.getRoleId()).select("user_id");
+            Set<Long> roleUserIds = userRoleMapper.selectList(urWrapper)
+                    .stream().map(UserRoleDO::getUserId).collect(Collectors.toSet());
+            if (roleUserIds.isEmpty()) {
+                return 0;
+            }
+            candidateUserIds.retainAll(roleUserIds);
+            if (candidateUserIds.isEmpty()) {
+                return 0;
+            }
+        }
+
+        // 步骤3：过滤活跃状态并计数
+        QueryWrapper<UserDO> wrapper = new QueryWrapper<>();
+        wrapper.in("id", candidateUserIds)
+                .eq("deleted", 0)
+                .eq("status", DisEnableStatusEnum.ENABLE.getValue());
+        return userMapper.selectCount(wrapper).intValue();
+    }
+
+    /**
+     * 收集所有范围规则中的候选用户ID（并集，不过滤状态，DEPT规则已在查询时过滤 deleted）
+     */
+    private Set<Long> collectCandidateUserIds(List<CountScopeReq.ScopeRuleItem> rules) {
+        Set<Long> result = new HashSet<>();
+        for (CountScopeReq.ScopeRuleItem rule : rules) {
+            if ("USER".equals(rule.getScopeType())) {
+                Object userIdsObj = rule.getScopeConfig().get("userIds");
+                if (userIdsObj instanceof List) {
+                    for (Object id : (List<?>) userIdsObj) {
+                        if (id != null) {
+                            try {
+                                result.add(Long.parseLong(String.valueOf(id)));
+                            } catch (NumberFormatException ignored) {
+                            }
+                        }
+                    }
+                }
+            } else if ("DEPT".equals(rule.getScopeType())) {
+                Object deptIdsObj = rule.getScopeConfig().get("deptIds");
+                boolean includeSub = Boolean.TRUE.equals(rule.getScopeConfig().get("includeSub"));
+                if (deptIdsObj instanceof List) {
+                    Set<Long> expandedDeptIds = expandDeptIds((List<?>) deptIdsObj, includeSub);
+                    if (!expandedDeptIds.isEmpty()) {
+                        QueryWrapper<UserDO> deptUserWrapper = new QueryWrapper<>();
+                        deptUserWrapper.in("dept_id", expandedDeptIds).eq("deleted", 0).select("id");
+                        userMapper.selectList(deptUserWrapper).stream()
+                                .map(UserDO::getId).forEach(result::add);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 展开部门ID集合（若 includeSub=true 则递归包含所有子孙部门）
+     */
+    private Set<Long> expandDeptIds(List<?> deptIdList, boolean includeSub) {
+        Set<Long> result = new HashSet<>();
+        for (Object id : deptIdList) {
+            if (id == null) {
+                continue;
+            }
+            try {
+                long deptId = Long.parseLong(String.valueOf(id));
+                result.add(deptId);
+                if (includeSub) {
+                    QueryWrapper<DeptDO> subWrapper = new QueryWrapper<>();
+                    subWrapper.apply("FIND_IN_SET({0}, ancestors)", deptId).eq("deleted", 0);
+                    deptMapper.selectList(subWrapper).stream().map(DeptDO::getId).forEach(result::add);
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return result;
+    }
+
+    private Map<String, Object> toDeptNode(DeptDO dept, Map<Long, List<DeptDO>> childrenMap) {
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("key", String.valueOf(dept.getId()));
+        node.put("title", dept.getName());
+        List<DeptDO> children = childrenMap.getOrDefault(dept.getId(), Collections.emptyList());
+        if (!children.isEmpty()) {
+            node.put("children", children.stream()
+                    .map(c -> toDeptNode(c, childrenMap))
+                    .collect(Collectors.toList()));
+        }
+        return node;
     }
 }

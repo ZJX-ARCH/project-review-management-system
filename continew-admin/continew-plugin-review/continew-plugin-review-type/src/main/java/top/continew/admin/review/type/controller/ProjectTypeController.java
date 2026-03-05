@@ -10,12 +10,15 @@ import top.continew.admin.review.type.model.query.ProjectTypeQuery;
 import top.continew.admin.review.type.model.req.*;
 import top.continew.admin.review.type.model.resp.ProjectTypeDetailResp;
 import top.continew.admin.review.type.model.resp.ProjectTypeResp;
+import top.continew.admin.review.type.model.resp.ReviewPersonResp;
 import top.continew.admin.review.type.service.ProjectTypeService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.web.model.R;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 项目类型管理 API
@@ -101,6 +104,20 @@ public class ProjectTypeController {
         return R.ok(code);
     }
 
+    /**
+     * 查询业务角色编码 → ID 映射（供节点人员范围配置按角色过滤用户）
+     */
+    @GetMapping("/role-map")
+    @Operation(summary = "查询业务角色编码→ID映射")
+    @SaCheckPermission("review:type:query")
+    public R<Map<String, Long>> getRoleMap() {
+        List<String> businessRoleCodes = Arrays.asList(
+                "APPLICANT", "AUDITOR", "REVIEWER", "DECISION_MAKER",
+                "MANAGER", "ACCEPTANCE_INSPECTOR");
+        Map<String, Long> roleMap = projectTypeService.getRoleMap(businessRoleCodes);
+        return R.ok(roleMap);
+    }
+
     // ===== 分步配置（均为全量替换） =====
 
     /**
@@ -149,6 +166,52 @@ public class ProjectTypeController {
                                  @Valid @RequestBody List<TypeApprovalConfigReq> reqs) {
         projectTypeService.saveApproval(id, reqs);
         return R.ok();
+    }
+
+    // ===== 人员 / 部门辅助查询 =====
+
+    /**
+     * 搜索拥有指定角色的人员（与系统 listUser 语义相反：此处返回已拥有该角色的用户）
+     */
+    @GetMapping("/person-search")
+    @Operation(summary = "按角色搜索人员")
+    @SaCheckPermission("review:type:query")
+    public R<List<ReviewPersonResp>> searchPersons(
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "20") int limit) {
+        return R.ok(projectTypeService.searchPersons(roleId, keyword, limit));
+    }
+
+    /**
+     * 根据 ID 列表回显已选人员（用于编辑时展示已保存的用户）
+     */
+    @GetMapping("/person-by-ids")
+    @Operation(summary = "根据ID列表查询人员")
+    @SaCheckPermission("review:type:query")
+    public R<List<ReviewPersonResp>> getPersonsByIds(
+            @RequestParam List<Long> ids) {
+        return R.ok(projectTypeService.getPersonsByIds(ids));
+    }
+
+    /**
+     * 统计指定范围内拥有指定角色的人员数量（多条规则取并集）
+     */
+    @PostMapping("/count-scope")
+    @Operation(summary = "统计人员范围人数")
+    @SaCheckPermission("review:type:query")
+    public R<Integer> countScope(@RequestBody CountScopeReq req) {
+        return R.ok(projectTypeService.countScope(req));
+    }
+
+    /**
+     * 查询当前用户所在部门及其子孙部门树（限定 DEPT 范围选择范围）
+     */
+    @GetMapping("/dept-tree")
+    @Operation(summary = "查询当前部门树")
+    @SaCheckPermission("review:type:query")
+    public R<List<Map<String, Object>>> getDeptTree() {
+        return R.ok(projectTypeService.getDeptTree());
     }
 
     // ===== 状态管理 =====
