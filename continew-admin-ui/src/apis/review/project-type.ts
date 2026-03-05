@@ -71,3 +71,33 @@ export function enableProjectType(id: string | number) {
 export function disableProjectType(id: string | number) {
   return http.put(`${BASE_URL}/${id}/disable`)
 }
+
+/** @desc 查询业务角色编码→ID映射（供节点人员范围配置按角色过滤用户，权限：review:type:query） */
+export function getTypeRoleMap() {
+  return http.get<Record<string, string>>(`${BASE_URL}/role-map`)
+}
+
+/** @desc 按角色搜索人员（返回已拥有该角色的用户，与系统 listUser 语义相反） */
+export function searchReviewPersons(params: { roleId?: string; keyword?: string; limit?: number }) {
+  return http.get<{ id: string; nickname: string; username: string }[]>(`${BASE_URL}/person-search`, params)
+}
+
+/** @desc 根据 ID 列表回显已选人员 */
+export function getReviewPersonsByIds(ids: (string | number)[]) {
+  return http.get<{ id: string; nickname: string; username: string }[]>(`${BASE_URL}/person-by-ids`, { ids })
+}
+
+/** @desc 查询当前用户部门及子部门树（用于 DEPT 范围配置） */
+export function getReviewDeptTree() {
+  return http.get<{ key: string; title: string; children?: unknown[] }[]>(`${BASE_URL}/dept-tree`)
+}
+
+export interface CountScopeRule {
+  scopeType: string
+  scopeConfig: Record<string, unknown>
+}
+
+/** @desc 统计指定范围内拥有指定角色的人员数量（多条规则取并集） */
+export function countScope(data: { roleId?: string; rules: CountScopeRule[] }) {
+  return http.post<number>(`${BASE_URL}/count-scope`, data)
+}

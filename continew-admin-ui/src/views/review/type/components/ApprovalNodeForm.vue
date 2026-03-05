@@ -1,26 +1,37 @@
 <template>
   <div class="node-form">
-    <a-row :gutter="16">
+    <!-- 第一行：审批模式 + 相关参数 -->
+    <a-row :gutter="16" align="start">
       <!-- 审批模式 -->
       <a-col :span="8">
         <a-form-item label="审批模式">
+          <!-- 有评分表：固定评分通过，只读 -->
           <a-select
+            v-if="hasScoreTable"
+            :model-value="ApprovalMode.SCORE_PASS"
+            disabled
+            style="width: 100%"
+          >
+            <a-option :value="ApprovalMode.SCORE_PASS">评分通过</a-option>
+          </a-select>
+          <!-- 无评分表：投票模式可选 -->
+          <a-select
+            v-else
             v-model="form.approvalMode"
             :disabled="disabled"
             placeholder="请选择审批模式"
             style="width: 100%"
             @change="onModeChange"
           >
-            <a-option value="VOTE_ALL_PASS">全部通过</a-option>
-            <a-option value="VOTE_MAJORITY_PASS">多数通过</a-option>
-            <a-option value="VOTE_ONE_PASS">一票通过</a-option>
-            <a-option value="SCORE_PASS">评分通过</a-option>
+            <a-option :value="ApprovalMode.VOTE_ALL_PASS">全部通过</a-option>
+            <a-option :value="ApprovalMode.VOTE_MAJORITY_PASS">多数通过</a-option>
+            <a-option :value="ApprovalMode.VOTE_ONE_PASS">一票通过</a-option>
           </a-select>
         </a-form-item>
       </a-col>
 
-      <!-- 多数通过比例 -->
-      <a-col v-if="form.approvalMode === 'VOTE_MAJORITY_PASS'" :span="8">
+      <!-- 多数通过比例（投票-多数时） -->
+      <a-col v-if="!hasScoreTable && form.approvalMode === ApprovalMode.VOTE_MAJORITY_PASS" :span="8">
         <a-form-item label="多数通过比例">
           <a-input-number
             v-model="form.majorityRatio"
@@ -29,134 +40,132 @@
             :max="1.00"
             :step="0.01"
             :precision="2"
-            placeholder="默认0.67（2/3）"
+            placeholder="默认 0.67（2/3）"
+            style="width: 100%"
+          />
+        </a-form-item>
+      </a-col>
+
+      <!-- 通过阈值（评分通过时） -->
+      <a-col v-if="hasScoreTable" :span="8">
+        <a-form-item label="通过阈值（0-100）">
+          <a-input-number
+            v-model="form.passThreshold"
+            :disabled="disabled"
+            :min="0"
+            :max="100"
+            :precision="2"
+            placeholder="如：60"
             style="width: 100%"
           />
         </a-form-item>
       </a-col>
     </a-row>
 
-    <!-- 评分模式配置 -->
-    <template v-if="form.approvalMode === 'SCORE_PASS'">
-      <a-divider orientation="left" style="margin: 8px 0">评分配置</a-divider>
-      <a-row :gutter="16">
-        <a-col :span="6">
-          <a-form-item label="通过阈值 *">
-            <a-input-number
-              v-model="form.passThreshold"
-              :disabled="disabled"
-              :min="0"
-              :max="100"
-              :precision="2"
-              placeholder="如：60"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="6">
-          <a-form-item label="良好阈值">
-            <a-input-number
-              v-model="form.goodThreshold"
-              :disabled="disabled"
-              :min="0"
-              :max="100"
-              :precision="2"
-              placeholder="如：75"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="6">
-          <a-form-item label="优秀阈值">
-            <a-input-number
-              v-model="form.excellentThreshold"
-              :disabled="disabled"
-              :min="0"
-              :max="100"
-              :precision="2"
-              placeholder="如：85"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="6">
-          <a-form-item label="计算方式">
-            <a-select v-model="form.scoreCalcMethod" :disabled="disabled" placeholder="请选择" style="width: 100%">
-              <a-option value="WEIGHTED_AVG">加权平均</a-option>
-              <a-option value="AVG">算术平均</a-option>
-              <a-option value="MIN">取最低分</a-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
+    <!-- 评分表列表（有评分表时显示） -->
+    <template v-if="hasScoreTable">
+      <div class="section-label">评分表列表</div>
 
-      <a-row :gutter="16">
-        <a-col :span="8">
-          <a-form-item label="评审人权重模式">
-            <a-select v-model="form.weightMode" :disabled="disabled" placeholder="请选择" style="width: 100%">
-              <a-option value="EQUAL">等权重（各评审人平等）</a-option>
-              <a-option value="PRESET">预设权重（按用户ID指定）</a-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
+      <!-- 多个评分表：显示计分方式 + 表格 -->
+      <template v-if="scoreFields.length > 1">
+        <a-row :gutter="16" style="margin-bottom: 8px">
+          <a-col :span="8">
+            <a-form-item label="计分方式">
+              <a-select
+                v-model="form.scoreWeightMode"
+                :disabled="disabled"
+                style="width: 100%"
+                @change="emitChange"
+              >
+                <a-option value="EQUAL">平均（各评分表等权）</a-option>
+                <a-option value="WEIGHTED">加权（自定义各评分表权重）</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-      <!-- PRESET 权重配置 -->
-      <template v-if="form.weightMode === 'PRESET'">
-        <a-divider orientation="left" style="margin: 8px 0">评审人预设权重</a-divider>
-        <div v-for="(w, idx) in form.reviewerWeights" :key="idx" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
-          <a-input-number
-            v-model="w.userId"
-            :disabled="disabled"
-            placeholder="用户ID"
-            :min="1"
-            style="width: 150px"
-          />
-          <a-input-number
-            v-model="w.weight"
-            :disabled="disabled"
-            placeholder="权重"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            :precision="4"
-            style="width: 140px"
-          />
-          <a-button v-if="!disabled" type="text" status="danger" size="small" @click="removeWeight(idx)">删除</a-button>
+        <!-- 加权模式下才显示权重配置表格 -->
+        <div v-if="form.scoreWeightMode === 'WEIGHTED'" class="weight-table-wrap">
+          <table class="weight-table">
+            <thead>
+              <tr>
+                <th class="col-index">序号</th>
+                <th>评分表名称</th>
+                <th class="col-weight">权重（0~1，总和须为1.0）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(f, idx) in scoreFields" :key="f.fieldCode">
+                <td class="col-index">{{ idx + 1 }}</td>
+                <td>{{ f.fieldName }}</td>
+                <td class="col-weight">
+                  <a-input-number
+                    v-model="form.scoreFieldWeights[f.fieldCode]"
+                    :disabled="disabled"
+                    :min="0"
+                    :max="1"
+                    :step="0.05"
+                    :precision="2"
+                    style="width: 120px"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- 权重总和提示 -->
+          <div class="weight-summary">
+            <span>权重总和：{{ totalWeight.toFixed(2) }}</span>
+            <a-tag
+              :color="Math.abs(totalWeight - 1) < 0.001 ? 'green' : 'orange'"
+              size="small"
+              style="margin-left: 8px"
+            >
+              {{ Math.abs(totalWeight - 1) < 0.001 ? '✓ 满足要求' : '请使总和等于 1.0' }}
+            </a-tag>
+          </div>
         </div>
-        <a-button v-if="!disabled" type="dashed" size="small" @click="addWeight">
-          <template #icon><icon-plus /></template>
-          添加评审人权重
-        </a-button>
-        <div class="hint">所有评审人权重之和必须等于 1.0</div>
       </template>
 
-      <!-- 多 SCORE_TABLE 字段权重 -->
-      <a-divider orientation="left" style="margin: 8px 0">评分表字段权重（可选）</a-divider>
-      <div class="hint" style="margin-bottom: 8px">若表单中有多个评分表字段，请在此配置各字段的权重（之和=1.0）。只有一个评分表字段时可忽略。</div>
-      <div v-for="(entry, idx) in scoreTableWeightEntries" :key="idx" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
-        <a-input
-          v-model="entry.fieldCode"
-          :disabled="disabled"
-          placeholder="字段编码（fieldCode）"
-          style="width: 200px"
-        />
-        <a-input-number
-          v-model="entry.weight"
-          :disabled="disabled"
-          placeholder="权重"
-          :min="0"
-          :max="1"
-          :step="0.01"
-          :precision="4"
-          style="width: 140px"
-        />
-        <a-button v-if="!disabled" type="text" status="danger" size="small" @click="removeScoreWeight(idx)">删除</a-button>
-      </div>
-      <a-button v-if="!disabled" type="dashed" size="small" @click="addScoreWeight">
-        <template #icon><icon-plus /></template>
-        添加评分表字段权重
-      </a-button>
+      <!-- 单个评分表：仅显示名称 -->
+      <a-table
+        v-else-if="scoreFields.length === 1"
+        :data="scoreFields"
+        :pagination="false"
+        size="small"
+        :bordered="{ wrapper: true, cell: true }"
+        style="margin-bottom: 8px"
+      >
+        <a-table-column title="序号" :width="60" align="center">
+          <template #cell>1</template>
+        </a-table-column>
+        <a-table-column title="评分表名称" data-index="fieldName" />
+      </a-table>
+    </template>
+
+    <!-- 审批人数（人员范围已配置后才显示） -->
+    <template v-if="hasPersonnel">
+      <a-divider style="margin: 8px 0" />
+      <a-row :gutter="16">
+        <a-col :span="8">
+          <a-form-item
+            label="审批人数"
+            :help="props.maxReviewerCount !== undefined
+              ? `范围内共 ${props.maxReviewerCount} 人，请填写所需参与审批的人数`
+              : '所需参与审批的人员数量，用于检验人员范围是否满足要求'"
+          >
+            <a-input-number
+              v-model="form.requiredReviewerCount"
+              :disabled="disabled"
+              :min="1"
+              :max="props.maxReviewerCount"
+              :precision="0"
+              :placeholder="props.maxReviewerCount !== undefined ? `最多 ${props.maxReviewerCount} 人` : '如：3'"
+              style="width: 100%"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
     </template>
 
     <!-- ACCEPTANCE 专属：验收不通过回退目标 -->
@@ -184,29 +193,22 @@
         </a-col>
       </a-row>
     </template>
-
-    <!-- 当前节点配置预览 -->
-    <div v-if="form.approvalMode" style="margin-top: 8px; text-align: right">
-      <a-button size="small" type="outline" @click="emitChange">应用此配置</a-button>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, reactive, watch, onMounted } from 'vue'
 import {
   type StageResp,
   type TypeApprovalConfigReq,
   type TypeApprovalConfigResp,
-  type TypeReviewerWeightReq,
   StageType,
   ApprovalMode,
-  WeightMode,
-  ScoreCalcMethod,
 } from '@/apis/review'
 
-interface ScoreWeightEntry {
+interface ScoreFieldInfo {
   fieldCode: string
-  weight: number
+  fieldName: string
 }
 
 const props = defineProps<{
@@ -214,6 +216,9 @@ const props = defineProps<{
   nodeLabel: string
   isAcceptance: boolean
   manageStages: StageResp[]
+  scoreFields: ScoreFieldInfo[]
+  hasPersonnel: boolean
+  maxReviewerCount?: number
   initialConfig?: TypeApprovalConfigResp
   disabled?: boolean
 }>()
@@ -223,89 +228,67 @@ const emit = defineEmits<{
 }>()
 
 interface FormState {
+  requiredReviewerCount: number | undefined
   approvalMode: ApprovalMode | undefined
   majorityRatio: number | undefined
   passThreshold: number | undefined
-  goodThreshold: number | undefined
-  excellentThreshold: number | undefined
-  scoreCalcMethod: ScoreCalcMethod | undefined
-  weightMode: WeightMode | undefined
   rejectBackTo: string | undefined
-  reviewerWeights: TypeReviewerWeightReq[]
+  scoreWeightMode: 'EQUAL' | 'WEIGHTED'
+  scoreFieldWeights: Record<string, number>
 }
 
 const form = reactive<FormState>({
+  requiredReviewerCount: undefined,
   approvalMode: undefined,
   majorityRatio: 0.67,
   passThreshold: undefined,
-  goodThreshold: undefined,
-  excellentThreshold: undefined,
-  scoreCalcMethod: undefined,
-  weightMode: undefined,
   rejectBackTo: undefined,
-  reviewerWeights: [],
+  scoreWeightMode: 'EQUAL',
+  scoreFieldWeights: {},
 })
 
-const scoreTableWeightEntries = ref<ScoreWeightEntry[]>([])
+/** 是否存在评分表 */
+const hasScoreTable = computed(() => props.scoreFields.length > 0)
 
 /** 仅 EXECUTION 类型的阶段，用于 ACCEPTANCE 回退目标选项 */
 const executionStages = computed(() =>
-  props.manageStages.filter(s => s.stageType === StageType.EXECUTION)
+  props.manageStages.filter(s => s.stageType === StageType.EXECUTION),
 )
 
-/** 切换审批模式时重置相关字段 */
+/** 加权模式下权重总和 */
+const totalWeight = computed(() => {
+  const weights = Object.values(form.scoreFieldWeights) as number[]
+  const sum = weights.reduce((acc: number, w: number) => acc + (w || 0), 0)
+  return Math.round(sum * 100) / 100
+})
+
+/** 切换投票模式时重置多数通过比例 */
 const onModeChange = () => {
   form.majorityRatio = 0.67
-  form.passThreshold = undefined
-  form.goodThreshold = undefined
-  form.excellentThreshold = undefined
-  form.scoreCalcMethod = undefined
-  form.weightMode = undefined
-  form.reviewerWeights = []
-  scoreTableWeightEntries.value = []
-}
-
-const addWeight = () => form.reviewerWeights.push({ userId: 0, weight: 0 })
-const removeWeight = (idx: number) => form.reviewerWeights.splice(idx, 1)
-
-const addScoreWeight = () => scoreTableWeightEntries.value.push({ fieldCode: '', weight: 0 })
-const removeScoreWeight = (idx: number) => scoreTableWeightEntries.value.splice(idx, 1)
-
-/** 构建 scoreTableWeights 对象 */
-const buildScoreTableWeights = () => {
-  if (scoreTableWeightEntries.value.length === 0) return undefined
-  const result: Record<string, number> = {}
-  for (const entry of scoreTableWeightEntries.value) {
-    if (entry.fieldCode) result[entry.fieldCode] = entry.weight
-  }
-  return Object.keys(result).length > 0 ? result : undefined
 }
 
 /** 将当前表单配置 emit 出去 */
 const emitChange = () => {
-  if (!form.approvalMode) {
+  const effectiveMode = hasScoreTable.value ? ApprovalMode.SCORE_PASS : form.approvalMode
+  if (!effectiveMode) {
     emit('change', null)
     return
   }
 
   const config: TypeApprovalConfigReq = {
     nodeScope: props.nodeScope,
-    approvalMode: form.approvalMode,
+    approvalMode: effectiveMode,
+    requiredReviewerCount: form.requiredReviewerCount,
   }
 
-  if (form.approvalMode === ApprovalMode.VOTE_MAJORITY_PASS) {
+  if (effectiveMode === ApprovalMode.VOTE_MAJORITY_PASS) {
     config.majorityRatio = form.majorityRatio
   }
 
-  if (form.approvalMode === ApprovalMode.SCORE_PASS) {
+  if (effectiveMode === ApprovalMode.SCORE_PASS) {
     config.passThreshold = form.passThreshold
-    config.goodThreshold = form.goodThreshold
-    config.excellentThreshold = form.excellentThreshold
-    config.scoreCalcMethod = form.scoreCalcMethod
-    config.weightMode = form.weightMode
-    config.scoreTableWeights = buildScoreTableWeights()
-    if (form.weightMode === WeightMode.PRESET) {
-      config.reviewerWeights = form.reviewerWeights.filter(w => w.userId > 0)
+    if (props.scoreFields.length > 1 && form.scoreWeightMode === 'WEIGHTED') {
+      config.scoreTableWeights = { ...form.scoreFieldWeights }
     }
   }
 
@@ -321,37 +304,55 @@ const initFromConfig = () => {
   if (!props.initialConfig) return
 
   const cfg = props.initialConfig
-  form.approvalMode = cfg.approvalMode
+  form.requiredReviewerCount = cfg.requiredReviewerCount
   form.majorityRatio = cfg.majorityRatio ?? 0.67
   form.passThreshold = cfg.passThreshold
-  form.goodThreshold = cfg.goodThreshold
-  form.excellentThreshold = cfg.excellentThreshold
-  form.scoreCalcMethod = cfg.scoreCalcMethod
-  form.weightMode = cfg.weightMode
   form.rejectBackTo = cfg.rejectBackTo
-  form.reviewerWeights = cfg.reviewerWeights?.map(w => ({ userId: w.userId, weight: w.weight })) || []
 
-  // 恢复 scoreTableWeights
-  if (cfg.scoreTableWeights) {
-    scoreTableWeightEntries.value = Object.entries(cfg.scoreTableWeights).map(([fieldCode, weight]) => ({
-      fieldCode,
-      weight,
-    }))
-  }
-  else {
-    scoreTableWeightEntries.value = []
+  if (!hasScoreTable.value) {
+    form.approvalMode = (cfg.approvalMode !== ApprovalMode.SCORE_PASS)
+      ? cfg.approvalMode
+      : ApprovalMode.VOTE_ALL_PASS
   }
 
-  // 自动触发一次 emit 以同步父组件
+  if (cfg.scoreTableWeights && Object.keys(cfg.scoreTableWeights).length > 0) {
+    form.scoreWeightMode = 'WEIGHTED'
+    form.scoreFieldWeights = { ...(cfg.scoreTableWeights as Record<string, number>) }
+  }
+
   emitChange()
 }
 
-// 监听 approvalMode 变化，自动 emit（让父组件保持同步）
+/** 当评分表列表变化时，自动初始化权重并同步审批模式 */
+watch(
+  () => props.scoreFields,
+  (fields: ScoreFieldInfo[]) => {
+    if (fields.length > 0) {
+      const equalWeight = Math.round((1 / fields.length) * 100) / 100
+      const weights: Record<string, number> = {}
+      for (const f of fields) {
+        weights[f.fieldCode] = form.scoreFieldWeights[f.fieldCode] ?? equalWeight
+      }
+      form.scoreFieldWeights = weights
+    } else {
+      if (!form.approvalMode || form.approvalMode === ApprovalMode.SCORE_PASS) {
+        form.approvalMode = ApprovalMode.VOTE_ALL_PASS
+      }
+      form.scoreFieldWeights = {}
+    }
+    emitChange()
+  },
+  { immediate: true, deep: true },
+)
+
+// 监听表单变化，自动同步给父组件
+watch(() => form.requiredReviewerCount, emitChange)
 watch(() => form.approvalMode, emitChange)
 watch(() => form.majorityRatio, emitChange)
 watch(() => form.passThreshold, emitChange)
-watch(() => form.weightMode, emitChange)
 watch(() => form.rejectBackTo, emitChange)
+watch(() => form.scoreWeightMode, emitChange)
+watch(() => form.scoreFieldWeights, emitChange, { deep: true })
 
 onMounted(initFromConfig)
 watch(() => props.initialConfig, initFromConfig, { deep: true })
@@ -359,12 +360,63 @@ watch(() => props.initialConfig, initFromConfig, { deep: true })
 
 <style scoped>
 .node-form {
-  padding: 8px 0;
+  padding: 4px 0 8px;
 }
 
-.hint {
-  color: var(--color-text-3);
-  font-size: 12px;
-  margin-top: 4px;
+.section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  margin: 0 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid rgb(var(--arcoblue-5));
+}
+
+.weight-summary {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-text-2);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+}
+
+.weight-table-wrap {
+  margin-bottom: 8px;
+}
+
+.weight-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.weight-table th,
+.weight-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-2);
+  text-align: left;
+}
+
+.weight-table thead tr {
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  font-weight: 600;
+}
+
+.weight-table .col-index {
+  width: 60px;
+  text-align: center;
+}
+
+.weight-table .col-weight {
+  width: 220px;
+  text-align: center;
 }
 </style>

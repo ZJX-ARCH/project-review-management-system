@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { TreeNodeData } from '@arco-design/web-vue'
 import { type ScopeConfig, defaultScopeConfig } from './scope-config'
-import { listAllUser, listUser } from '@/apis/system/user'
-import { listDeptDictTree } from '@/apis/system/dept'
-import type { UserResp } from '@/apis/system/user'
+import { getReviewDeptTree, getReviewPersonsByIds, searchReviewPersons } from '@/apis/review/project-type'
+
+type PersonOption = { label: string; value: string }
+type PersonResp = { id: string; nickname: string; username: string }
 
 const props = defineProps<{
   modelValue: ScopeConfig
@@ -17,18 +18,34 @@ const emit = defineEmits<{
 
 const local = reactive<ScopeConfig>(defaultScopeConfig())
 
-const userOptions = ref<{ label: string, value: string }[]>([])
+const userOptions = ref<PersonOption[]>([])
 const userOptionsLoading = ref(false)
 
 const deptTreeData = ref<TreeNodeData[]>([])
 const deptLoading = ref(false)
 
-function mergeUserOptions(users: UserResp[]) {
+function mergeUserOptions(persons: PersonResp[]) {
   const existing = new Map(userOptions.value.map((o) => [o.value, o]))
-  for (const u of users) {
+  for (const u of persons) {
     existing.set(u.id, { label: `${u.nickname}（${u.username}）`, value: u.id })
   }
   userOptions.value = Array.from(existing.values())
+}
+
+/** 加载初始用户列表（组件挂载 或 scopeType 切换为 USER 时调用） */
+async function loadInitialUsers() {
+  userOptionsLoading.value = true
+  try {
+    const res = await searchReviewPersons({
+      roleId: props.roleId || undefined,
+      limit: 20,
+    })
+    mergeUserOptions(res.data || [])
+  }
+  catch { /* ignore */ }
+  finally {
+    userOptionsLoading.value = false
+  }
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -38,15 +55,15 @@ const handleUserSearch = (value: string) => {
   searchTimer = setTimeout(async () => {
     userOptionsLoading.value = true
     try {
-      const res = await listUser({
-        description: value || undefined,
+      const res = await searchReviewPersons({
         roleId: props.roleId || undefined,
-        sort: ['t1.createTime,desc'],
-        pageNum: 1,
-        pageSize: 20,
+        keyword: value || undefined,
+        limit: 20,
       })
-      mergeUserOptions((res.data?.list || []) as UserResp[])
-    } catch { /* ignore */ } finally {
+      mergeUserOptions(res.data || [])
+    }
+    catch { /* ignore */ }
+    finally {
       userOptionsLoading.value = false
     }
   }, 300)
@@ -62,13 +79,15 @@ onUnmounted(() => {
 async function loadDeptTree() {
   deptLoading.value = true
   try {
-    const res = await listDeptDictTree({ description: '' })
-    deptTreeData.value = res.data || []
-  } finally {
+    const res = await getReviewDeptTree()
+    deptTreeData.value = (res.data || []) as TreeNodeData[]
+  }
+  finally {
     deptLoading.value = false
   }
 }
 
+// 回显已选用户：补全 userOptions 中缺少的条目
 watch(
   () => local.parsed.userIds,
   async (ids) => {
@@ -77,9 +96,10 @@ watch(
     const missingIds = ids.filter((id) => !existingIds.has(id))
     if (missingIds.length === 0) return
     try {
-      const res = await listAllUser({ userIds: missingIds })
+      const res = await getReviewPersonsByIds(missingIds)
       mergeUserOptions(res.data || [])
-    } catch {
+    }
+    catch {
       // 加载失败时忽略
     }
   },
@@ -88,6 +108,10 @@ watch(
 
 onMounted(async () => {
   await loadDeptTree()
+  // 初始加载用户选项（避免 USER 范围打开时一片空白）
+  if (local.scopeType === 'USER') {
+    await loadInitialUsers()
+  }
 })
 
 watch(
@@ -121,11 +145,15 @@ watch(
   { deep: true },
 )
 
-const onScopeTypeChange = () => {
+const onScopeTypeChange = async () => {
   local.parsed = {
     userIds: [],
     deptIds: [],
     includeSub: false,
+  }
+  // 切换到 USER 范围时立即加载初始用户列表
+  if (local.scopeType === 'USER') {
+    await loadInitialUsers()
   }
 }
 </script>

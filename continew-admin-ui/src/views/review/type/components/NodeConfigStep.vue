@@ -57,6 +57,9 @@
                 :node-label="node.label"
                 :is-acceptance="node.stageType === 'ACCEPTANCE'"
                 :manage-stages="props.manageTemplate?.stages || []"
+                :score-fields="getNodeScoreFields(node.key)"
+                :has-personnel="isPersonnelConfigured(node.key)"
+                :max-reviewer-count="nodeMaxReviewerCount[node.key]"
                 :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
                 :disabled="disabled"
                 @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
@@ -114,6 +117,9 @@
                 :node-label="node.label"
                 :is-acceptance="node.stageType === 'ACCEPTANCE'"
                 :manage-stages="props.manageTemplate?.stages || []"
+                :score-fields="getNodeScoreFields(node.key)"
+                :has-personnel="isPersonnelConfigured(node.key)"
+                :max-reviewer-count="nodeMaxReviewerCount[node.key]"
                 :initial-config="props.approvalConfigs.find(a => a.nodeScope === node.approvalNodeScope)"
                 :disabled="disabled"
                 @change="(cfg) => { nodeApproval[node.approvalNodeScope] = cfg }"
@@ -134,12 +140,13 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import ScopeRuleList from './ScopeRuleList.vue'
 import { type ScopeConfig, defaultScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
 import ApprovalNodeForm from './ApprovalNodeForm.vue'
-import { type RoleResp, listRole } from '@/apis/system/role'
 import {
+  type FormFieldResp,
   type FormTemplateResp,
   type ManagementTemplateResp,
   type ProcessTemplateResp,
@@ -149,9 +156,12 @@ import {
   type TypeFormMappingResp,
   type TypePersonnelConfigResp,
   listEnabledFormTemplate,
+  getFormTemplate,
   saveApproval,
   saveFormMapping,
   savePersonnel,
+  getTypeRoleMap,
+  countScope,
 } from '@/apis/review'
 
 interface NodeDef {
@@ -186,6 +196,9 @@ const emit = defineEmits<{
 // 表单模板选项（按 templateType 分组）
 const formOptions = ref<Record<number, { label: string, value: number }[]>>({})
 
+// 表单模板完整数据（id -> FormTemplateResp，用于检测 SCORE_TABLE 字段）
+const formDataMap = ref<Record<number, FormTemplateResp>>({})
+
 // 表单选择（key -> formTemplateId）
 const formSelections = reactive<Record<string, number | undefined>>({})
 
@@ -195,21 +208,24 @@ const nodePersonnel = reactive<Record<string, ScopeConfig[]>>({})
 // 审批规则（nodeScope -> TypeApprovalConfigReq | null）
 const nodeApproval = reactive<Record<string, TypeApprovalConfigReq | null>>({})
 
+// 各节点人员范围内最大可用人数（用于限制审批人数上限）
+const nodeMaxReviewerCount = reactive<Record<string, number | undefined>>({})
+
 const saveLoading = ref(false)
 
-// 角色编码 → 角色ID 映射（从后端加载）
+// 角色编码 → 角色ID 映射（从 review 自有接口加载，权限：review:type:query）
 const roleCodeToId = ref<Record<string, string>>({})
 
 const loadRoles = async () => {
   try {
-    const res = await listRole({ sort: [] })
+    const res = await getTypeRoleMap()
     const map: Record<string, string> = {}
-    for (const role of (res.data || []) as RoleResp[]) {
-      map[role.code] = role.id
+    for (const [code, id] of Object.entries(res.data || {})) {
+      map[code] = String(id)
     }
     roleCodeToId.value = map
   } catch (error) {
-    console.error('加载角色列表失败:', error)
+    console.error('加载角色映射失败:', error)
   }
 }
 
@@ -345,15 +361,57 @@ const loadFormOptions = async () => {
   try {
     const results = await Promise.all(types.map((t) => listEnabledFormTemplate(t)))
     const options: Record<number, { label: string, value: number }[]> = {}
+    const dataMap: Record<number, FormTemplateResp> = {}
     types.forEach((t, idx) => {
       const data: FormTemplateResp[] = results[idx].data || []
       options[t] = data.map((f) => ({ label: f.templateName, value: f.id }))
+      for (const f of data) {
+        dataMap[f.id] = f
+      }
     })
     formOptions.value = options
+    formDataMap.value = dataMap
   } catch (error) {
     console.error('加载表单模板选项失败:', error)
   }
 }
+
+/** 获取节点表单模板中的 SCORE_TABLE 字段列表 */
+const getNodeScoreFields = (nodeKey: string): { fieldCode: string, fieldName: string }[] => {
+  const formId = formSelections[nodeKey]
+  if (!formId) return []
+  const template = formDataMap.value[formId]
+  if (!template?.fields) return []
+  return template.fields
+    .filter((f: FormFieldResp) => f.fieldType === 'SCORE_TABLE')
+    .map((f: FormFieldResp) => ({ fieldCode: f.fieldCode, fieldName: f.fieldName }))
+}
+
+/** 懒加载表单模板完整详情（含字段列表），listEnabled 只返回 fieldCount，不含 fields */
+const loadTemplateDetail = async (formId: number) => {
+  if (!formId) return
+  // 已有完整 fields 数组时跳过（listEnabled 返回的是 fields:null，需用 Array.isArray 区分）
+  if (Array.isArray(formDataMap.value[formId]?.fields)) return
+  try {
+    const res = await getFormTemplate(formId)
+    if (res.data) {
+      formDataMap.value[formId] = res.data
+    }
+  } catch (error) {
+    console.error('加载表单模板详情失败:', error)
+  }
+}
+
+/** 监听表单选择变化，自动懒加载模板详情（含字段） */
+watch(
+  formSelections,
+  (selections) => {
+    for (const formId of Object.values(selections)) {
+      if (formId) loadTemplateDetail(formId)
+    }
+  },
+  { deep: true, immediate: true },
+)
 
 /** 从 props 初始化各节点的状态 */
 const fillFromProps = () => {
@@ -421,6 +479,55 @@ const isNodeConfigured = (node: NodeDef) => {
   return hasForm && hasPersonnel
 }
 
+/** 判断节点人员范围是否已配置（用于控制审批人数输入框的显示） */
+const isPersonnelConfigured = (nodeKey: string): boolean => {
+  const rules: ScopeConfig[] = nodePersonnel[nodeKey] || []
+  return rules.some((r) => !!r.scopeType)
+}
+
+/** 判断单条范围规则是否完整（scopeType + 实际数据均已填写） */
+const isScopeRuleComplete = (r: ScopeConfig): boolean => {
+  if (!r.scopeType) return false
+  if (r.scopeType === 'USER') return (r.parsed?.userIds?.length ?? 0) > 0
+  if (r.scopeType === 'DEPT') return (r.parsed?.deptIds?.length ?? 0) > 0
+  return false
+}
+
+/** 防抖定时器（避免人员范围每次细微变化都触发请求） */
+let countDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 统计指定节点人员范围内符合角色的最大人数 */
+const countScopeForNode = async (nodeKey: string, node: NodeDef) => {
+  const rules: ScopeConfig[] = nodePersonnel[nodeKey] || []
+  const completeRules = rules.filter(isScopeRuleComplete)
+  if (completeRules.length === 0) {
+    nodeMaxReviewerCount[nodeKey] = undefined
+    return
+  }
+  try {
+    const res = await countScope({
+      roleId: node.roleId || undefined,
+      rules: completeRules.map((r) => ({
+        scopeType: r.scopeType!,
+        scopeConfig: JSON.parse(serializeScopeConfig(r)) as Record<string, unknown>,
+      })),
+    })
+    nodeMaxReviewerCount[nodeKey] = res.data ?? undefined
+  } catch {
+    nodeMaxReviewerCount[nodeKey] = undefined
+  }
+}
+
+/** 人员范围变化时防抖刷新所有节点的可用人数 */
+const scheduleCountUpdate = () => {
+  if (countDebounceTimer) clearTimeout(countDebounceTimer)
+  countDebounceTimer = setTimeout(() => {
+    for (const node of allNodes.value) {
+      countScopeForNode(node.key, node)
+    }
+  }, 600)
+}
+
 /** 保存所有节点配置 */
 const handleSave = async () => {
   // 构建表单映射请求
@@ -448,7 +555,7 @@ const handleSave = async () => {
   })
 
   // 构建审批规则请求（过滤掉未设置的）
-  const approvalReqs = Object.entries(nodeApproval)
+  const approvalReqs = (Object.entries(nodeApproval) as [string, TypeApprovalConfigReq | null][])
     .filter(([, v]) => v?.approvalMode)
     .map(([nodeScope, v]) => ({ nodeScope, ...v! }))
 
@@ -473,6 +580,9 @@ onMounted(async () => {
   await loadRoles()
   await loadFormOptions()
   fillFromProps()
+  // 初始加载后显式触发一次计数（fillFromProps 改变 nodePersonnel 会触发 watch，
+  // 但 allNodes 依赖 roleCodeToId，此处确保角色加载完成后立即算一次）
+  scheduleCountUpdate()
 })
 
 watch(
@@ -480,6 +590,11 @@ watch(
   () => { fillFromProps() },
   { deep: true },
 )
+
+watch(nodePersonnel, scheduleCountUpdate, { deep: true })
+
+// 模板切换导致 allNodes 重建时，重新计算各节点人数
+watch(allNodes, () => { nextTick(scheduleCountUpdate) })
 
 watch(
   [() => props.reviewTemplate, () => props.manageTemplate],

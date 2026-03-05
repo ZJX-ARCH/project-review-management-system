@@ -166,8 +166,12 @@ export enum FieldType {
   SCORE = 'SCORE',
   /** 文件 */
   FILE = 'FILE',
+  /** 文件模板 */
+  FILE_TEMPLATE = 'FILE_TEMPLATE',
   /** 表格 */
   TABLE = 'TABLE',
+  /** 评分表 */
+  SCORE_TABLE = 'SCORE_TABLE',
 }
 
 /** 模板类型枚举 */
@@ -486,24 +490,16 @@ export interface TypeApprovalConfigReq {
   nodeScope: string
   /** 审批模式 */
   approvalMode: ApprovalMode
+  /** 所需审批人数 */
+  requiredReviewerCount?: number
   /** 多数通过比例(0.01~1.00)，仅 VOTE_MAJORITY_PASS 时用 */
   majorityRatio?: number
   /** 评分通过阈值，SCORE_PASS 必填 */
   passThreshold?: number
-  /** 良好阈值（可选） */
-  goodThreshold?: number
-  /** 优秀阈值（可选） */
-  excellentThreshold?: number
-  /** 评分计算方式 */
-  scoreCalcMethod?: ScoreCalcMethod
-  /** 评审人权重模式 */
-  weightMode?: WeightMode
-  /** 评分表字段权重 {"fieldCode1": 0.4, "fieldCode2": 0.6} */
+  /** 评分表字段权重 {"fieldCode1": 0.4, "fieldCode2": 0.6}，多个 SCORE_TABLE 且加权时使用 */
   scoreTableWeights?: Record<string, number>
   /** 验收不通过回退目标（仅ACCEPTANCE节点），FIRST_EXECUTION 或阶段序号如 "3" */
   rejectBackTo?: string
-  /** 评审人预设权重列表（PRESET模式时必填） */
-  reviewerWeights?: TypeReviewerWeightReq[]
 }
 
 /** 类型审批规则配置响应 */
@@ -512,15 +508,11 @@ export interface TypeApprovalConfigResp {
   typeId?: number
   nodeScope: string
   approvalMode: ApprovalMode
+  requiredReviewerCount?: number
   majorityRatio?: number
   passThreshold?: number
-  goodThreshold?: number
-  excellentThreshold?: number
-  scoreCalcMethod?: ScoreCalcMethod
-  weightMode?: WeightMode
   scoreTableWeights?: Record<string, number>
   rejectBackTo?: string
-  reviewerWeights?: TypeReviewerWeightResp[]
 }
 
 /** 项目类型完整配置详情响应 */
