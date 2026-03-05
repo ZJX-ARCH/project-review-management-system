@@ -1,8 +1,8 @@
 package top.continew.admin.review.type.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
-import top.continew.admin.common.base.mapper.DataPermissionMapper;
 import top.continew.admin.review.type.model.entity.TypePersonnelConfigDO;
+import top.continew.starter.data.mapper.BaseMapper;
 
 /**
  * 类型人员配置 Mapper
@@ -11,5 +11,5 @@ import top.continew.admin.review.type.model.entity.TypePersonnelConfigDO;
  * @since 2026-03-02
  */
 @Mapper
-public interface TypePersonnelConfigMapper extends DataPermissionMapper<TypePersonnelConfigDO> {
+public interface TypePersonnelConfigMapper extends BaseMapper<TypePersonnelConfigDO> {
 }

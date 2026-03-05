@@ -1,8 +1,8 @@
 package top.continew.admin.review.type.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
-import top.continew.admin.common.base.mapper.DataPermissionMapper;
 import top.continew.admin.review.type.model.entity.TypeProcessConfigDO;
+import top.continew.starter.data.mapper.BaseMapper;
 
 /**
  * 类型流程配置 Mapper
@@ -11,5 +11,5 @@ import top.continew.admin.review.type.model.entity.TypeProcessConfigDO;
  * @since 2026-03-02
  */
 @Mapper
-public interface TypeProcessConfigMapper extends DataPermissionMapper<TypeProcessConfigDO> {
+public interface TypeProcessConfigMapper extends BaseMapper<TypeProcessConfigDO> {
 }
