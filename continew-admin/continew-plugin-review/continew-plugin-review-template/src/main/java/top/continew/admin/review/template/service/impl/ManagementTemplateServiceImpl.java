@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.template.mapper.ManagementStageMapper;
 import top.continew.admin.review.template.mapper.ManagementTemplateMapper;
@@ -84,6 +85,8 @@ public class ManagementTemplateServiceImpl extends ServiceImpl<ManagementTemplat
         ManagementTemplateDO entity = BeanUtil.toBean(req, ManagementTemplateDO.class);
         entity.setTemplateCode(templateCode);
         entity.setStatus(DisEnableStatusEnum.ENABLE); // 默认启用
+        // 设置部门ID，使数据权限过滤生效
+        entity.setDeptId(UserContextHolder.getContext().getDeptId());
         // createUser、createTime由框架自动填充
         baseMapper.insert(entity);
         Long templateId = entity.getId();

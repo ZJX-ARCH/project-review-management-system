@@ -15,6 +15,7 @@ import org.dromara.x.file.storage.core.FileInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.form.mapper.FormFieldMapper;
 import top.continew.admin.review.form.mapper.FormTemplateFileMapper;
@@ -109,6 +110,8 @@ public class FormTemplateServiceImpl extends ServiceImpl<FormTemplateMapper, For
         BeanUtil.copyProperties(req, entity);
         // 设置状态为禁用(新建模板默认禁用,需要手动启用)
         entity.setStatus(DisEnableStatusEnum.DISABLE);
+        // 设置部门ID，使数据权限过滤生效
+        entity.setDeptId(UserContextHolder.getContext().getDeptId());
         // 如果有布局配置,转换为JSON字符串
         if (req.getLayoutConfig() != null) {
             entity.setLayoutConfig(req.getLayoutConfig().toString());
