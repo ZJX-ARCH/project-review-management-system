@@ -46,6 +46,8 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/type/review_type_visibility_drop.sql
   - include:
       file: db/changelog/mysql/plugin/type/review_type_approval_add_reviewer_count.sql
+  - include:
+      file: db/changelog/mysql/plugin/type/review_type_approval_drop_reject_back_to.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql

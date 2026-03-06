@@ -92,12 +92,6 @@ public class TypeApprovalConfigResp implements Serializable {
     private Map<String, BigDecimal> scoreTableWeights;
 
     /**
-     * 验收不通过回退目标（仅ACCEPTANCE节点）
-     */
-    @Schema(description = "验收不通过回退目标", example = "FIRST_EXECUTION")
-    private String rejectBackTo;
-
-    /**
      * 评审人预设权重列表（PRESET 模式时填充）
      */
     @Schema(description = "评审人预设权重列表（PRESET模式）")

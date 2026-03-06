@@ -98,13 +98,6 @@ public class TypeApprovalConfigReq implements Serializable {
     private Map<String, BigDecimal> scoreTableWeights;
 
     /**
-     * 验收不通过回退目标（仅ACCEPTANCE节点）：FIRST_EXECUTION 或执行阶段序号（如"3"）
-     */
-    @Schema(description = "验收不通过回退目标，仅ACCEPTANCE节点填写", example = "FIRST_EXECUTION")
-    @Length(max = 20, message = "回退目标长度不能超过 {max} 个字符")
-    private String rejectBackTo;
-
-    /**
      * 评审人预设权重列表（weightMode=PRESET 时必填，所有人权重之和须=1.0）
      */
     @Schema(description = "评审人预设权重列表（PRESET模式时填写）")

@@ -84,8 +84,4 @@ public class TypeApprovalConfigDO extends BaseDO {
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, BigDecimal> scoreTableWeights;
 
-    /**
-     * 验收不通过回退目标，仅ACCEPTANCE节点：FIRST_EXECUTION或执行阶段序号（如"3"）
-     */
-    private String rejectBackTo;
 }

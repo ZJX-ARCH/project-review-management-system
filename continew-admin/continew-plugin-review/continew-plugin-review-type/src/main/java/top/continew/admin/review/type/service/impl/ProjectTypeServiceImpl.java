@@ -1,5 +1,6 @@
 package top.continew.admin.review.type.service.impl;
 
+import cn.crane4j.annotation.AutoOperate;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -219,6 +220,7 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
     }
 
     @Override
+    @AutoOperate(type = ProjectTypeDetailResp.class)
     public ProjectTypeDetailResp getDetail(Long id) {
         // 步骤1：查主表
         ProjectTypeDO entity = baseMapper.selectById(id);
@@ -381,8 +383,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
         // 步骤4：全量替换 form_mapping
         formMappingMapper.delete(new QueryWrapper<TypeFormMappingDO>().eq("type_id", id));
         formMappingMapper.insertBatch(entities);
-
-        log.info("保存表单映射成功，type_id={}, 共{}条", id, reqs.size());
     }
 
     @Override
@@ -396,12 +396,14 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
 
         // reqs 为空时，允许清空人员配置（与 saveFormMapping 保持一致）
 
-        // 步骤2：业务规则校验
+        // 步骤2：业务规则校验（同一节点+范围类型不允许重复）
         Set<String> nodeKeySet = new HashSet<>();
         for (TypePersonnelConfigReq req : reqs) {
-            String nodeKey = buildNodeKey(req.getNodeType(), req.getNodeSequence());
-            if (!nodeKeySet.add(nodeKey)) {
-                throw new BadRequestException(StrUtil.format("节点[{}]重复配置人员范围", nodeKey));
+            String dedupKey = buildNodeKey(req.getNodeType(), req.getNodeSequence())
+                    + "_" + req.getScopeType();
+            if (!nodeKeySet.add(dedupKey)) {
+                String label = nodeToChineseLabel(req.getNodeType(), req.getNodeSequence());
+                throw new BadRequestException(label + "重复配置了相同类型的人员范围");
             }
             validateScopeConfig(req);
         }
@@ -417,8 +419,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
             personnelConfigMapper.insertBatch(entities);
         }
-
-        log.info("保存人员范围配置成功，type_id={}, 共{}条", id, reqs.size());
     }
 
     @Override
@@ -453,8 +453,6 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
             approvalConfigMapper.insertBatch(entities);
         }
-
-        log.info("保存审批规则配置成功，type_id={}, 共{}条", id, reqs.size());
     }
 
     @Override
@@ -515,26 +513,31 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
                     .collect(Collectors.toSet());
 
             // REVIEW 侧：申请(APPLICATION) + 审核×N + 评审×N + 决策×N
-            checkNodeFormMapping(errors, mappedNodes, "REVIEW", "APPLICATION", null);
+            checkNodeFormMapping(errors, mappedNodes, "REVIEW", "APPLICATION", null, "评审流程-申请节点");
             if (reviewTemplate.getAuditRounds() != null && reviewTemplate.getAuditRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getAuditRounds(); i++) {
-                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "AUDIT", i);
+                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "AUDIT", i,
+                            "评审流程-第" + i + "轮审核节点");
                 }
             }
             if (reviewTemplate.getReviewRounds() != null && reviewTemplate.getReviewRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getReviewRounds(); i++) {
-                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "REVIEW", i);
+                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "REVIEW", i,
+                            "评审流程-第" + i + "轮评审节点");
                 }
             }
             if (reviewTemplate.getDecisionRounds() != null && reviewTemplate.getDecisionRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getDecisionRounds(); i++) {
-                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "DECISION", i);
+                    checkNodeFormMapping(errors, mappedNodes, "REVIEW", "DECISION", i,
+                            "评审流程-第" + i + "轮决策节点");
                 }
             }
 
             // MANAGE 侧：每个阶段对应一个 STAGE 节点（按 stageOrder）
             for (ManagementStageDO stage : stages) {
-                checkNodeFormMapping(errors, mappedNodes, "MANAGE", "STAGE", stage.getStageOrder());
+                String stageLabel = "管理流程-第" + stage.getStageOrder() + "阶段"
+                        + (StrUtil.isNotBlank(stage.getStageName()) ? "（" + stage.getStageName() + "）" : "");
+                checkNodeFormMapping(errors, mappedNodes, "MANAGE", "STAGE", stage.getStageOrder(), stageLabel);
             }
 
             // 校验已配置的表单模板是否仍处于启用状态
@@ -557,33 +560,35 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
                 .map(p -> buildNodeKey(p.getNodeType(), p.getNodeSequence()))
                 .collect(Collectors.toSet());
 
-        // 构建期望节点键（与 formMapping 验证保持一致）
-        Set<String> expectedPersonnelKeys = new HashSet<>();
-        expectedPersonnelKeys.add(buildNodeKey("APPLICATION", null));
+        // 构建期望节点键及对应中文标签（key → label）
+        Map<String, String> expectedPersonnelEntries = new LinkedHashMap<>();
+        expectedPersonnelEntries.put(buildNodeKey("APPLICATION", null), nodeToChineseLabel("APPLICATION", null));
         if (ObjectUtil.isNotNull(reviewTemplate)) {
             if (reviewTemplate.getAuditRounds() != null && reviewTemplate.getAuditRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getAuditRounds(); i++) {
-                    expectedPersonnelKeys.add(buildNodeKey("AUDIT", i));
+                    expectedPersonnelEntries.put(buildNodeKey("AUDIT", i), nodeToChineseLabel("AUDIT", i));
                 }
             }
             if (reviewTemplate.getReviewRounds() != null && reviewTemplate.getReviewRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getReviewRounds(); i++) {
-                    expectedPersonnelKeys.add(buildNodeKey("REVIEW", i));
+                    expectedPersonnelEntries.put(buildNodeKey("REVIEW", i), nodeToChineseLabel("REVIEW", i));
                 }
             }
             if (reviewTemplate.getDecisionRounds() != null && reviewTemplate.getDecisionRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getDecisionRounds(); i++) {
-                    expectedPersonnelKeys.add(buildNodeKey("DECISION", i));
+                    expectedPersonnelEntries.put(buildNodeKey("DECISION", i), nodeToChineseLabel("DECISION", i));
                 }
             }
         }
         for (ManagementStageDO stage : stages) {
-            expectedPersonnelKeys.add(buildNodeKey("STAGE", stage.getStageOrder()));
+            String stageLabel = nodeToChineseLabel("STAGE", stage.getStageOrder())
+                    + (StrUtil.isNotBlank(stage.getStageName()) ? "（" + stage.getStageName() + "）" : "");
+            expectedPersonnelEntries.put(buildNodeKey("STAGE", stage.getStageOrder()), stageLabel);
         }
 
-        for (String key : expectedPersonnelKeys) {
-            if (!configuredPersonnelKeys.contains(key)) {
-                errors.add("节点[" + key + "]未配置人员范围");
+        for (Map.Entry<String, String> entry : expectedPersonnelEntries.entrySet()) {
+            if (!configuredPersonnelKeys.contains(entry.getKey())) {
+                errors.add(entry.getValue() + "未配置人员范围");
             }
         }
 
@@ -597,31 +602,28 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
 
             if (reviewTemplate.getAuditRounds() != null && reviewTemplate.getAuditRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getAuditRounds(); i++) {
-                    String node = "AUDIT_" + i;
-                    if (!configuredNodes.contains(node)) {
-                        errors.add("节点[" + node + "]未配置审批规则");
+                    if (!configuredNodes.contains("AUDIT_" + i)) {
+                        errors.add(nodeToChineseLabel("AUDIT", i) + "未配置审批规则");
                     }
                 }
             }
             if (reviewTemplate.getReviewRounds() != null && reviewTemplate.getReviewRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getReviewRounds(); i++) {
-                    String node = "REVIEW_" + i;
-                    if (!configuredNodes.contains(node)) {
-                        errors.add("节点[" + node + "]未配置审批规则");
+                    if (!configuredNodes.contains("REVIEW_" + i)) {
+                        errors.add(nodeToChineseLabel("REVIEW", i) + "未配置审批规则");
                     }
                 }
             }
             if (reviewTemplate.getDecisionRounds() != null && reviewTemplate.getDecisionRounds() > 0) {
                 for (int i = 1; i <= reviewTemplate.getDecisionRounds(); i++) {
-                    String node = "DECISION_" + i;
-                    if (!configuredNodes.contains(node)) {
-                        errors.add("节点[" + node + "]未配置审批规则");
+                    if (!configuredNodes.contains("DECISION_" + i)) {
+                        errors.add(nodeToChineseLabel("DECISION", i) + "未配置审批规则");
                     }
                 }
             }
             // ACCEPTANCE 节点来自管理流程的验收阶段
             if (!configuredNodes.contains("ACCEPTANCE")) {
-                errors.add("节点[ACCEPTANCE]未配置审批规则");
+                errors.add(nodeToChineseLabel("ACCEPTANCE", null) + "未配置审批规则");
             }
         }
 
@@ -739,21 +741,17 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             default:
                 break;
         }
-        // ACCEPTANCE 节点必须配置 rejectBackTo
-        if ("ACCEPTANCE".equals(req.getNodeScope()) && StrUtil.isBlank(req.getRejectBackTo())) {
-            throw new BadRequestException("ACCEPTANCE 节点必须配置 rejectBackTo（驳回回退目标）");
-        }
     }
 
     /**
-     * 检查指定节点是否已配置表单映射，缺失则向 errors 列表添加提示
+     * 检查指定节点是否已配置表单映射，缺失则向 errors 列表添加中文提示
      */
     private void checkNodeFormMapping(List<String> errors, Set<String> mappedNodes,
-                                       String processType, String nodeType, Integer nodeSequence) {
+                                       String processType, String nodeType, Integer nodeSequence,
+                                       String nodeLabel) {
         String key = processType + "_" + nodeType + "_" + nodeSequence;
         if (!mappedNodes.contains(key)) {
-            errors.add(StrUtil.format("节点[{}-{}-{}]未配置表单", processType, nodeType,
-                    nodeSequence == null ? "N/A" : nodeSequence));
+            errors.add(nodeLabel + "未配置表单");
         }
     }
 
@@ -766,6 +764,25 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
      */
     private static String buildNodeKey(String nodeType, Integer nodeSequence) {
         return nodeType + (nodeSequence != null ? "_" + nodeSequence : "");
+    }
+
+    /**
+     * 将节点类型和序号转换为可读的中文标签
+     *
+     * @param nodeType     节点类型（APPLICATION/AUDIT/REVIEW/DECISION/STAGE/ACCEPTANCE）
+     * @param nodeSequence 节点序号，APPLICATION/ACCEPTANCE 时为 null
+     * @return 中文标签，如 "申请节点"、"第1轮审核节点"、"第2阶段"
+     */
+    private static String nodeToChineseLabel(String nodeType, Integer nodeSequence) {
+        switch (nodeType) {
+            case "APPLICATION": return "申请节点";
+            case "AUDIT": return "第" + nodeSequence + "轮审核节点";
+            case "REVIEW": return "第" + nodeSequence + "轮评审节点";
+            case "DECISION": return "第" + nodeSequence + "轮决策节点";
+            case "ACCEPTANCE": return "验收节点";
+            case "STAGE": return "第" + nodeSequence + "阶段";
+            default: return nodeType + (nodeSequence != null ? "_" + nodeSequence : "");
+        }
     }
 
     @Override
