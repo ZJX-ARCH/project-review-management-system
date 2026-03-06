@@ -31,7 +31,10 @@
             </template>
             <!-- 表单模板：独占一行 -->
             <a-form layout="vertical" style="margin-bottom: 4px">
-              <a-form-item label="表单模板">
+              <a-form-item>
+                <template #label>
+                  <span>表单模板<span class="required-star"> *</span></span>
+                </template>
                 <a-select
                   v-model="formSelections[node.key]"
                   :options="formOptions[node.templateType] || []"
@@ -43,7 +46,7 @@
               </a-form-item>
             </a-form>
             <!-- 人员范围 -->
-            <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+            <a-divider orientation="left">{{ node.personnelLabel }}<span class="required-star"> *</span></a-divider>
             <ScopeRuleList
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
@@ -67,12 +70,10 @@
             </div>
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
-              <a-divider orientation="left">审批规则</a-divider>
+              <a-divider orientation="left">审批规则<span class="required-star"> *</span></a-divider>
               <ApprovalNodeForm
                 :node-scope="node.approvalNodeScope"
                 :node-label="node.label"
-                :is-acceptance="node.stageType === 'ACCEPTANCE'"
-                :manage-stages="props.manageTemplate?.stages || []"
                 :score-fields="getNodeScoreFields(node.key)"
                 :has-personnel="isPersonnelConfigured(node.key)"
                 :max-reviewer-count="nodeMaxReviewerCount[node.key]"
@@ -107,7 +108,10 @@
             </template>
             <!-- 表单模板：独占一行 -->
             <a-form layout="vertical" style="margin-bottom: 4px">
-              <a-form-item label="表单模板">
+              <a-form-item>
+                <template #label>
+                  <span>表单模板<span class="required-star"> *</span></span>
+                </template>
                 <a-select
                   v-model="formSelections[node.key]"
                   :options="formOptions[node.templateType] || []"
@@ -119,7 +123,7 @@
               </a-form-item>
             </a-form>
             <!-- 人员范围 -->
-            <a-divider orientation="left">{{ node.personnelLabel }}</a-divider>
+            <a-divider orientation="left">{{ node.personnelLabel }}<span class="required-star"> *</span></a-divider>
             <ScopeRuleList
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
@@ -143,12 +147,10 @@
             </div>
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
-              <a-divider orientation="left">审批规则</a-divider>
+              <a-divider orientation="left">审批规则<span class="required-star"> *</span></a-divider>
               <ApprovalNodeForm
                 :node-scope="node.approvalNodeScope"
                 :node-label="node.label"
-                :is-acceptance="node.stageType === 'ACCEPTANCE'"
-                :manage-stages="props.manageTemplate?.stages || []"
                 :score-fields="getNodeScoreFields(node.key)"
                 :has-personnel="isPersonnelConfigured(node.key)"
                 :max-reviewer-count="nodeMaxReviewerCount[node.key]"
@@ -639,7 +641,7 @@ const handleSave = async () => {
         nodeType: n.nodeType,
         nodeSequence: n.nodeSequence,
         scopeType: r.scopeType!,
-        scopeConfig: serializeScopeConfig(r),
+        scopeConfig: JSON.parse(serializeScopeConfig(r)) as Record<string, unknown>,
         remark: r.remark,
       }))
   })
@@ -742,6 +744,10 @@ watch(
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--color-border-2);
+}
+
+.required-star {
+  color: rgb(var(--red-6));
 }
 
 .personnel-dirty-tip {

@@ -498,8 +498,6 @@ export interface TypeApprovalConfigReq {
   passThreshold?: number
   /** 评分表字段权重 {"fieldCode1": 0.4, "fieldCode2": 0.6}，多个 SCORE_TABLE 且加权时使用 */
   scoreTableWeights?: Record<string, number>
-  /** 验收不通过回退目标（仅ACCEPTANCE节点），FIRST_EXECUTION 或阶段序号如 "3" */
-  rejectBackTo?: string
 }
 
 /** 类型审批规则配置响应 */
@@ -512,7 +510,6 @@ export interface TypeApprovalConfigResp {
   majorityRatio?: number
   passThreshold?: number
   scoreTableWeights?: Record<string, number>
-  rejectBackTo?: string
 }
 
 /** 项目类型完整配置详情响应 */

@@ -4,7 +4,10 @@
     <a-row :gutter="16" align="start">
       <!-- 审批模式 -->
       <a-col :span="8">
-        <a-form-item label="审批模式">
+        <a-form-item>
+          <template #label>
+            <span>审批模式<span class="required-star"> *</span></span>
+          </template>
           <!-- 有评分表：固定评分通过，只读 -->
           <a-select
             v-if="hasScoreTable"
@@ -32,7 +35,10 @@
 
       <!-- 多数通过比例（投票-多数时） -->
       <a-col v-if="!hasScoreTable && form.approvalMode === ApprovalMode.VOTE_MAJORITY_PASS" :span="8">
-        <a-form-item label="多数通过比例">
+        <a-form-item>
+          <template #label>
+            <span>多数通过比例<span class="required-star"> *</span></span>
+          </template>
           <a-input-number
             v-model="form.majorityRatio"
             :disabled="disabled"
@@ -48,7 +54,10 @@
 
       <!-- 通过阈值（评分通过时） -->
       <a-col v-if="hasScoreTable" :span="8">
-        <a-form-item label="通过阈值（0-100）">
+        <a-form-item>
+          <template #label>
+            <span>通过阈值（0-100）<span class="required-star"> *</span></span>
+          </template>
           <a-input-number
             v-model="form.passThreshold"
             :disabled="disabled"
@@ -149,11 +158,13 @@
       <a-row :gutter="16">
         <a-col :span="8">
           <a-form-item
-            label="审批人数"
             :help="props.maxReviewerCount !== undefined
               ? `范围内共 ${props.maxReviewerCount} 人，请填写所需参与审批的人数`
               : '所需参与审批的人员数量，用于检验人员范围是否满足要求'"
           >
+            <template #label>
+              <span>审批人数<span class="required-star"> *</span></span>
+            </template>
             <a-input-number
               v-model="form.requiredReviewerCount"
               :disabled="disabled"
@@ -168,41 +179,14 @@
       </a-row>
     </template>
 
-    <!-- ACCEPTANCE 专属：验收不通过回退目标 -->
-    <template v-if="isAcceptance">
-      <a-divider orientation="left" style="margin: 8px 0">验收不通过回退配置</a-divider>
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="回退到阶段">
-            <a-select
-              v-model="form.rejectBackTo"
-              :disabled="disabled"
-              placeholder="选择验收不通过时的回退目标"
-              style="width: 100%"
-            >
-              <a-option value="FIRST_EXECUTION">回到第一个执行阶段</a-option>
-              <a-option
-                v-for="stage in executionStages"
-                :key="stage.stageOrder"
-                :value="String(stage.stageOrder)"
-              >
-                回到：{{ stage.stageName }}（第{{ stage.stageOrder }}阶段）
-              </a-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
-    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, watch, onMounted } from 'vue'
 import {
-  type StageResp,
   type TypeApprovalConfigReq,
   type TypeApprovalConfigResp,
-  StageType,
   ApprovalMode,
 } from '@/apis/review'
 
@@ -214,8 +198,6 @@ interface ScoreFieldInfo {
 const props = defineProps<{
   nodeScope: string
   nodeLabel: string
-  isAcceptance: boolean
-  manageStages: StageResp[]
   scoreFields: ScoreFieldInfo[]
   hasPersonnel: boolean
   maxReviewerCount?: number
@@ -232,7 +214,6 @@ interface FormState {
   approvalMode: ApprovalMode | undefined
   majorityRatio: number | undefined
   passThreshold: number | undefined
-  rejectBackTo: string | undefined
   scoreWeightMode: 'EQUAL' | 'WEIGHTED'
   scoreFieldWeights: Record<string, number>
 }
@@ -242,18 +223,12 @@ const form = reactive<FormState>({
   approvalMode: undefined,
   majorityRatio: 0.67,
   passThreshold: undefined,
-  rejectBackTo: undefined,
   scoreWeightMode: 'EQUAL',
   scoreFieldWeights: {},
 })
 
 /** 是否存在评分表 */
 const hasScoreTable = computed(() => props.scoreFields.length > 0)
-
-/** 仅 EXECUTION 类型的阶段，用于 ACCEPTANCE 回退目标选项 */
-const executionStages = computed(() =>
-  props.manageStages.filter(s => s.stageType === StageType.EXECUTION),
-)
 
 /** 加权模式下权重总和 */
 const totalWeight = computed(() => {
@@ -292,10 +267,6 @@ const emitChange = () => {
     }
   }
 
-  if (props.isAcceptance) {
-    config.rejectBackTo = form.rejectBackTo
-  }
-
   emit('change', config)
 }
 
@@ -307,7 +278,6 @@ const initFromConfig = () => {
   form.requiredReviewerCount = cfg.requiredReviewerCount
   form.majorityRatio = cfg.majorityRatio ?? 0.67
   form.passThreshold = cfg.passThreshold
-  form.rejectBackTo = cfg.rejectBackTo
 
   if (!hasScoreTable.value) {
     form.approvalMode = (cfg.approvalMode !== ApprovalMode.SCORE_PASS)
@@ -350,7 +320,6 @@ watch(() => form.requiredReviewerCount, emitChange)
 watch(() => form.approvalMode, emitChange)
 watch(() => form.majorityRatio, emitChange)
 watch(() => form.passThreshold, emitChange)
-watch(() => form.rejectBackTo, emitChange)
 watch(() => form.scoreWeightMode, emitChange)
 watch(() => form.scoreFieldWeights, emitChange, { deep: true })
 
@@ -359,6 +328,10 @@ watch(() => props.initialConfig, initFromConfig, { deep: true })
 </script>
 
 <style scoped>
+.required-star {
+  color: rgb(var(--red-6));
+}
+
 .node-form {
   padding: 4px 0 8px;
 }

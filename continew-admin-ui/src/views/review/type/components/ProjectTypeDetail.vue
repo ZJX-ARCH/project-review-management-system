@@ -2,7 +2,7 @@
   <a-drawer
     :visible="visible"
     :title="detail?.typeName || '项目类型详情'"
-    :width="680"
+    :width="700"
     :footer="false"
     @cancel="handleClose"
     @update:visible="emit('update:visible', $event)"
@@ -23,79 +23,93 @@
           <a-descriptions-item label="排序">{{ detail.sortOrder ?? '—' }}</a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ detail.createTime || '—' }}</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detail.createUserString || '—' }}</a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{ detail.description || '—' }}</a-descriptions-item>
+          <a-descriptions-item v-if="detail.description" label="描述" :span="2">
+            {{ detail.description }}
+          </a-descriptions-item>
         </a-descriptions>
 
-        <!-- 流程配置 -->
-        <a-divider orientation="left">流程模板配置</a-divider>
+        <!-- 流程模板 -->
+        <div class="section-title">流程模板</div>
         <template v-if="detail.processConfigs?.length">
-          <a-descriptions :column="1" bordered size="small">
-            <a-descriptions-item
-              v-for="pc in detail.processConfigs"
-              :key="pc.processType"
-              :label="pc.processType === 'REVIEW' ? '评审流程模板' : '管理流程模板'"
-            >
-              {{ pc.templateName || `ID: ${pc.templateId}` }}
-            </a-descriptions-item>
-          </a-descriptions>
-        </template>
-        <a-empty v-else description="暂未配置流程模板" />
-
-        <!-- 表单映射摘要 -->
-        <a-divider orientation="left">表单映射（{{ detail.formMappings?.length || 0 }} 个节点）</a-divider>
-        <template v-if="detail.formMappings?.length">
-          <div class="tag-list">
-            <a-tag
-              v-for="fm in detail.formMappings"
-              :key="`${fm.mappingType}-${fm.nodeType}-${fm.nodeSequence}`"
-              :color="fm.mappingType === 'REVIEW' ? 'blue' : 'purple'"
-            >
-              {{ formMappingLabel(fm) }}
-            </a-tag>
+          <div class="config-grid">
+            <div v-for="pc in detail.processConfigs" :key="pc.processType" class="config-item">
+              <span class="config-label">{{ pc.processType === 'REVIEW' ? '评审流程' : '管理流程' }}</span>
+              <span class="config-value">{{ pc.templateName || `ID: ${pc.templateId}` }}</span>
+            </div>
           </div>
         </template>
-        <a-empty v-else description="暂未配置表单映射" />
+        <a-empty v-else :image-size="40" description="暂未配置" />
+
+        <!-- 表单映射 -->
+        <div class="section-title">表单映射</div>
+        <template v-if="detail.formMappings?.length">
+          <!-- 评审流程 -->
+          <template v-if="reviewFormMappings.length">
+            <div class="sub-title">评审流程</div>
+            <div class="form-mapping-list">
+              <div v-for="fm in reviewFormMappings" :key="`${fm.nodeType}-${fm.nodeSequence}`" class="form-mapping-row">
+                <span class="node-name">{{ formNodeLabel(fm.nodeType, fm.nodeSequence) }}</span>
+                <a-tag size="small" color="arcoblue">{{ fm.formTemplateName || `模板 ${fm.formTemplateId}` }}</a-tag>
+              </div>
+            </div>
+          </template>
+          <!-- 管理流程 -->
+          <template v-if="manageFormMappings.length">
+            <div class="sub-title">管理流程</div>
+            <div class="form-mapping-list">
+              <div v-for="fm in manageFormMappings" :key="`${fm.nodeType}-${fm.nodeSequence}`" class="form-mapping-row">
+                <span class="node-name">{{ formNodeLabel(fm.nodeType, fm.nodeSequence) }}</span>
+                <a-tag size="small" color="purple">{{ fm.formTemplateName || `模板 ${fm.formTemplateId}` }}</a-tag>
+              </div>
+            </div>
+          </template>
+        </template>
+        <a-empty v-else :image-size="40" description="暂未配置" />
 
         <!-- 人员范围 -->
-        <a-divider orientation="left">人员范围配置（{{ detail.personnelConfigs?.length || 0 }} 条规则）</a-divider>
+        <div class="section-title">人员范围</div>
         <template v-if="detail.personnelConfigs?.length">
-          <a-descriptions :column="1" bordered size="small">
-            <a-descriptions-item
-              v-for="pc in detail.personnelConfigs"
-              :key="`${pc.nodeType}-${pc.nodeSequence}`"
-              :label="nodePersonnelLabel(pc)"
-            >
-              <a-space>
-                <a-tag>{{ scopeTypeLabel(pc.scopeType) }}</a-tag>
-                <span style="color: var(--color-text-3); font-size: 12px">{{ pc.scopeConfig }}</span>
-              </a-space>
-            </a-descriptions-item>
-          </a-descriptions>
+          <div
+            v-for="[nodeKey, rules] in groupedPersonnel"
+            :key="nodeKey"
+            class="node-group"
+          >
+            <div class="node-group-title">{{ nodeKey }}</div>
+            <div class="scope-rule-list">
+              <div v-for="(rule, i) in rules" :key="i" class="scope-rule-row">
+                <a-tag size="small" :color="rule.scopeType === 'USER' ? 'orange' : 'cyan'">
+                  {{ scopeTypeLabel(rule.scopeType) }}
+                </a-tag>
+                <span class="scope-summary">{{ parseScopeConfig(rule.scopeType, rule.scopeConfig) }}</span>
+                <span v-if="rule.remark" class="scope-remark">{{ rule.remark }}</span>
+              </div>
+            </div>
+          </div>
         </template>
-        <a-empty v-else description="暂未配置人员范围" />
+        <a-empty v-else :image-size="40" description="暂未配置" />
 
         <!-- 审批规则 -->
-        <a-divider orientation="left">审批规则（{{ detail.approvalConfigs?.length || 0 }} 个节点）</a-divider>
+        <div class="section-title">审批规则</div>
         <template v-if="detail.approvalConfigs?.length">
-          <a-descriptions :column="1" bordered size="small">
-            <a-descriptions-item
-              v-for="ac in detail.approvalConfigs"
-              :key="ac.nodeScope"
-              :label="ac.nodeScope"
-            >
-              <a-space>
-                <a-tag :color="approvalModeColor(ac.approvalMode)">{{ approvalModeLabel(ac.approvalMode) }}</a-tag>
-                <span v-if="ac.approvalMode === 'VOTE_MAJORITY_PASS'" style="font-size: 12px">
-                  比例={{ (ac.majorityRatio ?? 0.67).toFixed(2) }}
+          <div class="approval-list">
+            <div v-for="ac in detail.approvalConfigs" :key="ac.nodeScope" class="approval-row">
+              <span class="node-name">{{ nodeScopeToLabel(ac.nodeScope) }}</span>
+              <div class="approval-detail">
+                <a-tag size="small" :color="approvalModeColor(ac.approvalMode)">
+                  {{ approvalModeLabel(ac.approvalMode) }}
+                </a-tag>
+                <span v-if="ac.requiredReviewerCount" class="detail-text">审批人数 {{ ac.requiredReviewerCount }}</span>
+                <span v-if="ac.approvalMode === 'VOTE_MAJORITY_PASS'" class="detail-text">
+                  通过比例 {{ ((ac.majorityRatio ?? 0.67) * 100).toFixed(0) }}%
                 </span>
-                <span v-if="ac.approvalMode === 'SCORE_PASS'" style="font-size: 12px">
-                  通过阈值={{ ac.passThreshold }}
+                <span v-if="ac.approvalMode === 'SCORE_PASS' && ac.passThreshold != null" class="detail-text">
+                  通过阈值 {{ ac.passThreshold }}
                 </span>
-              </a-space>
-            </a-descriptions-item>
-          </a-descriptions>
+              </div>
+            </div>
+          </div>
         </template>
-        <a-empty v-else description="暂未配置审批规则" />
+        <a-empty v-else :image-size="40" description="暂未配置" />
       </template>
     </a-spin>
 
@@ -111,8 +125,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { type ProjectTypeDetailResp, getProjectType } from '@/apis/review'
+import { type ProjectTypeDetailResp, type TypePersonnelConfigResp, getProjectType } from '@/apis/review'
 
 const props = defineProps<{
   visible: boolean
@@ -141,8 +156,7 @@ const loadDetail = async (id: string | number) => {
   try {
     const res = await getProjectType(id)
     detail.value = res.data
-  } catch (error) {
-    console.error('加载详情失败:', error)
+  } catch {
     Message.error('加载详情失败')
   } finally {
     loading.value = false
@@ -152,49 +166,230 @@ const loadDetail = async (id: string | number) => {
 watch(
   () => [props.visible, props.id] as const,
   ([visible, id]) => {
-    if (visible && id) {
-      loadDetail(id)
-    }
+    if (visible && id) loadDetail(id)
   },
   { immediate: true },
 )
 
-// 辅助函数
-const scopeTypeLabel = (type: string) => ({
-  USER: '指定用户',
-  DEPT: '按部门',
-}[type] ?? type)
+// ── 计算属性 ──────────────────────────────────────────────
 
-const approvalModeLabel = (mode: string) => ({
-  VOTE_ALL_PASS: '全部通过',
-  VOTE_MAJORITY_PASS: '多数通过',
-  VOTE_ONE_PASS: '一票通过',
-  SCORE_PASS: '评分通过',
-}[mode] ?? mode)
+const reviewFormMappings = computed(() =>
+  (detail.value?.formMappings ?? []).filter(fm => fm.mappingType === 'REVIEW'),
+)
+const manageFormMappings = computed(() =>
+  (detail.value?.formMappings ?? []).filter(fm => fm.mappingType === 'MANAGE'),
+)
 
-const approvalModeColor = (mode: string) => ({
-  VOTE_ALL_PASS: 'orange',
-  VOTE_MAJORITY_PASS: 'blue',
-  VOTE_ONE_PASS: 'green',
-  SCORE_PASS: 'red',
-}[mode] ?? 'gray')
+/** 将人员范围按节点分组，key 为中文节点名 */
+const groupedPersonnel = computed(() => {
+  const map = new Map<string, TypePersonnelConfigResp[]>()
+  for (const pc of detail.value?.personnelConfigs ?? []) {
+    const key = personnelNodeLabel(pc.nodeType, pc.nodeSequence)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(pc)
+  }
+  return map
+})
 
-const formMappingLabel = (fm: { mappingType: string, nodeType: string, nodeSequence?: number, formTemplateName?: string }) => {
-  const nodeLabel = { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策', STAGE: '阶段' }[fm.nodeType] ?? fm.nodeType
-  const seq = fm.nodeSequence ? `_${fm.nodeSequence}` : ''
-  return `${nodeLabel}${seq}`
+// ── 辅助函数 ──────────────────────────────────────────────
+
+/** 表单映射节点标签 */
+function formNodeLabel(nodeType: string, seq?: number): string {
+  const labels: Record<string, string> = {
+    APPLICATION: '申请节点', AUDIT: `第${seq}轮审核节点`,
+    REVIEW: `第${seq}轮评审节点`, DECISION: `第${seq}轮决策节点`,
+    STAGE: `第${seq}阶段`,
+  }
+  return labels[nodeType] ?? nodeType
 }
 
-const nodePersonnelLabel = (pc: { nodeType: string, nodeSequence?: number }) => {
-  const base = { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策', STAGE: '阶段' }[pc.nodeType] ?? pc.nodeType
-  return pc.nodeSequence ? `${base} 第${pc.nodeSequence}轮` : base
+/** 人员范围节点标签 */
+function personnelNodeLabel(nodeType: string, seq?: number): string {
+  const labels: Record<string, string> = {
+    APPLICATION: '申请节点', AUDIT: `第${seq}轮审核节点`,
+    REVIEW: `第${seq}轮评审节点`, DECISION: `第${seq}轮决策节点`,
+    STAGE: `第${seq}阶段`,
+  }
+  return labels[nodeType] ?? nodeType
 }
+
+/** 审批规则节点标识转中文 */
+function nodeScopeToLabel(nodeScope: string): string {
+  if (nodeScope === 'ACCEPTANCE') return '验收节点'
+  const match = nodeScope.match(/^(AUDIT|REVIEW|DECISION)_(\d+)$/)
+  if (match) {
+    const typeMap: Record<string, string> = { AUDIT: '审核', REVIEW: '评审', DECISION: '决策' }
+    return `第${match[2]}轮${typeMap[match[1]]}节点`
+  }
+  return nodeScope
+}
+
+/** 范围类型标签 */
+function scopeTypeLabel(type: string): string {
+  return ({ USER: '指定用户', DEPT: '按部门' } as Record<string, string>)[type] ?? type
+}
+
+/** 将 scopeConfig JSON 转为可读摘要 */
+function parseScopeConfig(scopeType: string, config: string): string {
+  try {
+    const obj = typeof config === 'string' ? JSON.parse(config) : config
+    if (scopeType === 'USER') {
+      const count = obj.userIds?.length ?? 0
+      return `共 ${count} 人`
+    }
+    if (scopeType === 'DEPT') {
+      const count = obj.deptIds?.length ?? 0
+      return `共 ${count} 个部门${obj.includeSub ? '（含子部门）' : ''}`
+    }
+  } catch {
+    // ignore
+  }
+  return ''
+}
+
+const approvalModeLabel = (mode: string) =>
+  ({ VOTE_ALL_PASS: '全部通过', VOTE_MAJORITY_PASS: '多数通过', VOTE_ONE_PASS: '一票通过', SCORE_PASS: '评分通过' } as Record<string, string>)[mode] ?? mode
+
+const approvalModeColor = (mode: string) =>
+  ({ VOTE_ALL_PASS: 'orange', VOTE_MAJORITY_PASS: 'blue', VOTE_ONE_PASS: 'green', SCORE_PASS: 'red' } as Record<string, string>)[mode] ?? 'gray'
 </script>
 
 <style scoped>
-.tag-list {
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  margin: 16px 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid rgb(var(--arcoblue-5));
+}
+
+.sub-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-3);
+  margin: 8px 0 4px;
+}
+
+/* 流程模板网格 */
+.config-grid {
   display: flex;
-  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.config-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-1);
+}
+
+.config-label {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.config-value {
+  font-size: 13px;
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+/* 表单映射列表 */
+.form-mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.form-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+}
+
+/* 节点分组（人员范围） */
+.node-group {
+  margin-bottom: 8px;
+}
+
+.node-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  margin-bottom: 4px;
+}
+
+.scope-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-border-2);
+}
+
+.scope-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+}
+
+.scope-summary {
+  font-size: 13px;
+  color: var(--color-text-1);
+}
+
+.scope-remark {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-left: auto;
+}
+
+/* 审批规则列表 */
+.approval-list {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+}
+
+.approval-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+}
+
+.node-name {
+  font-size: 13px;
+  color: var(--color-text-1);
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.approval-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-text {
+  font-size: 12px;
+  color: var(--color-text-2);
+  background: var(--color-fill-2);
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 </style>
