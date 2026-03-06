@@ -25,10 +25,11 @@ export function defaultScopeConfig(): ScopeConfig {
 export function serializeScopeConfig(config: ScopeConfig): string {
   if (!config.scopeType) return '{}'
   switch (config.scopeType) {
+    // 注意：雪花ID超过 JS Number 精度（53位），必须保持字符串传输，不可转 Number
     case 'USER':
-      return JSON.stringify({ userIds: config.parsed.userIds.map(Number).filter((n) => !Number.isNaN(n)) })
+      return JSON.stringify({ userIds: config.parsed.userIds.filter(Boolean) })
     case 'DEPT':
-      return JSON.stringify({ deptIds: config.parsed.deptIds.map(Number).filter((n) => !Number.isNaN(n)), includeSub: config.parsed.includeSub })
+      return JSON.stringify({ deptIds: config.parsed.deptIds.filter(Boolean), includeSub: config.parsed.includeSub })
     default:
       return '{}'
   }

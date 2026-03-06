@@ -4,8 +4,11 @@
       <a-collapse-item
         v-for="(rule, idx) in localRules"
         :key="idx"
-        :header="`规则 ${idx + 1}：${scopeTypeLabel(rule.scopeType)}`"
       >
+        <template #header>
+          <span>规则 {{ idx + 1 }}：{{ scopeTypeLabel(rule.scopeType) }}</span>
+          <a-tag v-if="ruleErrors[idx]" color="red" size="small" style="margin-left: 8px">校验未通过</a-tag>
+        </template>
         <template #extra>
           <a-button
             v-if="!disabled"
@@ -17,7 +20,12 @@
             <template #icon><icon-delete /></template>
           </a-button>
         </template>
-        <ScopeConfigForm v-model="localRules[idx]" :disabled="disabled" :role-id="roleId" />
+        <ScopeConfigForm
+          v-model="localRules[idx]"
+          :disabled="disabled"
+          :role-id="roleId"
+          :errors="ruleErrors[idx]"
+        />
       </a-collapse-item>
     </a-collapse>
 
@@ -37,18 +45,22 @@
 </template>
 
 <script setup lang="ts">
-import ScopeConfigForm from './ScopeConfigForm.vue'
+import { computed, ref, watch } from 'vue'
+import ScopeConfigForm, { type ScopeFieldErrors } from './ScopeConfigForm.vue'
 import { type ScopeConfig, defaultScopeConfig } from './scope-config'
 
 const props = defineProps<{
   modelValue: ScopeConfig[]
   disabled?: boolean
   roleId?: string
+  ruleErrors?: Record<number, ScopeFieldErrors>
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: ScopeConfig[]): void
 }>()
+
+const ruleErrors = computed(() => props.ruleErrors ?? {})
 
 const localRules = ref<ScopeConfig[]>([])
 

@@ -48,7 +48,23 @@
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
               :role-id="node.roleId"
+              :rule-errors="personnelErrors[node.key]"
             />
+            <!-- 保存范围按钮 -->
+            <div v-if="!disabled" class="personnel-save-bar">
+              <span v-if="personnelDirty[node.key]" class="personnel-dirty-tip">
+                <icon-exclamation-circle />
+                范围已修改，请保存后生效
+              </span>
+              <a-button
+                type="primary"
+                size="small"
+                :loading="personnelSaving[node.key]"
+                @click="handleSavePersonnel(node.key, node)"
+              >
+                保存范围
+              </a-button>
+            </div>
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
               <a-divider orientation="left">审批规则</a-divider>
@@ -108,7 +124,23 @@
               v-model="nodePersonnel[node.key]"
               :disabled="disabled"
               :role-id="node.roleId"
+              :rule-errors="personnelErrors[node.key]"
             />
+            <!-- 保存范围按钮 -->
+            <div v-if="!disabled" class="personnel-save-bar">
+              <span v-if="personnelDirty[node.key]" class="personnel-dirty-tip">
+                <icon-exclamation-circle />
+                范围已修改，请保存后生效
+              </span>
+              <a-button
+                type="primary"
+                size="small"
+                :loading="personnelSaving[node.key]"
+                @click="handleSavePersonnel(node.key, node)"
+              >
+                保存范围
+              </a-button>
+            </div>
             <!-- 审批规则 -->
             <template v-if="node.hasApproval">
               <a-divider orientation="left">审批规则</a-divider>
@@ -143,7 +175,8 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import ScopeRuleList from './ScopeRuleList.vue'
-import { type ScopeConfig, defaultScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
+import { type ScopeConfig, deserializeScopeConfig, serializeScopeConfig } from './scope-config'
+import { type ScopeFieldErrors } from './ScopeConfigForm.vue'
 import ApprovalNodeForm from './ApprovalNodeForm.vue'
 import {
   type FormFieldResp,
@@ -202,13 +235,25 @@ const formDataMap = ref<Record<number, FormTemplateResp>>({})
 // 表单选择（key -> formTemplateId）
 const formSelections = reactive<Record<string, number | undefined>>({})
 
-// 人员范围（key -> ScopeConfig[]，一个节点可配置多条规则）
+// 人员范围（key -> ScopeConfig[]，用户实时编辑的临时状态）
 const nodePersonnel = reactive<Record<string, ScopeConfig[]>>({})
+
+// 已保存的人员范围（key -> ScopeConfig[]，作为计数和最终保存的依据）
+const savedNodePersonnel = reactive<Record<string, ScopeConfig[]>>({})
+
+// 人员范围是否有未保存的修改
+const personnelDirty = reactive<Record<string, boolean>>({})
+
+// 人员范围保存中状态
+const personnelSaving = reactive<Record<string, boolean>>({})
+
+// 人员范围校验错误（key -> { ruleIndex -> ScopeFieldErrors }）
+const personnelErrors = reactive<Record<string, Record<number, ScopeFieldErrors>>>({})
 
 // 审批规则（nodeScope -> TypeApprovalConfigReq | null）
 const nodeApproval = reactive<Record<string, TypeApprovalConfigReq | null>>({})
 
-// 各节点人员范围内最大可用人数（用于限制审批人数上限）
+// 各节点人员范围内最大可用人数（用于限制审批人数上限，基于已保存范围计算）
 const nodeMaxReviewerCount = reactive<Record<string, number | undefined>>({})
 
 const saveLoading = ref(false)
@@ -435,17 +480,24 @@ const fillFromProps = () => {
         remark: pc.remark || '',
         parsed: deserializeScopeConfig(pc.scopeConfig, pc.scopeType),
       }))
+      const deepCopy = newRules.map(r => ({ ...r, parsed: { ...r.parsed, userIds: [...r.parsed.userIds], deptIds: [...r.parsed.deptIds] } }))
       if (nodePersonnel[node.key]) {
         nodePersonnel[node.key].splice(0, nodePersonnel[node.key].length, ...newRules)
       } else {
         nodePersonnel[node.key] = newRules
       }
+      // 同步到已保存状态
+      savedNodePersonnel[node.key] = deepCopy
     } else {
       if (!nodePersonnel[node.key]) {
         nodePersonnel[node.key] = []
       }
+      if (!savedNodePersonnel[node.key]) {
+        savedNodePersonnel[node.key] = []
+      }
       // 已存在时不重置（保留用户的未保存编辑）
     }
+    personnelDirty[node.key] = false
 
     // 审批规则
     if (node.hasApproval) {
@@ -471,35 +523,52 @@ const nodeTagLabel = (node: NodeDef): string => {
   return { APPLICATION: '申请', AUDIT: '审核', REVIEW: '评审', DECISION: '决策' }[node.nodeType] ?? node.nodeType
 }
 
-/** 判断节点是否已完成基本配置 */
+/** 判断节点是否已完成基本配置（基于已保存状态） */
 const isNodeConfigured = (node: NodeDef) => {
   const hasForm = !!formSelections[node.key]
-  const rules: ScopeConfig[] = nodePersonnel[node.key] || []
+  const rules: ScopeConfig[] = savedNodePersonnel[node.key] || []
   const hasPersonnel = rules.length > 0 && rules.some((r) => !!r.scopeType)
   return hasForm && hasPersonnel
 }
 
-/** 判断节点人员范围是否已配置（用于控制审批人数输入框的显示） */
+/** 判断节点人员范围是否已配置（基于已保存状态，用于控制审批人数输入框的显示） */
 const isPersonnelConfigured = (nodeKey: string): boolean => {
-  const rules: ScopeConfig[] = nodePersonnel[nodeKey] || []
+  const rules: ScopeConfig[] = savedNodePersonnel[nodeKey] || []
   return rules.some((r) => !!r.scopeType)
 }
 
-/** 判断单条范围规则是否完整（scopeType + 实际数据均已填写） */
-const isScopeRuleComplete = (r: ScopeConfig): boolean => {
-  if (!r.scopeType) return false
-  if (r.scopeType === 'USER') return (r.parsed?.userIds?.length ?? 0) > 0
-  if (r.scopeType === 'DEPT') return (r.parsed?.deptIds?.length ?? 0) > 0
-  return false
+/** 校验单个节点的人员范围规则，返回各条规则的错误信息 */
+const validatePersonnelRules = (nodeKey: string): Record<number, ScopeFieldErrors> => {
+  const rules = nodePersonnel[nodeKey] || []
+  const errors: Record<number, ScopeFieldErrors> = {}
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i]
+    const err: ScopeFieldErrors = {}
+    if (!rule.scopeType) {
+      err.scopeType = '请选择范围类型'
+    }
+    if (rule.scopeType === 'USER' && (!rule.parsed?.userIds || rule.parsed.userIds.length === 0)) {
+      err.data = '请选择至少一个用户'
+    }
+    if (rule.scopeType === 'DEPT' && (!rule.parsed?.deptIds || rule.parsed.deptIds.length === 0)) {
+      err.data = '请选择至少一个部门'
+    }
+    if (Object.keys(err).length > 0) {
+      errors[i] = err
+    }
+  }
+  return errors
 }
 
-/** 防抖定时器（避免人员范围每次细微变化都触发请求） */
-let countDebounceTimer: ReturnType<typeof setTimeout> | null = null
-
-/** 统计指定节点人员范围内符合角色的最大人数 */
+/** 统计指定节点已保存范围内符合角色的最大人数 */
 const countScopeForNode = async (nodeKey: string, node: NodeDef) => {
-  const rules: ScopeConfig[] = nodePersonnel[nodeKey] || []
-  const completeRules = rules.filter(isScopeRuleComplete)
+  const rules: ScopeConfig[] = savedNodePersonnel[nodeKey] || []
+  const completeRules = rules.filter((r) => {
+    if (!r.scopeType) return false
+    if (r.scopeType === 'USER') return (r.parsed?.userIds?.length ?? 0) > 0
+    if (r.scopeType === 'DEPT') return (r.parsed?.deptIds?.length ?? 0) > 0
+    return false
+  })
   if (completeRules.length === 0) {
     nodeMaxReviewerCount[nodeKey] = undefined
     return
@@ -518,18 +587,39 @@ const countScopeForNode = async (nodeKey: string, node: NodeDef) => {
   }
 }
 
-/** 人员范围变化时防抖刷新所有节点的可用人数 */
-const scheduleCountUpdate = () => {
-  if (countDebounceTimer) clearTimeout(countDebounceTimer)
-  countDebounceTimer = setTimeout(() => {
-    for (const node of allNodes.value) {
-      countScopeForNode(node.key, node)
-    }
-  }, 600)
+/** 保存单个节点的人员范围：校验 → 提交到已保存状态 → 计算可用人数 */
+const handleSavePersonnel = async (nodeKey: string, node: NodeDef) => {
+  const errors = validatePersonnelRules(nodeKey)
+  personnelErrors[nodeKey] = errors
+  if (Object.keys(errors).length > 0) {
+    Message.error('请完善所有规则的必填项')
+    return
+  }
+  personnelSaving[nodeKey] = true
+  try {
+    const rules = nodePersonnel[nodeKey] || []
+    savedNodePersonnel[nodeKey] = rules.map(r => ({
+      ...r,
+      parsed: { ...r.parsed, userIds: [...r.parsed.userIds], deptIds: [...r.parsed.deptIds] },
+    }))
+    personnelDirty[nodeKey] = false
+    personnelErrors[nodeKey] = {}
+    await countScopeForNode(nodeKey, node)
+  }
+  finally {
+    personnelSaving[nodeKey] = false
+  }
 }
 
 /** 保存所有节点配置 */
 const handleSave = async () => {
+  // 若有节点人员范围有未保存的修改，提示用户先保存
+  const dirtyNodes = allNodes.value.filter(n => personnelDirty[n.key])
+  if (dirtyNodes.length > 0) {
+    Message.warning(`以下节点人员范围有未保存的修改，请先点击「保存范围」：${dirtyNodes.map(n => n.label).join('、')}`)
+    return
+  }
+
   // 构建表单映射请求
   const formReqs = allNodes.value
     .filter((n) => formSelections[n.key])
@@ -540,9 +630,9 @@ const handleSave = async () => {
       formTemplateId: formSelections[n.key]!,
     }))
 
-  // 构建人员范围请求（展开每个节点的多条规则，过滤未设置 scopeType 的条目）
+  // 构建人员范围请求：使用已保存状态，而非实时编辑状态
   const personnelReqs = allNodes.value.flatMap((n: NodeDef) => {
-    const rules: ScopeConfig[] = nodePersonnel[n.key] || []
+    const rules: ScopeConfig[] = savedNodePersonnel[n.key] || []
     return rules
       .filter((r: ScopeConfig) => r.scopeType)
       .map((r: ScopeConfig) => ({
@@ -580,9 +670,12 @@ onMounted(async () => {
   await loadRoles()
   await loadFormOptions()
   fillFromProps()
-  // 初始加载后显式触发一次计数（fillFromProps 改变 nodePersonnel 会触发 watch，
-  // 但 allNodes 依赖 roleCodeToId，此处确保角色加载完成后立即算一次）
-  scheduleCountUpdate()
+  // 初始加载完成后，对已保存状态计算一次各节点可用人数
+  nextTick(() => {
+    for (const node of allNodes.value) {
+      countScopeForNode(node.key, node)
+    }
+  })
 })
 
 watch(
@@ -591,10 +684,14 @@ watch(
   { deep: true },
 )
 
-watch(nodePersonnel, scheduleCountUpdate, { deep: true })
-
-// 模板切换导致 allNodes 重建时，重新计算各节点人数
-watch(allNodes, () => { nextTick(scheduleCountUpdate) })
+// 监听 nodePersonnel 变化，更新脏状态标记（不再自动触发计数）
+watch(nodePersonnel, () => {
+  for (const node of allNodes.value) {
+    const current = JSON.stringify(nodePersonnel[node.key] ?? [])
+    const saved = JSON.stringify(savedNodePersonnel[node.key] ?? [])
+    personnelDirty[node.key] = current !== saved
+  }
+}, { deep: true })
 
 watch(
   [() => props.reviewTemplate, () => props.manageTemplate],
@@ -635,5 +732,23 @@ watch(
 
 .node-collapse :deep(.arco-collapse-item-content) {
   padding: 16px;
+}
+
+.personnel-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border-2);
+}
+
+.personnel-dirty-tip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: rgb(var(--orange-6));
 }
 </style>

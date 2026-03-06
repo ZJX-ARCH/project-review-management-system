@@ -6,10 +6,16 @@ import { getReviewDeptTree, getReviewPersonsByIds, searchReviewPersons } from '@
 type PersonOption = { label: string; value: string }
 type PersonResp = { id: string; nickname: string; username: string }
 
+export interface ScopeFieldErrors {
+  scopeType?: string
+  data?: string
+}
+
 const props = defineProps<{
   modelValue: ScopeConfig
   disabled?: boolean
   roleId?: string
+  errors?: ScopeFieldErrors
 }>()
 
 const emit = defineEmits<{
@@ -163,10 +169,14 @@ const onScopeTypeChange = async () => {
     <a-form layout="vertical">
       <a-row :gutter="16">
         <a-col :span="8">
-          <a-form-item label="范围类型">
+          <a-form-item :class="{ 'has-error': !!props.errors?.scopeType }">
+            <template #label>
+              <span>范围类型<span class="required-star"> *</span></span>
+            </template>
             <a-select
               v-model="local.scopeType"
               :disabled="disabled"
+              :status="props.errors?.scopeType ? 'error' : undefined"
               placeholder="请选择范围类型"
               style="width: 100%"
               @change="onScopeTypeChange"
@@ -174,6 +184,7 @@ const onScopeTypeChange = async () => {
               <a-option value="USER">指定用户</a-option>
               <a-option value="DEPT">按部门</a-option>
             </a-select>
+            <div v-if="props.errors?.scopeType" class="field-error">{{ props.errors.scopeType }}</div>
           </a-form-item>
         </a-col>
         <a-col :span="16">
@@ -190,7 +201,10 @@ const onScopeTypeChange = async () => {
 
       <!-- USER 范围 -->
       <template v-if="local.scopeType === 'USER'">
-        <a-form-item label="用户范围">
+        <a-form-item :class="{ 'has-error': !!props.errors?.data }">
+          <template #label>
+            <span>用户范围<span class="required-star"> *</span></span>
+          </template>
           <a-select
             v-model="local.parsed.userIds"
             multiple
@@ -199,11 +213,13 @@ const onScopeTypeChange = async () => {
             :disabled="disabled"
             :options="userOptions"
             :loading="userOptionsLoading"
+            :status="props.errors?.data ? 'error' : undefined"
             placeholder="搜索并选择用户（按昵称/用户名）"
             :filter-option="false"
             style="width: 100%"
             @search="handleUserSearch"
           />
+          <div v-if="props.errors?.data" class="field-error">{{ props.errors.data }}</div>
         </a-form-item>
       </template>
 
@@ -211,7 +227,10 @@ const onScopeTypeChange = async () => {
       <template v-else-if="local.scopeType === 'DEPT'">
         <a-row :gutter="16">
           <a-col :span="16">
-            <a-form-item label="部门范围">
+            <a-form-item :class="{ 'has-error': !!props.errors?.data }">
+              <template #label>
+                <span>部门范围<span class="required-star"> *</span></span>
+              </template>
               <a-tree-select
                 v-model="local.parsed.deptIds"
                 :data="deptTreeData"
@@ -220,9 +239,11 @@ const onScopeTypeChange = async () => {
                 allow-clear
                 allow-search
                 :disabled="disabled"
+                :status="props.errors?.data ? 'error' : undefined"
                 placeholder="请选择部门"
                 style="width: 100%"
               />
+              <div v-if="props.errors?.data" class="field-error">{{ props.errors.data }}</div>
             </a-form-item>
           </a-col>
           <a-col :span="8">
@@ -239,5 +260,16 @@ const onScopeTypeChange = async () => {
 <style scoped>
 .scope-config-form {
   width: 100%;
+}
+
+.required-star {
+  color: rgb(var(--red-6));
+}
+
+.field-error {
+  color: rgb(var(--red-6));
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 2px;
 }
 </style>
