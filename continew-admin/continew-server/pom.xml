@@ -70,6 +70,12 @@
             <artifactId>continew-plugin-review-type</artifactId>
         </dependency>
 
+        <!-- 项目管理模块（工作流引擎、任务分配、结果汇总） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-project</artifactId>
+        </dependency>
+
         <!-- ContiNew Starter 链路追踪模块 -->
         <dependency>
             <groupId>top.continew.starter</groupId>

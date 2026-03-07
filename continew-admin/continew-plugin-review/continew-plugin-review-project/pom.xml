@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>top.continew.admin</groupId>
+        <artifactId>continew-plugin-review</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>continew-plugin-review-project</artifactId>
+
+    <name>${project.artifactId}</name>
+    <description>项目管理模块（工作流引擎、任务分配、结果汇总）</description>
+
+    <dependencies>
+        <!-- 公共模块（StateFlowEngine、TaskType、ProjectStatus 等枚举） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-common</artifactId>
+        </dependency>
+
+        <!-- 类型模块（TypePersonnelConfigService、TypeApprovalConfigService、TypeFormMappingService） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-type</artifactId>
+        </dependency>
+
+        <!-- 表单模块（FormTemplateService，任务处理时获取表单详情） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-form</artifactId>
+        </dependency>
+
+        <!-- 流程模板模块（读取轮次/阶段结构，用于快照） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-plugin-review-template</artifactId>
+        </dependency>
+
+        <!-- 系统模块（查询 sys_user 状态、部门用户列表） -->
+        <dependency>
+            <groupId>top.continew.admin</groupId>
+            <artifactId>continew-system</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis Plus -->
+        <dependency>
+            <groupId>top.continew.starter</groupId>
+            <artifactId>continew-starter-data-mp</artifactId>
+        </dependency>
+
+        <!-- Web -->
+        <dependency>
+            <groupId>top.continew.starter</groupId>
+            <artifactId>continew-starter-web</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>
