@@ -76,19 +76,22 @@ public class TaskAssignmentEngine {
             personnelSeq = nodeSequence;
         }
 
-        // Step 2: 查人员范围并展开为候选池
+        // Step 2: 查人员范围并展开为候选池（同一节点可存在多条不同 scopeType 的配置，取并集）
         QueryWrapper<TypePersonnelConfigDO> configWrapper = new QueryWrapper<>();
         configWrapper.eq("type_id", project.getTypeId())
                 .eq("node_type", personnelNodeType)
                 .eq("node_sequence", personnelSeq)
                 .eq("deleted", 0);
-        TypePersonnelConfigDO personnelConfig = personnelConfigMapper.selectOne(configWrapper);
-        if (personnelConfig == null) {
+        List<TypePersonnelConfigDO> personnelConfigs = personnelConfigMapper.selectList(configWrapper);
+        if (personnelConfigs.isEmpty()) {
             throw new BusinessException("未找到节点人员配置：typeId=" + project.getTypeId()
                     + ", nodeType=" + personnelNodeType + ", nodeSequence=" + personnelSeq);
         }
 
-        Set<Long> candidatePool = expandScope(personnelConfig);
+        Set<Long> candidatePool = new HashSet<>();
+        for (TypePersonnelConfigDO cfg : personnelConfigs) {
+            candidatePool.addAll(expandScope(cfg));
+        }
         if (candidatePool.isEmpty()) {
             throw new BusinessException("候选人员池为空，无法分配任务。节点：" + personnelNodeType + "_" + personnelSeq
                     + "，请检查类型人员范围配置");
@@ -161,6 +164,7 @@ public class TaskAssignmentEngine {
         Map<String, Object> scopeConfig = config.getScopeConfig() instanceof Map<?, ?>
                 ? (Map<String, Object>) config.getScopeConfig() : new HashMap<>();
 
+        log.info("[TaskAssignment] expandScope configId={} scopeType={} scopeConfig={}", config.getId(), scopeType, scopeConfig);
         switch (scopeType) {
             case "USER" -> {
                 Object userIdsObj = scopeConfig.get("userIds");
@@ -171,16 +175,19 @@ public class TaskAssignmentEngine {
                         }
                     });
                 }
+                log.info("[TaskAssignment] USER rawIds={}", rawIds);
             }
             case "DEPT" -> {
                 Object deptIdsObj = scopeConfig.get("deptIds");
                 boolean includeSub = Boolean.TRUE.equals(scopeConfig.get("includeSub"));
                 if (deptIdsObj instanceof List<?> list) {
                     Set<Long> deptIds = expandDeptIds(list, includeSub);
+                    log.info("[TaskAssignment] DEPT expandedDeptIds={}", deptIds);
                     if (!deptIds.isEmpty()) {
-                        QueryWrapper<UserDO> userWrapper = new QueryWrapper<>();
-                        userWrapper.in("dept_id", deptIds).eq("deleted", 0).select("id");
-                        userMapper.selectList(userWrapper).stream().map(UserDO::getId).forEach(rawIds::add);
+                        // 使用自定义 @Select 方法，绕过 @DataPermission 拦截
+                        List<Long> deptUserIds = userMapper.selectEnabledIdsByDeptIds(deptIds);
+                        log.info("[TaskAssignment] DEPT selectEnabledIdsByDeptIds={}", deptUserIds);
+                        rawIds.addAll(deptUserIds);
                     }
                 }
             }
@@ -219,18 +226,18 @@ public class TaskAssignmentEngine {
             default -> log.warn("[TaskAssignment] 未知 scopeType：{}", scopeType);
         }
 
+        log.info("[TaskAssignment] expandScope rawIds(before filter)={}", rawIds);
         if (rawIds.isEmpty()) {
             return Collections.emptySet();
         }
 
-        // 过滤禁用/已删除账号
-        QueryWrapper<UserDO> filterWrapper = new QueryWrapper<>();
-        filterWrapper.in("id", rawIds)
-                .eq("deleted", 0)
-                .eq("status", DisEnableStatusEnum.ENABLE.getValue())
-                .select("id");
-        return userMapper.selectList(filterWrapper).stream()
-                .map(UserDO::getId).collect(Collectors.toSet());
+        // 过滤禁用/已删除账号：用 selectBatchIds 绕过 @DataPermission 拦截（DataPermissionMapper 未覆盖此方法）
+        Set<Long> result = userMapper.selectBatchIds(rawIds).stream()
+                .filter(u -> DisEnableStatusEnum.ENABLE.equals(u.getStatus()))
+                .map(UserDO::getId)
+                .collect(Collectors.toSet());
+        log.info("[TaskAssignment] expandScope finalCandidates={}", result);
+        return result;
     }
 
     /**
@@ -255,9 +262,8 @@ public class TaskAssignmentEngine {
             if (deptIdsObj instanceof List<?> list) {
                 Set<Long> deptIds = expandDeptIds(list, includeSub);
                 if (!deptIds.isEmpty()) {
-                    QueryWrapper<UserDO> w = new QueryWrapper<>();
-                    w.in("dept_id", deptIds).eq("deleted", 0).select("id");
-                    userMapper.selectList(w).stream().map(UserDO::getId).forEach(ids::add);
+                    // 使用自定义 @Select 方法，绕过 @DataPermission 拦截
+                    userMapper.selectEnabledIdsByDeptIds(deptIds).forEach(ids::add);
                 }
             }
         } else if ("ROLE".equals(type)) {
@@ -319,10 +325,10 @@ public class TaskAssignmentEngine {
                 }
             }
         }
-        // 校验执行阶段
+        // 校验执行阶段（stageType 为 KICKOFF/EXECUTION/ACCEPTANCE，需转换为 TaskType）
         if (snapshot.getStages() != null) {
             for (ProjectTypeSnapshot.StageInfo stage : snapshot.getStages()) {
-                TaskType taskType = TaskType.valueOf(stage.getStageType());
+                TaskType taskType = stageTypeToTaskType(stage.getStageType());
                 Set<Long> candidates = findCandidates(typeId, taskType, stage.getStageOrder());
                 if (candidates.isEmpty()) {
                     throw new top.continew.starter.core.exception.BusinessException(
@@ -343,11 +349,30 @@ public class TaskAssignmentEngine {
                 .eq("node_type", personnelNodeType)
                 .eq("node_sequence", nodeSequence)
                 .eq("deleted", 0);
-        TypePersonnelConfigDO personnelConfig = personnelConfigMapper.selectOne(configWrapper);
-        if (personnelConfig == null) {
+        List<TypePersonnelConfigDO> personnelConfigs = personnelConfigMapper.selectList(configWrapper);
+        if (personnelConfigs.isEmpty()) {
             return Collections.emptySet();
         }
-        return expandScope(personnelConfig);
+        Set<Long> candidates = new HashSet<>();
+        for (TypePersonnelConfigDO cfg : personnelConfigs) {
+            candidates.addAll(expandScope(cfg));
+        }
+        return candidates;
+    }
+
+    /**
+     * 将管理阶段类型（KICKOFF/EXECUTION/ACCEPTANCE）转换为任务类型
+     * <ul>
+     *     <li>KICKOFF / EXECUTION → MANAGEMENT</li>
+     *     <li>ACCEPTANCE → ACCEPTANCE</li>
+     * </ul>
+     */
+    private TaskType stageTypeToTaskType(String stageType) {
+        if ("ACCEPTANCE".equals(stageType)) {
+            return TaskType.ACCEPTANCE;
+        }
+        // KICKOFF / EXECUTION 均归为管理任务
+        return TaskType.MANAGEMENT;
     }
 
     /**

@@ -49,6 +49,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/mysql/plugin/type/review_type_approval_drop_reject_back_to.sql
   - include:
+      file: db/changelog/mysql/plugin/type/review_type_personnel_unique_fix.sql
+  - include:
       file: db/changelog/mysql/plugin/project/review_project_table.sql
   - include:
       file: db/changelog/mysql/plugin/project/review_project_data.sql

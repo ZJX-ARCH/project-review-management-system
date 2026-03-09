@@ -480,7 +480,8 @@ export interface TypePersonnelConfigResp {
   nodeType: string
   nodeSequence?: number
   scopeType: ScopeType
-  scopeConfig: string
+  /** 范围配置（后端返回 JSON Object，非字符串） */
+  scopeConfig: Record<string, unknown>
   remark?: string
 }
 

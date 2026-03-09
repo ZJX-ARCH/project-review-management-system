@@ -13,6 +13,11 @@ import type {
 
 const BASE = '/review/project'
 
+/** 上传评审相关文件（使用公共上传接口，无需 system:file:upload 权限） */
+export function uploadReviewFile(data: FormData, parentPath?: string) {
+  return http.post('/system/common/file', data, { params: { parentPath } })
+}
+
 /** 查询已启用的项目类型列表（申请人视角，无需 type:query 权限） */
 export function listEnabledTypes() {
   return http.get<ProjectTypeResp[]>(`${BASE}/types`)

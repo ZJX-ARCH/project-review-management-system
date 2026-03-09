@@ -35,21 +35,22 @@ export function serializeScopeConfig(config: ScopeConfig): string {
   }
 }
 
-export function deserializeScopeConfig(scopeConfig: string, scopeType: ScopeType): ScopeConfig['parsed'] {
+export function deserializeScopeConfig(scopeConfig: string | Record<string, unknown>, scopeType: ScopeType): ScopeConfig['parsed'] {
   const parsed: ScopeConfig['parsed'] = {
     userIds: [],
     deptIds: [],
     includeSub: false,
   }
   try {
-    const obj = JSON.parse(scopeConfig)
+    // 后端直接返回 JSON Object，兼容字符串格式（向后兼容）
+    const obj: Record<string, unknown> = typeof scopeConfig === 'string' ? JSON.parse(scopeConfig) : scopeConfig
     switch (scopeType) {
       case 'USER':
-        parsed.userIds = (obj.userIds || []).map(String)
+        parsed.userIds = ((obj.userIds as unknown[]) || []).map(String)
         break
       case 'DEPT':
-        parsed.deptIds = (obj.deptIds || []).map(String)
-        parsed.includeSub = obj.includeSub ?? false
+        parsed.deptIds = ((obj.deptIds as unknown[]) || []).map(String)
+        parsed.includeSub = (obj.includeSub as boolean) ?? false
         break
     }
   } catch {

@@ -1,5 +1,5 @@
 <template>
-  <GiPageLayout>
+  <GiPageLayout :body-style="{ overflowY: 'auto' }">
     <a-page-header
       :title="detail?.projectName ?? '任务详情'"
       @back="router.push({ path: '/review/task', query: { t: Date.now() } })"
@@ -126,7 +126,7 @@
             <a-card title="项目信息" style="margin-bottom: 16px;">
               <a-descriptions :column="1" size="small">
                 <a-descriptions-item label="项目名称">{{ detail.projectName }}</a-descriptions-item>
-                <a-descriptions-item label="申请人">{{ detail.applicantId }}</a-descriptions-item>
+                <a-descriptions-item label="申请人">{{ detail.applicantName }}</a-descriptions-item>
                 <a-descriptions-item label="提交时间">{{ detail.submittedTime ?? '—' }}</a-descriptions-item>
                 <a-descriptions-item v-if="detail.description" label="项目描述">{{ detail.description }}</a-descriptions-item>
               </a-descriptions>

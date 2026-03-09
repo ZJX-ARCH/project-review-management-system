@@ -72,14 +72,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
 
         // I6: 项目名关键词过滤先在 SQL 层查出匹配的 projectId，再用 IN 条件过滤任务
         // 避免先分页后内存过滤导致分页结果不准确
+        // 使用自定义 @Select 方法绕过 @DataPermission（评审人非项目创建者，SELF 范围会过滤掉所有项目）
         List<Long> matchingProjectIds = null;
         if (query.getProjectName() != null && !query.getProjectName().isBlank()) {
-            matchingProjectIds = projectMapper.selectList(
-                            new LambdaQueryWrapper<ReviewProjectDO>()
-                                    .like(ReviewProjectDO::getProjectName, query.getProjectName())
-                                    .eq(ReviewProjectDO::getDeleted, 0)
-                                    .select(ReviewProjectDO::getId))
-                    .stream().map(ReviewProjectDO::getId).collect(Collectors.toList());
+            matchingProjectIds = projectMapper.selectIdsByNameLike(query.getProjectName());
             if (matchingProjectIds.isEmpty()) {
                 PageResp<TaskListResp> empty = new PageResp<>();
                 empty.setList(Collections.emptyList());
@@ -107,11 +103,11 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         Page<ReviewTaskDO> result = taskMapper.selectPage(pageParam, wrapper);
 
         // 批量查关联项目（仅当前页数据）
+        // 使用 selectBatchIds 绕过 @DataPermission（评审人非项目创建者，SELF 范围会过滤掉所有关联项目）
         List<Long> projectIds = result.getRecords().stream()
                 .map(ReviewTaskDO::getProjectId).distinct().collect(Collectors.toList());
         Map<Long, ReviewProjectDO> projectMap = projectIds.isEmpty() ? new HashMap<>() :
-                projectMapper.selectList(new LambdaQueryWrapper<ReviewProjectDO>()
-                                .in(ReviewProjectDO::getId, projectIds))
+                projectMapper.selectBatchIds(projectIds)
                         .stream().collect(Collectors.toMap(ReviewProjectDO::getId, p -> p));
 
         // 批量查申请人姓名
@@ -168,6 +164,9 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         resp.setProjectName(project.getProjectName());
         resp.setDescription(project.getDescription());
         resp.setApplicantId(project.getApplicantId());
+        // 手动填充申请人姓名（crane4j @Assemble 需 @AutoOperate 触发，此处直接 selectById 绕过 @DataPermission）
+        UserDO applicant = userMapper.selectById(project.getApplicantId());
+        resp.setApplicantName(applicant != null ? applicant.getNickname() : null);
         resp.setSubmittedTime(project.getSubmittedTime());
         if (project.getApplicationFormData() instanceof Map<?, ?> appFormMap) {
             @SuppressWarnings("unchecked")
@@ -465,9 +464,8 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         if (userIds.isEmpty()) {
             return new HashMap<>();
         }
-        return userMapper.selectList(new LambdaQueryWrapper<UserDO>()
-                        .in(UserDO::getId, userIds)
-                        .eq(UserDO::getDeleted, 0))
+        // 使用 selectBatchIds 绕过 @DataPermission（评审人没有申请人的数据权限，SELF 范围会过滤掉）
+        return userMapper.selectBatchIds(userIds)
                 .stream().collect(Collectors.toMap(UserDO::getId, UserDO::getNickname));
     }
 }

@@ -463,9 +463,9 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
             return new HashMap<>();
         }
         List<Long> typeIds = projects.stream().map(ReviewProjectDO::getTypeId).distinct().collect(Collectors.toList());
-        List<ProjectTypeDO> types = typeMapper.selectList(
-                new LambdaQueryWrapper<ProjectTypeDO>().in(ProjectTypeDO::getId, typeIds));
-        return types.stream().collect(Collectors.toMap(ProjectTypeDO::getId, ProjectTypeDO::getTypeName));
+        // 使用 selectBatchIds 绕过 @DataPermission（类型由管理员创建，申请人 SELF 范围会过滤掉）
+        return typeMapper.selectBatchIds(typeIds)
+                .stream().collect(Collectors.toMap(ProjectTypeDO::getId, ProjectTypeDO::getTypeName));
     }
 
     /**

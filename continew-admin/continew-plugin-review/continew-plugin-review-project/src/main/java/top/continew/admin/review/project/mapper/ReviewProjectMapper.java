@@ -6,6 +6,8 @@ import org.apache.ibatis.annotations.Select;
 import top.continew.admin.common.base.mapper.DataPermissionMapper;
 import top.continew.admin.review.project.model.entity.ReviewProjectDO;
 
+import java.util.List;
+
 /**
  * 项目实例 Mapper
  *
@@ -23,4 +25,13 @@ public interface ReviewProjectMapper extends DataPermissionMapper<ReviewProjectD
      */
     @Select("SELECT * FROM review_project WHERE id = #{id} AND deleted = 0 FOR UPDATE")
     ReviewProjectDO selectByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * 按项目名称模糊查询ID列表（绕过 @DataPermission，供跨权限场景使用）
+     *
+     * @param name 项目名称关键词
+     * @return 匹配的项目ID列表
+     */
+    @Select("SELECT id FROM review_project WHERE deleted = 0 AND project_name LIKE CONCAT('%', #{name}, '%')")
+    List<Long> selectIdsByNameLike(@Param("name") String name);
 }

@@ -1,4 +1,4 @@
-﻿package top.continew.admin.review.type.service.impl;
+package top.continew.admin.review.type.service.impl;
 
 import cn.crane4j.annotation.AutoOperate;
 import cn.hutool.core.bean.BeanUtil;
