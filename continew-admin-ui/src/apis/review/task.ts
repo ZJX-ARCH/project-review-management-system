@@ -1,0 +1,36 @@
+import http from '@/utils/http'
+import type {
+  TaskQuery,
+  TaskListResp,
+  TaskDetailResp,
+  TaskSubmitReq,
+  TaskSaveReq,
+  TaskTransferReq,
+} from './type'
+
+const BASE = '/review/task'
+
+/** 分页查询我的任务列表 */
+export function getMyTasks(params: TaskQuery) {
+  return http.get<PageRes<TaskListResp[]>>(`${BASE}/my`, params)
+}
+
+/** 获取任务详情 */
+export function getTaskDetail(id: number | string) {
+  return http.get<TaskDetailResp>(`${BASE}/${id}`)
+}
+
+/** 暂存任务表单 */
+export function saveTask(id: number | string, data: TaskSaveReq) {
+  return http.put<void>(`${BASE}/${id}/save`, data)
+}
+
+/** 提交任务决策 */
+export function submitTask(id: number | string, data: TaskSubmitReq) {
+  return http.post<void>(`${BASE}/${id}/submit`, data)
+}
+
+/** 转办任务 */
+export function transferTask(id: number | string, data: TaskTransferReq) {
+  return http.post<void>(`${BASE}/${id}/transfer`, data)
+}

@@ -523,3 +523,270 @@ export interface ProjectTypeDetailResp extends ProjectTypeResp {
   /** 审批规则配置列表 */
   approvalConfigs: TypeApprovalConfigResp[]
 }
+
+// ============ 项目管理模块 ============
+
+/** 项目状态枚举（与后端 ProjectStatus 对应） */
+export enum ProjectStatus {
+  DRAFT = 1,
+  SUBMITTED = 10,
+  AUDITING = 20,
+  REVIEWING = 30,
+  DECIDING = 40,
+  TERMINATED = 49,
+  EXECUTING = 50,
+  OVERTIME = 55,
+  ACCEPTING = 60,
+  ARCHIVED_COMPLETED = 90,
+  ARCHIVED_UNQUALIFIED = 91,
+  ARCHIVED_CANCELLED = 92,
+  VOIDED = 99,
+}
+
+/** 项目状态标签与颜色映射 */
+export const PROJECT_STATUS_MAP: Record<number, { label: string; color: string }> = {
+  1:  { label: '草稿',     color: 'gray'   },
+  10: { label: '已提交',   color: 'blue'   },
+  20: { label: '审核中',   color: 'orange' },
+  30: { label: '评审中',   color: 'orange' },
+  40: { label: '决策中',   color: 'orange' },
+  49: { label: '已终止',   color: 'red'    },
+  50: { label: '执行中',   color: 'blue'   },
+  55: { label: '执行超时', color: 'red'    },
+  60: { label: '验收中',   color: 'purple' },
+  90: { label: '已完成',   color: 'green'  },
+  91: { label: '不合格',   color: 'red'    },
+  92: { label: '已取消',   color: 'gray'   },
+  99: { label: '已作废',   color: 'gray'   },
+}
+
+/** 任务类型枚举 */
+export enum ProjectTaskType {
+  AUDIT      = 'AUDIT',
+  REVIEW     = 'REVIEW',
+  DECISION   = 'DECISION',
+  MANAGEMENT = 'MANAGEMENT',
+  ACCEPTANCE = 'ACCEPTANCE',
+}
+
+/** 任务类型中文映射 */
+export const PROJECT_TASK_TYPE_MAP: Record<string, string> = {
+  AUDIT:      '审核',
+  REVIEW:     '评审',
+  DECISION:   '决策',
+  MANAGEMENT: '管理',
+  ACCEPTANCE: '验收',
+}
+
+/** 任务状态枚举 */
+export enum ProjectTaskStatus {
+  PENDING     = 'PENDING',
+  SAVED       = 'SAVED',
+  COMPLETED   = 'COMPLETED',
+  TRANSFERRED = 'TRANSFERRED',
+  CANCELLED   = 'CANCELLED',
+}
+
+/** 任务状态标签与颜色映射 */
+export const PROJECT_TASK_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  PENDING:     { label: '待处理', color: 'orange' },
+  SAVED:       { label: '暂存中', color: 'blue'   },
+  COMPLETED:   { label: '已完成', color: 'green'  },
+  TRANSFERRED: { label: '已转办', color: 'gray'   },
+  CANCELLED:   { label: '已取消', color: 'gray'   },
+}
+
+/** 任务决策枚举 */
+export enum TaskDecision {
+  PASS        = 'PASS',
+  REJECT      = 'REJECT',
+  UNQUALIFIED = 'UNQUALIFIED',
+  WITHDRAW    = 'WITHDRAW',
+}
+
+/** 项目阶段状态枚举 */
+export enum ProjectStageStatus {
+  PENDING     = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  SUBMITTED   = 'SUBMITTED',
+  COMPLETED   = 'COMPLETED',
+  REJECTED    = 'REJECTED',
+}
+
+/** 项目阶段状态标签与颜色映射 */
+export const PROJECT_STAGE_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  PENDING:     { label: '待开始', color: 'gray'   },
+  IN_PROGRESS: { label: '进行中', color: 'blue'   },
+  SUBMITTED:   { label: '已提交', color: 'orange' },
+  COMPLETED:   { label: '已完成', color: 'green'  },
+  REJECTED:    { label: '已驳回', color: 'red'    },
+}
+
+/** 项目查询参数 */
+export interface ProjectQuery extends PageQuery {
+  /** 项目名称（模糊） */
+  projectName?: string
+  /** 项目类型ID */
+  typeId?: number
+  /** 项目状态 */
+  status?: number
+}
+
+/** 项目列表响应 */
+export interface ProjectListResp {
+  id: number
+  projectName: string
+  typeName: string
+  typeId: number
+  status: number
+  applicantId: number
+  currentNodeType?: string
+  currentNodeSequence?: number
+  submittedTime?: string
+  createTime: string
+}
+
+/** 项目阶段响应（项目详情中） */
+export interface ProjectStageResp {
+  id: number
+  stageType: string
+  stageOrder: number
+  stageName: string
+  plannedDays?: number
+  startDate?: string
+  deadline?: string
+  status: ProjectStageStatus
+  isOverdue: boolean
+  stageFormData?: Record<string, unknown>
+}
+
+/** 项目详情响应 */
+export interface ProjectDetailResp {
+  id: number
+  projectName: string
+  description?: string
+  typeId: number
+  typeName: string
+  status: number
+  applicantId: number
+  currentNodeType?: string
+  currentNodeSequence?: number
+  submittedTime?: string
+  applicationFormData?: Record<string, unknown>
+  applicationFormTemplate?: ProjectFormTemplateResp
+  stages?: ProjectStageResp[]
+  createTime: string
+}
+
+/** 项目表单模板（用于项目模块，避免与 form-template 模块类型混淆） */
+export interface ProjectFormField {
+  fieldCode: string
+  fieldName: string
+  fieldType: string
+  isRequired: boolean
+  span?: number
+  fieldConfig?: unknown
+  options?: unknown
+}
+
+export interface ProjectFormTemplateResp {
+  id: number
+  templateName: string
+  fields: ProjectFormField[]
+}
+
+/** 创建草稿请求 */
+export interface ProjectCreateReq {
+  typeId: number
+  projectName: string
+  description?: string
+}
+
+/** 提交申请请求 */
+export interface ProjectSubmitReq {
+  formData: Record<string, unknown>
+}
+
+/** 修改申请表单请求（有痕） */
+export interface ProjectUpdateFormReq {
+  formData: Record<string, unknown>
+  modifyReason?: string
+}
+
+/** 提交阶段成果请求 */
+export interface StageFormSubmitReq {
+  formData: Record<string, unknown>
+}
+
+/** 任务查询参数 */
+export interface TaskQuery extends PageQuery {
+  projectName?: string
+  taskType?: string
+  status?: string
+}
+
+/** 任务列表响应 */
+export interface TaskListResp {
+  id: number
+  projectId: number
+  projectName: string
+  applicantName: string
+  taskType: string
+  nodeSequence: number
+  nodeName: string
+  status: string
+  assignTime: string
+  completeTime?: string
+}
+
+/** 前序节点汇总 */
+export interface NodeSummaryResp {
+  nodeType: string
+  nodeSequence: number
+  nodeName: string
+  passCount: number
+  totalCount: number
+  averageScore?: number
+  result: string
+}
+
+/** 任务详情响应 */
+export interface TaskDetailResp {
+  taskId: number
+  taskType: string
+  nodeSequence: number
+  nodeName: string
+  taskStatus: string
+  assignTime: string
+  savedFormData?: Record<string, unknown>
+  taskFormTemplate?: ProjectFormTemplateResp
+  projectId: number
+  projectName: string
+  description?: string
+  applicantId: number
+  submittedTime?: string
+  applicationFormData?: Record<string, unknown>
+  applicationFormTemplate?: ProjectFormTemplateResp
+  previousNodes?: NodeSummaryResp[]
+  currentStage?: ProjectStageResp
+  allStages?: ProjectStageResp[]
+}
+
+/** 任务提交请求 */
+export interface TaskSubmitReq {
+  decision: string
+  score?: number
+  rejectBackToStageOrder?: number
+  formData?: Record<string, unknown>
+}
+
+/** 任务暂存请求 */
+export interface TaskSaveReq {
+  formData: Record<string, unknown>
+}
+
+/** 转办请求 */
+export interface TaskTransferReq {
+  targetUserId: number
+  transferRemark?: string
+}
