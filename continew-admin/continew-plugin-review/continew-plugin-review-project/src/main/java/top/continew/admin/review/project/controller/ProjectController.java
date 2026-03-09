@@ -15,9 +15,13 @@ import top.continew.admin.review.project.model.req.StageFormSubmitReq;
 import top.continew.admin.review.project.model.resp.ProjectDetailResp;
 import top.continew.admin.review.project.model.resp.ProjectListResp;
 import top.continew.admin.review.project.service.ProjectService;
+import top.continew.admin.review.type.model.resp.ProjectTypeResp;
+import top.continew.admin.review.type.service.ProjectTypeService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.web.model.R;
+
+import java.util.List;
 
 /**
  * 项目管理 API（申请人视角）
@@ -32,6 +36,17 @@ import top.continew.starter.web.model.R;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final ProjectTypeService projectTypeService;
+
+    /**
+     * 查询已启用的项目类型列表（申请人创建项目时选类型用，无需 type:query 权限）
+     */
+    @GetMapping("/types")
+    @Operation(summary = "查询已启用的项目类型列表")
+    @SaCheckPermission("review:project:add")
+    public R<List<ProjectTypeResp>> listEnabledTypes() {
+        return R.ok(projectTypeService.listEnabledForApplicant());
+    }
 
     /**
      * 获取申请表单模板（申请人选好类型后调用）

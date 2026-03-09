@@ -1,4 +1,4 @@
-package top.continew.admin.review.type.service.impl;
+﻿package top.continew.admin.review.type.service.impl;
 
 import cn.crane4j.annotation.AutoOperate;
 import cn.hutool.core.bean.BeanUtil;
@@ -876,6 +876,159 @@ public class ProjectTypeServiceImpl extends ServiceImpl<ProjectTypeMapper, Proje
             }
         }
         return roots;
+    }
+
+    @Override
+    public List<ProjectTypeResp> listEnabledForApplicant() {
+        // 步骤1：查出所有已启用类型（用专用 Mapper 方法绕过 @DataPermission，申请人可查管理员创建的类型）
+        List<ProjectTypeDO> enabledTypes = baseMapper.selectAllEnabled();
+        if (enabledTypes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 步骤2：批量查出这些类型的 APPLICATION 节点人员配置
+        List<Long> typeIds = enabledTypes.stream().map(ProjectTypeDO::getId).collect(Collectors.toList());
+        QueryWrapper<TypePersonnelConfigDO> wrapper = new QueryWrapper<>();
+        wrapper.in("type_id", typeIds).eq("node_type", "APPLICATION").eq("deleted", 0);
+        List<TypePersonnelConfigDO> allAppConfigs = personnelConfigMapper.selectList(wrapper);
+
+        // 步骤3：按 typeId 分组，展开各类型的 APPLICATION 人员范围（多条规则取并集）
+        Map<Long, Set<Long>> typeApplicantMap = new HashMap<>();
+        for (TypePersonnelConfigDO cfg : allAppConfigs) {
+            typeApplicantMap.computeIfAbsent(cfg.getTypeId(), k -> new HashSet<>()).addAll(expandPersonnelScope(cfg));
+        }
+
+        // 步骤4：过滤出当前用户有资格申请的类型
+        Long currentUserId = UserContextHolder.getContext().getId();
+        return enabledTypes.stream()
+                .filter(type -> {
+                    Set<Long> applicants = typeApplicantMap.get(type.getId());
+                    return applicants != null && applicants.contains(currentUserId);
+                })
+                .map(type -> BeanUtil.toBean(type, ProjectTypeResp.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 展开单条人员范围配置为候选用户ID集合（过滤禁用/已删除账号）
+     * 与 TaskAssignmentEngine.expandScope() 逻辑一致，因模块隔离而在此复用
+     */
+    private Set<Long> expandPersonnelScope(TypePersonnelConfigDO config) {
+        Set<Long> rawIds = new HashSet<>();
+        String scopeType = config.getScopeType() != null ? config.getScopeType().getValue() : "";
+        @SuppressWarnings("unchecked")
+        Map<String, Object> scopeConfig = config.getScopeConfig() instanceof Map<?, ?>
+                ? (Map<String, Object>) config.getScopeConfig() : new HashMap<>();
+
+        switch (scopeType) {
+            case "USER" -> {
+                Object userIdsObj = scopeConfig.get("userIds");
+                if (userIdsObj instanceof List<?> list) {
+                    list.forEach(id -> {
+                        if (id != null) {
+                            try { rawIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
+                        }
+                    });
+                }
+            }
+            case "DEPT" -> {
+                Object deptIdsObj = scopeConfig.get("deptIds");
+                boolean includeSub = Boolean.TRUE.equals(scopeConfig.get("includeSub"));
+                if (deptIdsObj instanceof List<?> list) {
+                    Set<Long> deptIds = expandDeptIds(list, includeSub);
+                    if (!deptIds.isEmpty()) {
+                        // 用专用方法绕过 @DataPermission 数据权限过滤
+                        userMapper.selectEnabledIdsByDeptIds(deptIds).forEach(rawIds::add);
+                    }
+                }
+            }
+            case "ROLE" -> {
+                Object roleIdsObj = scopeConfig.get("roleIds");
+                if (roleIdsObj instanceof List<?> list) {
+                    List<Long> roleIds = new ArrayList<>();
+                    list.forEach(id -> {
+                        if (id != null) {
+                            try { roleIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
+                        }
+                    });
+                    if (!roleIds.isEmpty()) {
+                        QueryWrapper<UserRoleDO> roleWrapper = new QueryWrapper<>();
+                        roleWrapper.in("role_id", roleIds).select("user_id");
+                        userRoleMapper.selectList(roleWrapper).stream()
+                                .map(UserRoleDO::getUserId)
+                                .filter(Objects::nonNull)
+                                .forEach(rawIds::add);
+                    }
+                }
+            }
+            case "COMBINED" -> {
+                Object rulesObj = scopeConfig.get("rules");
+                if (rulesObj instanceof List<?> rules) {
+                    for (Object ruleObj : rules) {
+                        if (ruleObj instanceof Map<?, ?> ruleMap) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> rule = (Map<String, Object>) ruleMap;
+                            rawIds.addAll(expandSingleScopeRule(rule));
+                        }
+                    }
+                }
+            }
+            default -> { /* 未知类型，忽略 */ }
+        }
+
+        if (rawIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        // 过滤禁用/已删除账号（使用 selectBatchIds 绕过 @DataPermission 数据权限过滤）
+        return userMapper.selectBatchIds(rawIds).stream()
+                .filter(u -> DisEnableStatusEnum.ENABLE.equals(u.getStatus()))
+                .map(UserDO::getId).collect(Collectors.toSet());
+    }
+
+    /**
+     * 展开 COMBINED 类型中的单条子规则（USER/DEPT/ROLE）
+     */
+    private Set<Long> expandSingleScopeRule(Map<String, Object> rule) {
+        Set<Long> ids = new HashSet<>();
+        String type = String.valueOf(rule.getOrDefault("scopeType", ""));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> cfg = rule.get("scopeConfig") instanceof Map
+                ? (Map<String, Object>) rule.get("scopeConfig") : new HashMap<>();
+        if ("USER".equals(type)) {
+            Object userIdsObj = cfg.get("userIds");
+            if (userIdsObj instanceof List<?> list) {
+                list.forEach(id -> {
+                    try { ids.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
+                });
+            }
+        } else if ("DEPT".equals(type)) {
+            Object deptIdsObj = cfg.get("deptIds");
+            boolean includeSub = Boolean.TRUE.equals(cfg.get("includeSub"));
+            if (deptIdsObj instanceof List<?> list) {
+                Set<Long> deptIds = expandDeptIds(list, includeSub);
+                if (!deptIds.isEmpty()) {
+                    // 用专用方法绕过 @DataPermission 数据权限过滤
+                    userMapper.selectEnabledIdsByDeptIds(deptIds).forEach(ids::add);
+                }
+            }
+        } else if ("ROLE".equals(type)) {
+            Object roleIdsObj = cfg.get("roleIds");
+            if (roleIdsObj instanceof List<?> list) {
+                List<Long> roleIds = new ArrayList<>();
+                list.forEach(id -> {
+                    try { roleIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
+                });
+                if (!roleIds.isEmpty()) {
+                    QueryWrapper<UserRoleDO> w = new QueryWrapper<>();
+                    w.in("role_id", roleIds).select("user_id");
+                    userRoleMapper.selectList(w).stream()
+                            .map(UserRoleDO::getUserId)
+                            .filter(Objects::nonNull)
+                            .forEach(ids::add);
+                }
+            }
+        }
+        return ids;
     }
 
     @Override

@@ -77,7 +77,7 @@ import { watch } from 'vue'
 import type { TableInstance } from '@arco-design/web-vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getProjectPage, revokeProject, listProjectType } from '@/apis/review'
+import { getProjectPage, revokeProject, listEnabledTypes } from '@/apis/review'
 import { PROJECT_STATUS_MAP, ProjectStatus } from '@/apis/review/type'
 import type { ProjectListResp, ProjectTypeResp } from '@/apis/review/type'
 import { useResetReactive, useTable } from '@/hooks'
@@ -98,8 +98,8 @@ const [queryForm, resetForm] = useResetReactive({
 // 项目类型选项（异步加载）
 const typeOptions = ref<{ label: string; value: number }[]>([])
 onMounted(async () => {
-  const res = await listProjectType({ status: 1, pageNum: 1, pageSize: 200 } as any)
-  typeOptions.value = (res.data?.list ?? []).map((t: ProjectTypeResp) => ({
+  const res = await listEnabledTypes()
+  typeOptions.value = (res.data ?? []).map((t: ProjectTypeResp) => ({
     label: t.typeName,
     value: t.id,
   }))

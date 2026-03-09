@@ -157,6 +157,13 @@ public interface ProjectTypeService extends IService<ProjectTypeDO> {
     List<Map<String, Object>> getDeptTree();
 
     /**
+     * 查询当前用户有资格申请的项目类型列表（已启用 + APPLICATION 节点人员范围包含当前用户）
+     *
+     * @return 有权申请的类型列表
+     */
+    List<ProjectTypeResp> listEnabledForApplicant();
+
+    /**
      * 统计指定范围内拥有指定角色的人员数量（多条规则取并集）
      *
      * @param req 范围请求（roleId + 多条规则）

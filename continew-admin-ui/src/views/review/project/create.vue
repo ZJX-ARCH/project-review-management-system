@@ -52,7 +52,7 @@
     <!-- 步骤二：填写申请表单 -->
     <a-card v-if="step === 2" title="申请表单" :bordered="false">
       <div v-if="formTemplate && formTemplate.fields?.length">
-        <FormRenderer v-model="formData" :template="formTemplate" />
+        <FormRenderer ref="formRendererRef" v-model="formData" :template="formTemplate" />
       </div>
       <a-empty v-else-if="!templateLoading" description="该类型暂无申请表单配置" />
       <div v-else class="template-loading">
@@ -78,7 +78,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import {
-  listProjectType,
+  listEnabledTypes,
   getApplicationForm,
   createProject,
   submitProject,
@@ -95,6 +95,7 @@ const route = useRoute()
 // ——— 状态 ———
 const step = ref(1)
 const basicFormRef = ref<FormInstance>()
+const formRendererRef = ref<{ validate: () => Promise<Record<string, string[]> | undefined> }>()
 
 const projectForm = reactive({
   typeId: undefined as number | undefined,
@@ -122,8 +123,8 @@ const submitting = ref(false)
 onMounted(async () => {
   typeLoading.value = true
   try {
-    const res = await listProjectType({ status: 1, pageNum: 1, pageSize: 200 } as any)
-    typeOptions.value = (res.data?.list ?? []).map((t: ProjectTypeResp) => ({
+    const res = await listEnabledTypes()
+    typeOptions.value = (res.data ?? []).map((t: ProjectTypeResp) => ({
       label: t.typeName,
       value: t.id,
     }))
@@ -198,6 +199,7 @@ const onSaveDraft = async () => {
       draftProjectId.value = res.data
     }
     Message.success('草稿已保存')
+    router.replace({ path: '/review/project', query: { t: Date.now() } })
   }
   catch (e) {
     console.error('暂存失败:', e)
@@ -209,6 +211,10 @@ const onSaveDraft = async () => {
 
 // ——— 提交申请 ———
 const onSubmit = async () => {
+  // 校验必填字段
+  const errors = await formRendererRef.value?.validate()
+  if (errors) return
+
   submitting.value = true
   try {
     if (!draftProjectId.value) {

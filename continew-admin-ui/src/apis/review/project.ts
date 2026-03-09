@@ -8,9 +8,15 @@ import type {
   ProjectUpdateFormReq,
   StageFormSubmitReq,
   ProjectFormTemplateResp,
+  ProjectTypeResp,
 } from './type'
 
 const BASE = '/review/project'
+
+/** 查询已启用的项目类型列表（申请人视角，无需 type:query 权限） */
+export function listEnabledTypes() {
+  return http.get<ProjectTypeResp[]>(`${BASE}/types`)
+}
 
 /** 获取申请表单模板（选完类型后调用） */
 export function getApplicationForm(typeId: number | string) {

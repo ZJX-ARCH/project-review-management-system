@@ -28,6 +28,7 @@ import top.continew.admin.system.model.resp.user.UserDetailResp;
 import top.continew.starter.extension.datapermission.annotation.DataPermission;
 import top.continew.starter.encrypt.field.annotation.FieldEncrypt;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -94,4 +95,15 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      */
     @Select("SELECT nickname FROM sys_user WHERE id = #{id} AND deleted = 0")
     String selectNicknameById(@Param("id") Long id);
+
+    /**
+     * 根据部门 ID 列表查询启用状态的用户 ID（忽略数据权限，供人员范围展开使用）
+     *
+     * @param deptIds 部门 ID 列表
+     * @return 用户 ID 列表
+     */
+    @Select("<script>SELECT id FROM sys_user WHERE deleted = 0 AND status = 1 AND dept_id IN "
+        + "<foreach collection='deptIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>"
+        + "</script>")
+    List<Long> selectEnabledIdsByDeptIds(@Param("deptIds") Collection<Long> deptIds);
 }
