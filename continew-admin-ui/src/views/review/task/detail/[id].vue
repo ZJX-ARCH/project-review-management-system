@@ -42,7 +42,7 @@
               title="任务表单"
               style="margin-bottom: 16px;"
             >
-              <FormRenderer v-model="taskFormData" :template="detail.taskFormTemplate" />
+              <FormRenderer ref="formRendererRef" v-model="taskFormData" :template="detail.taskFormTemplate" :score-table-required="true" />
             </a-card>
 
             <!-- 任务表单（已完成，只读） -->
@@ -61,7 +61,7 @@
             <!-- 决策区（可操作时展示） -->
             <a-card v-if="isEditable" title="提交决策" style="margin-bottom: 16px;">
               <a-form :model="submitForm" layout="vertical">
-                <a-form-item label="决策结果" required>
+                <a-form-item v-if="!hasScoreTable" label="决策结果" required>
                   <a-radio-group v-model="submitForm.decision">
                     <a-radio value="PASS">
                       <a-tag color="green">通过</a-tag>
@@ -80,15 +80,13 @@
                   </a-radio-group>
                 </a-form-item>
 
-                <a-form-item v-if="hasScoreField" label="综合评分">
-                  <a-input-number
-                    v-model="submitForm.score"
-                    :min="0"
-                    :max="100"
-                    placeholder="请输入综合评分"
-                    style="width: 200px;"
-                  />
-                </a-form-item>
+                <a-alert
+                  v-if="hasScoreTable"
+                  type="info"
+                  style="margin-bottom: 16px;"
+                >
+                  表单中包含评分表，提交后系统将自动汇总评分并生成决策结果。
+                </a-alert>
 
                 <a-form-item
                   v-if="detail.taskType === 'ACCEPTANCE' && submitForm.decision === 'REJECT'"
@@ -261,11 +259,12 @@ const isEditable = computed(() =>
   detail.value?.taskStatus === 'PENDING' || detail.value?.taskStatus === 'SAVED',
 )
 
-const hasScoreField = computed(() =>
-  detail.value?.taskFormTemplate?.fields?.some(f => f.fieldType === 'SCORE' || f.fieldType === 'SCORE_TABLE'),
+const hasScoreTable = computed(() =>
+  detail.value?.taskFormTemplate?.fields?.some(f => f.fieldType === 'SCORE_TABLE'),
 )
 
 // ——— 表单数据 ———
+const formRendererRef = ref<{ validate: () => Promise<Record<string, string[]> | undefined> }>()
 const taskFormData = ref<Record<string, unknown>>({})
 
 const submitForm = reactive({
@@ -290,7 +289,11 @@ const onSave = async () => {
 // ——— 提交决策 ———
 const submitting = ref(false)
 const onSubmit = async () => {
-  if (!submitForm.decision) {
+  // 校验表单必填字段（含评分表）
+  const formErrors = await formRendererRef.value?.validate()
+  if (formErrors) return
+
+  if (!hasScoreTable.value && !submitForm.decision) {
     Message.warning('请选择决策结果')
     return
   }
@@ -299,6 +302,10 @@ const onSubmit = async () => {
     && !submitForm.rejectBackToStageOrder) {
     Message.warning('请选择驳回回退到的阶段')
     return
+  }
+
+  if (hasScoreTable.value) {
+    submitForm.decision = 'PASS'
   }
 
   Modal.confirm({

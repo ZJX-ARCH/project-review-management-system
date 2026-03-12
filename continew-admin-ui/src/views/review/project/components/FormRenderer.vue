@@ -13,7 +13,7 @@
         <a-form-item
           :label="field.fieldName"
           :field="field.fieldCode"
-          :required="field.isRequired"
+          :required="field.fieldType === 'SCORE_TABLE' ? (scoreTableRequired || field.isRequired) : field.isRequired"
         >
           <!-- 单行文本 -->
           <a-input
@@ -314,6 +314,8 @@ interface Props {
   modelValue: Record<string, unknown>
   template: ProjectFormTemplateResp
   readonly?: boolean
+  /** 是否强制要求评分表每项都填（任务表单传 true，申请表单不传则按 isRequired 判断） */
+  scoreTableRequired?: boolean
 }
 
 interface Emits {
@@ -322,16 +324,34 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
+  scoreTableRequired: false,
 })
 const emit = defineEmits<Emits>()
 
 const formRef = ref<FormInstance>()
 
-// 根据字段 isRequired 动态生成校验规则
+// 根据字段类型和 isRequired 动态生成校验规则
 const formRules = computed(() => {
   const rules: Record<string, any[]> = {}
   for (const field of props.template.fields ?? []) {
-    if (field.isRequired) {
+    if (field.fieldType === 'SCORE_TABLE') {
+      // scoreTableRequired=true（任务表单）：强制每项必填；否则（申请表单）按 isRequired 决定
+      const needValidate = props.scoreTableRequired || field.isRequired
+      const items = (field.fieldConfig?.scoreItems ?? []) as any[]
+      if (needValidate && items.length > 0) {
+        rules[field.fieldCode] = [{
+          validator: (value: any, cb: (error?: string) => void) => {
+            const scores = value?.scores ?? {}
+            const hasMissing = items.some(
+              item => scores[item.itemCode] === null || scores[item.itemCode] === undefined,
+            )
+            hasMissing ? cb(`请完整填写《${field.fieldName}》的所有评分项`) : cb()
+          },
+        }]
+      }
+    }
+    else if (field.isRequired) {
+      // 非评分表字段：按 isRequired 配置决定是否必填
       rules[field.fieldCode] = [{ required: true, message: `请填写${field.fieldName}` }]
     }
   }
