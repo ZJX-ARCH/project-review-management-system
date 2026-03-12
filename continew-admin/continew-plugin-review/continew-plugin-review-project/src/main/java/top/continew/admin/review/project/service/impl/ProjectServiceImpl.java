@@ -426,6 +426,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
             info.setPassThreshold(ac.getPassThreshold());
             info.setScoreCalcMethod(ac.getScoreCalcMethod() != null ? ac.getScoreCalcMethod().getValue() : null);
             info.setWeightMode(ac.getWeightMode() != null ? ac.getWeightMode().getValue() : null);
+            info.setScoreTableWeights(ac.getScoreTableWeights());
             approvalMap.put(ac.getNodeScope(), info);
         }
         snapshot.setApprovalRules(approvalMap);

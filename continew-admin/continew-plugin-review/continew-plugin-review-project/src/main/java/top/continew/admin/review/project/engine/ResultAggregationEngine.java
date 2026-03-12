@@ -160,9 +160,10 @@ public class ResultAggregationEngine {
         if (scores.isEmpty()) {
             return TaskDecisionEnum.REJECT;
         }
-        BigDecimal finalScore = switch (rule.getScoreCalcMethod() != null ? rule.getScoreCalcMethod() : "AVG") {
-            case "MIN" -> scores.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
-            case "WEIGHTED_AVG", "AVG" -> scores.stream()
+        BigDecimal finalScore = switch (rule.getScoreCalcMethod() != null ? rule.getScoreCalcMethod() : "SIMPLE_AVG") {
+            case "MAX_SCORE" -> scores.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            case "MIN_SCORE" -> scores.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            case "WEIGHTED_AVG", "SIMPLE_AVG" -> scores.stream()
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(scores.size()), 4, RoundingMode.HALF_UP);
             default -> BigDecimal.ZERO;

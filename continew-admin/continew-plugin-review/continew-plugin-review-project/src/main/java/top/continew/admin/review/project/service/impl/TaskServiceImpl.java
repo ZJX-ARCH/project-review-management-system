@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.review.common.enums.TaskType;
+import top.continew.admin.review.form.enums.FieldTypeEnum;
+import top.continew.admin.review.form.model.resp.FormFieldResp;
 import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.form.service.FormTemplateService;
 import top.continew.admin.review.project.enums.TaskDecisionEnum;
@@ -39,8 +42,11 @@ import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -237,6 +243,15 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             throw new BadRequestException("评审任务只能选择通过或驳回");
         }
 
+        // SCORE_PASS 模式：从 formData 自动计算归一化分数，决策由汇总引擎判定
+        if (isReviewTask(task.getTaskType()) && req.getFormData() != null) {
+            BigDecimal calculatedScore = calculateScoreFromFormData(task, req.getFormData());
+            if (calculatedScore != null) {
+                req.setScore(calculatedScore);
+                req.setDecision(TaskDecisionEnum.PASS);
+            }
+        }
+
         // 更新任务
         task.setDecision(req.getDecision());
         task.setScore(req.getScore());
@@ -318,6 +333,101 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
 
     private boolean isReviewTask(TaskType taskType) {
         return taskType == TaskType.AUDIT || taskType == TaskType.REVIEW || taskType == TaskType.DECISION;
+    }
+
+    /** SCORE_PASS 模式下从 formData 解析评分表并计算归一化分数（0~100）。逻辑与前端 FormRenderer.calcPercentage() 一致。*/
+    private BigDecimal calculateScoreFromFormData(ReviewTaskDO task, Map<String, Object> formData) {
+        ReviewProjectDO project = projectMapper.selectById(task.getProjectId());
+        if (project == null) return null;
+        ProjectTypeSnapshot snapshot;
+        try {
+            snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+        } catch (Exception e) {
+            log.warn("[Score] snapshot parse failed taskId={}", task.getId());
+            return null;
+        }
+        if (snapshot == null || snapshot.getApprovalRules() == null || snapshot.getFormMappings() == null) return null;
+        String nodeScope = task.getTaskType().getValue() + "_" + task.getNodeSequence();
+        ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(nodeScope);
+        if (rule == null || !"SCORE_PASS".equals(rule.getApprovalMode())) return null;
+        Long formTemplateId = snapshot.getFormMappings().get(nodeScope);
+        if (formTemplateId == null) {
+            log.warn("[Score] no form template for nodeScope={}", nodeScope);
+            return null;
+        }
+        FormTemplateResp template;
+        try {
+            template = formTemplateService.getDetail(formTemplateId);
+        } catch (Exception e) {
+            log.warn("[Score] load form template failed templateId={}", formTemplateId);
+            return null;
+        }
+        if (template == null || template.getFields() == null) return null;
+        List<FormFieldResp> scoreTableFields = template.getFields().stream()
+                .filter(f -> FieldTypeEnum.SCORE_TABLE.equals(f.getFieldType()))
+                .collect(Collectors.toList());
+        if (scoreTableFields.isEmpty()) return null;
+        Map<String, BigDecimal> tableScores = new LinkedHashMap<>();
+        for (FormFieldResp field : scoreTableFields) {
+            BigDecimal pct = calcTablePercentage(field, formData);
+            if (pct != null) tableScores.put(field.getFieldCode(), pct);
+        }
+        if (tableScores.isEmpty()) return null;
+        if (tableScores.size() == 1) return tableScores.values().iterator().next().setScale(4, RoundingMode.HALF_UP);
+        Map<String, BigDecimal> weights = rule.getScoreTableWeights();
+        if (weights == null || weights.isEmpty()) {
+            BigDecimal sum = tableScores.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+            return sum.divide(BigDecimal.valueOf(tableScores.size()), 4, RoundingMode.HALF_UP);
+        }
+        BigDecimal finalScore = BigDecimal.ZERO;
+        for (Map.Entry<String, BigDecimal> entry : tableScores.entrySet()) {
+            BigDecimal w = weights.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+            finalScore = finalScore.add(entry.getValue().multiply(w));
+        }
+        return finalScore.setScale(4, RoundingMode.HALF_UP);
+    }
+
+    /** 计算单张评分表的归一化分数（0~100），逻辑同前端 calcPercentage() */
+    @SuppressWarnings("unchecked")
+    private BigDecimal calcTablePercentage(FormFieldResp field, Map<String, Object> formData) {
+        if (field.getFieldConfig() == null) return null;
+        Object rawVal = formData.get(field.getFieldCode());
+        if (!(rawVal instanceof Map)) return null;
+        Map<String, Object> tableVal = (Map<String, Object>) rawVal;
+        Object rawScores = tableVal.get("scores");
+        if (!(rawScores instanceof Map)) return null;
+        Map<String, Object> scores = (Map<String, Object>) rawScores;
+        JsonNode cfg = field.getFieldConfig();
+        String scoreMode = cfg.path("scoreMode").asText("WEIGHTED");
+        if ("WEIGHTED".equals(scoreMode)) {
+            double totalScore = cfg.path("totalScore").asDouble(100);
+            if (totalScore <= 0) return BigDecimal.ZERO;
+            double sum = 0;
+            JsonNode items = cfg.path("scoreItems");
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    sum += toDouble(scores.get(item.path("itemCode").asText())) * item.path("weight").asDouble(0);
+                }
+            }
+            return BigDecimal.valueOf(sum / totalScore * 100).setScale(4, RoundingMode.HALF_UP);
+        } else {
+            double totalMax = 0, totalRaw = 0;
+            JsonNode items = cfg.path("scoreItems");
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    totalMax += item.path("maxScore").asDouble(0);
+                    totalRaw += toDouble(scores.get(item.path("itemCode").asText()));
+                }
+            }
+            if (totalMax <= 0) return BigDecimal.ZERO;
+            return BigDecimal.valueOf(totalRaw / totalMax * 100).setScale(4, RoundingMode.HALF_UP);
+        }
+    }
+
+    private double toDouble(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        try { return Double.parseDouble(val.toString()); } catch (Exception e) { return 0; }
     }
 
     /**

@@ -101,10 +101,13 @@ public class ProjectTypeSnapshot implements Serializable {
         /** 评分通过阈值（SCORE_PASS 时有效） */
         private BigDecimal passThreshold;
 
-        /** 评分计算方式（WEIGHTED_AVG/AVG/MIN） */
+        /** 评分计算方式（WEIGHTED_AVG/SIMPLE_AVG/MAX_SCORE/MIN_SCORE），SCORE_PASS 时有效 */
         private String scoreCalcMethod;
 
         /** 评审人权重模式（EQUAL/PRESET） */
         private String weightMode;
+
+        /** 多个 SCORE_TABLE 字段间的权重（key=fieldCode，value=0~1），仅多表时有效 */
+        private Map<String, BigDecimal> scoreTableWeights;
     }
 }
