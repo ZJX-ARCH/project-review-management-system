@@ -7,6 +7,7 @@ import top.continew.admin.review.project.model.req.TaskSubmitReq;
 import top.continew.admin.review.project.model.req.TaskTransferReq;
 import top.continew.admin.review.project.model.resp.TaskDetailResp;
 import top.continew.admin.review.project.model.resp.TaskListResp;
+import top.continew.admin.review.project.model.resp.TaskCandidateResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
@@ -60,6 +61,14 @@ public interface TaskService {
      * @param req    转办目标
      */
     void transfer(Long taskId, TaskTransferReq req);
+
+    /**
+     * 查询当前任务的转办候选人列表（排除自己和已有任务的人）
+     *
+     * @param taskId 任务ID
+     * @return 候选人列表
+     */
+    List<TaskCandidateResp> listCandidates(Long taskId);
 
     /**
      * 查询某节点的所有任务（结果引擎汇总用）

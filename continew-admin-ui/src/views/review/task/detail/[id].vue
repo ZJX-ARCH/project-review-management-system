@@ -110,7 +110,7 @@
               <div class="decision-actions">
                 <a-space>
                   <a-button :loading="saving" @click="onSave">暂存</a-button>
-                  <a-button @click="transferVisible = true">转办</a-button>
+                  <a-button @click="openTransferModal">转办</a-button>
                   <a-button type="primary" :loading="submitting" @click="onSubmit">提交决策</a-button>
                 </a-space>
               </div>
@@ -120,6 +120,19 @@
 
           <!-- 右栏：项目信息 + 历史节点 -->
           <a-col :span="8">
+
+            <!-- 流程进度条 -->
+            <a-card v-if="allProgressSteps.length" title="流程进度" style="margin-bottom: 16px;">
+              <a-steps :current="currentProgressStep" size="small" direction="vertical">
+                <a-step
+                  v-for="(step, idx) in allProgressSteps"
+                  :key="idx"
+                  :title="step.title"
+                  :status="step.status"
+                  :description="step.description"
+                />
+              </a-steps>
+            </a-card>
 
             <a-card title="项目信息" style="margin-bottom: 16px;">
               <a-descriptions :column="1" size="small">
@@ -199,12 +212,21 @@
       @cancel="transferVisible = false"
     >
       <a-form :model="transferForm" layout="vertical">
-        <a-form-item label="转办给（用户ID）" required>
-          <a-input-number
+        <a-form-item label="转办给" required>
+          <a-select
             v-model="transferForm.targetUserId"
-            placeholder="请输入目标用户ID"
+            placeholder="请选择转办对象"
+            :loading="candidatesLoading"
             style="width: 100%;"
-          />
+          >
+            <a-option
+              v-for="u in candidates"
+              :key="u.userId"
+              :value="u.userId"
+            >
+              {{ u.nickname }}（{{ u.username }}）
+            </a-option>
+          </a-select>
         </a-form-item>
         <a-form-item label="转办备注">
           <a-textarea v-model="transferForm.transferRemark" placeholder="请输入转办原因（选填）" :max-length="200" />
@@ -218,13 +240,13 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import { getTaskDetail, saveTask, submitTask, transferTask } from '@/apis/review'
+import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates } from '@/apis/review'
 import {
   PROJECT_TASK_TYPE_MAP,
   PROJECT_TASK_STATUS_MAP,
   PROJECT_STAGE_STATUS_MAP,
 } from '@/apis/review/type'
-import type { TaskDetailResp } from '@/apis/review/type'
+import type { TaskDetailResp, TaskCandidateResp } from '@/apis/review/type'
 import FormRenderer from '../../project/components/FormRenderer.vue'
 
 defineOptions({ name: 'ReviewTaskDetail' })
@@ -272,6 +294,39 @@ const submitForm = reactive({
   score: undefined as number | undefined,
   rejectBackToStageOrder: undefined as number | undefined,
 })
+
+// ——— 流程进度条 ———
+const TASK_TYPE_LABEL: Record<string, string> = {
+  AUDIT: '审核', REVIEW: '评审', DECISION: '决策',
+  MANAGEMENT: '管理', ACCEPTANCE: '验收',
+}
+
+interface ProgressStep {
+  title: string
+  status: 'wait' | 'process' | 'finish' | 'error'
+  description?: string
+}
+
+const allProgressSteps = computed<ProgressStep[]>(() => {
+  if (!detail.value) return []
+  const steps: ProgressStep[] = []
+  // 已完成的历史节点
+  for (const node of (detail.value.previousNodes ?? [])) {
+    steps.push({
+      title: node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`,
+      status: node.result === 'PASS' ? 'finish' : 'error',
+      description: `通过 ${node.passCount}/${node.totalCount}`,
+    })
+  }
+  // 当前节点
+  steps.push({
+    title: detail.value.nodeName || `${TASK_TYPE_LABEL[detail.value.taskType] ?? detail.value.taskType} 第${detail.value.nodeSequence}轮`,
+    status: 'process',
+  })
+  return steps
+})
+
+const currentProgressStep = computed(() => allProgressSteps.value.length - 1)
 
 // ——— 暂存 ———
 const saving = ref(false)
@@ -334,13 +389,29 @@ const onSubmit = async () => {
 const transferVisible = ref(false)
 const transferLoading = ref(false)
 const transferForm = reactive({
-  targetUserId: undefined as number | undefined,
+  targetUserId: undefined as string | undefined,
   transferRemark: '',
 })
+const candidates = ref<TaskCandidateResp[]>([])
+const candidatesLoading = ref(false)
+
+const openTransferModal = async () => {
+  transferForm.targetUserId = undefined
+  transferForm.transferRemark = ''
+  transferVisible.value = true
+  candidatesLoading.value = true
+  try {
+    const res = await getTaskCandidates(taskId.value)
+    candidates.value = res.data ?? []
+  }
+  finally {
+    candidatesLoading.value = false
+  }
+}
 
 const onTransfer = async () => {
   if (!transferForm.targetUserId) {
-    Message.warning('请输入转办目标用户ID')
+    Message.warning('请选择转办目标用户')
     return
   }
   transferLoading.value = true

@@ -345,7 +345,8 @@ public class WorkflowEngine {
         List<ReviewProjectStageDO> stageDOs = stageInfos.stream().map(info -> {
             ReviewProjectStageDO s = new ReviewProjectStageDO();
             s.setProjectId(projectId);
-            s.setStageType(TaskType.valueOf(info.getStageType()));
+            s.setStageType("ACCEPTANCE".equals(info.getStageType())
+                    ? TaskType.ACCEPTANCE : TaskType.MANAGEMENT);
             s.setStageOrder(info.getStageOrder());
             s.setStageName(info.getStageName());
             s.setPlannedDays(info.getPlannedDays());
@@ -374,10 +375,8 @@ public class WorkflowEngine {
                 ? ProjectStatus.ACCEPTING : ProjectStatus.EXECUTING);
         projectMapper.updateById(project);
 
-        // 激活首阶段后立即分配任务（设计文档：激活 KICKOFF → 分配 MANAGEMENT 任务）
-        // 管理人员需知晓项目已进入执行阶段；申请人提交成果后，dedup 保护避免重复分配
-        assignmentEngine.assignTasks(projectId, firstTaskType, firstStage.getStageOrder());
-        log.info("[Workflow] 项目{} 进入执行阶段，首阶段{}（{}）已激活，任务已分配",
+        // 激活首阶段后等待申请人提交成果，再由 StageFormSubmittedEvent 触发任务分配
+        log.info("[Workflow] 项目{} 进入执行阶段，首阶段{}（{}）已激活，等待申请人提交成果",
                 projectId, firstStage.getStageOrder(), firstStage.getStageType());
     }
 

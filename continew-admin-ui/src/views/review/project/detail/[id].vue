@@ -1,5 +1,5 @@
 <template>
-  <GiPageLayout>
+  <GiPageLayout :body-style="{ overflowY: 'auto' }">
     <a-page-header
       :title="detail?.projectName ?? '项目详情'"
       @back="router.push({ path: '/review/project', query: { t: Date.now() } })"
@@ -16,7 +16,7 @@
           <a-button
             v-if="canUpdateForm"
             v-permission="['review:project:update']"
-            @click="updateFormVisible = true"
+            @click="openUpdateForm"
           >有痕修改</a-button>
           <a-button
             v-if="canTerminate"
@@ -47,13 +47,13 @@
         </a-card>
 
         <!-- 评审阶段进度（评审阶段才显示） -->
-        <a-card v-if="isReviewPhase" title="评审流程进度" style="margin-bottom: 16px;">
-          <a-steps :current="currentRoundStep" size="small">
+        <a-card v-if="isReviewPhase && detail.reviewProgress?.length" title="评审流程进度" style="margin-bottom: 16px;">
+          <a-steps size="small">
             <a-step
-              v-for="(node, idx) in reviewNodes"
+              v-for="(node, idx) in detail.reviewProgress"
               :key="idx"
-              :title="node.name"
-              :description="node.description"
+              :title="node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`"
+              :status="nodeStatusToStep(node.nodeStatus)"
             />
           </a-steps>
         </a-card>
@@ -78,7 +78,15 @@
         </a-card>
 
         <!-- 执行阶段进度（执行阶段才显示） -->
-        <a-card v-if="isExecutionPhase && detail.stages?.length" title="执行阶段进度" style="margin-bottom: 16px;">
+        <a-card v-if="isExecutionPhase && detail.stageProgress?.length" title="执行阶段进度" style="margin-bottom: 16px;">
+          <a-steps size="small" style="margin-bottom: 16px;">
+            <a-step
+              v-for="(sp, idx) in detail.stageProgress"
+              :key="idx"
+              :title="sp.stageName"
+              :status="stageStatusToStep(sp.stageStatus)"
+            />
+          </a-steps>
           <div v-for="stage in detail.stages" :key="stage.id" class="stage-item">
             <div class="stage-header">
               <span class="stage-name">{{ stage.stageName }}</span>
@@ -157,6 +165,7 @@ import { Message, Modal } from '@arco-design/web-vue'
 import { getProjectDetail, revokeProject, terminateProject, updateProjectForm, submitStageForm } from '@/apis/review'
 import { PROJECT_STATUS_MAP, PROJECT_STAGE_STATUS_MAP } from '@/apis/review/type'
 import type { ProjectDetailResp, ProjectStageResp } from '@/apis/review/type'
+import has from '@/utils/has'
 import FormRenderer from '../components/FormRenderer.vue'
 
 defineOptions({ name: 'ReviewProjectDetail' })
@@ -195,15 +204,28 @@ const canRevoke = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.st
 const canUpdateForm = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
 const canTerminate = computed(() => {
   const s = detail.value?.status ?? 0
-  return s !== 0 && ![49, 90, 91, 92, 99].includes(s)
+  const notArchived = s !== 0 && ![49, 90, 91, 92, 99].includes(s)
+  return notArchived && has.hasPerm('review:project:terminate')
 })
 
-// ——— 评审进度节点 ———
-const reviewNodes = computed(() => {
-  if (!detail.value?.currentNodeType) return []
-  return [{ name: '当前节点', description: `${detail.value.currentNodeType} 第${detail.value.currentNodeSequence ?? 1}轮` }]
-})
-const currentRoundStep = computed(() => 1)
+// ——— 进度条辅助 ———
+const TASK_TYPE_LABEL: Record<string, string> = {
+  AUDIT: '审核', REVIEW: '评审', DECISION: '决策',
+  MANAGEMENT: '管理', ACCEPTANCE: '验收',
+}
+
+function nodeStatusToStep(status: string): 'wait' | 'process' | 'finish' | 'error' {
+  if (status === 'COMPLETED') return 'finish'
+  if (status === 'ACTIVE') return 'process'
+  return 'wait'
+}
+
+function stageStatusToStep(status: string): 'wait' | 'process' | 'finish' | 'error' {
+  if (status === 'COMPLETED') return 'finish'
+  if (status === 'REJECTED') return 'error'
+  if (status === 'IN_PROGRESS' || status === 'SUBMITTED') return 'process'
+  return 'wait'
+}
 
 // ——— 操作 ———
 const onRevoke = () => {
@@ -251,6 +273,12 @@ const updateFormData = reactive({
   modifyReason: '',
   formData: {} as Record<string, unknown>,
 })
+
+const openUpdateForm = () => {
+  updateFormData.modifyReason = ''
+  updateFormData.formData = { ...(detail.value?.applicationFormData ?? {}) }
+  updateFormVisible.value = true
+}
 
 const onSubmitUpdateForm = async () => {
   if (!updateFormData.modifyReason.trim()) {

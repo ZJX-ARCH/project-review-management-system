@@ -19,6 +19,7 @@ import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.form.service.FormTemplateService;
 import top.continew.admin.review.project.enums.TaskDecisionEnum;
 import top.continew.admin.review.project.enums.TaskStatusEnum;
+import top.continew.admin.review.project.engine.TaskAssignmentEngine;
 import top.continew.admin.review.project.event.TaskCompletedEvent;
 import top.continew.admin.review.project.mapper.ReviewProjectMapper;
 import top.continew.admin.review.project.mapper.ReviewProjectStageMapper;
@@ -32,6 +33,7 @@ import top.continew.admin.review.project.model.req.TaskSaveReq;
 import top.continew.admin.review.project.model.req.TaskSubmitReq;
 import top.continew.admin.review.project.model.req.TaskTransferReq;
 import top.continew.admin.review.project.model.resp.ProjectStageResp;
+import top.continew.admin.review.project.model.resp.TaskCandidateResp;
 import top.continew.admin.review.project.model.resp.TaskDetailResp;
 import top.continew.admin.review.project.model.resp.TaskListResp;
 import top.continew.admin.review.project.service.TaskService;
@@ -69,6 +71,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
     private final ReviewProjectStageMapper stageMapper;
     private final FormTemplateService formTemplateService;
     private final UserMapper userMapper;
+    private final TaskAssignmentEngine assignmentEngine;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -288,6 +291,14 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         }
 
         // 原任务标记为 TRANSFERRED
+        ReviewProjectDO project = projectMapper.selectById(task.getProjectId());
+        if (project == null || project.getDeleted() != 0) {
+            throw new BadRequestException("Related project not found");
+        }
+        Set<Long> candidatePool = assignmentEngine.findCandidates(project.getTypeId(), task.getTaskType(), task.getNodeSequence());
+        if (!candidatePool.contains(req.getTargetUserId())) {
+            throw new BadRequestException("Target user is not eligible for the current node");
+        }
         task.setStatus(TaskStatusEnum.TRANSFERRED);
         task.setTransferRemark(req.getTransferRemark());
         task.setCompleteTime(LocalDateTime.now());
@@ -577,5 +588,38 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         // 使用 selectBatchIds 绕过 @DataPermission（评审人没有申请人的数据权限，SELF 范围会过滤掉）
         return userMapper.selectBatchIds(userIds)
                 .stream().collect(Collectors.toMap(UserDO::getId, UserDO::getNickname));
+    }
+
+    @Override
+    public List<TaskCandidateResp> listCandidates(Long taskId) {
+        ReviewTaskDO task = getTaskAndCheckAssignee(taskId);
+        ReviewProjectDO project = projectMapper.selectById(task.getProjectId());
+        if (project == null) {
+            throw new BusinessException("关联项目不存在");
+        }
+
+        // 查当前节点候选人池
+        Set<Long> candidatePool = assignmentEngine.findCandidates(
+                project.getTypeId(), task.getTaskType(), task.getNodeSequence());
+
+        // 排除自己
+        candidatePool.remove(task.getAssigneeId());
+
+        if (candidatePool.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 查用户信息（selectBatchIds 绕过 @DataPermission）
+        return userMapper.selectBatchIds(candidatePool).stream()
+                .map(u -> {
+                    TaskCandidateResp resp = new TaskCandidateResp();
+                    resp.setUserId(u.getId());
+                    resp.setNickname(u.getNickname());
+                    resp.setUsername(u.getUsername());
+                    return resp;
+                })
+                .sorted(Comparator.comparing(TaskCandidateResp::getNickname,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
     }
 }

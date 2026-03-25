@@ -214,7 +214,11 @@ const TASK_TYPE_LABEL: Record<string, string> = {
 function formatCurrentNode(record: ProjectListResp): string {
   if (!record.currentNodeType) return '—'
   const label = TASK_TYPE_LABEL[record.currentNodeType] ?? record.currentNodeType
-  return record.currentNodeSequence ? `${label} 第${record.currentNodeSequence}轮` : label
+  if (!record.currentNodeSequence) return label
+  const suffix = ['MANAGEMENT', 'ACCEPTANCE'].includes(record.currentNodeType)
+    ? `第${record.currentNodeSequence}阶段`
+    : `第${record.currentNodeSequence}轮`
+  return `${label} ${suffix}`
 }
 
 /** 评审阶段（已提交~决策中）可撤销 */

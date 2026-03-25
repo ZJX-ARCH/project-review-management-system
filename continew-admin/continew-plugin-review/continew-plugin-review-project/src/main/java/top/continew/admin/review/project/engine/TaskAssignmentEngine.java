@@ -7,41 +7,42 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.review.common.enums.TaskType;
+import top.continew.admin.review.project.enums.TaskStatusEnum;
 import top.continew.admin.review.project.mapper.ReviewProjectMapper;
 import top.continew.admin.review.project.mapper.ReviewTaskMapper;
 import top.continew.admin.review.project.model.entity.ProjectTypeSnapshot;
 import top.continew.admin.review.project.model.entity.ReviewProjectDO;
 import top.continew.admin.review.project.model.entity.ReviewTaskDO;
-import top.continew.admin.review.project.enums.TaskStatusEnum;
 import top.continew.admin.review.type.mapper.TypePersonnelConfigMapper;
 import top.continew.admin.review.type.model.entity.TypePersonnelConfigDO;
 import top.continew.admin.system.mapper.DeptMapper;
+import top.continew.admin.system.mapper.RoleMapper;
 import top.continew.admin.system.mapper.UserRoleMapper;
 import top.continew.admin.system.mapper.user.UserMapper;
 import top.continew.admin.system.model.entity.DeptDO;
+import top.continew.admin.system.model.entity.RoleDO;
 import top.continew.admin.system.model.entity.UserRoleDO;
 import top.continew.admin.system.model.entity.user.UserDO;
 import top.continew.starter.core.exception.BusinessException;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * 任务分配引擎（七步算法：范围展开 → 用户过滤 → 确定人数 → 负载均衡 → 随机抽取 → 防重 → 批量创建）
- *
- * @author zjx
- * @since 2026-03-07
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TaskAssignmentEngine {
 
-    /** 同类型任务积压阈值（超过此数则进备选池） */
     private static final int MAX_PENDING_SAME_TYPE = 5;
-
-    /** 管理/验收阶段默认分配人数 */
     private static final int DEFAULT_MANAGEMENT_COUNT = 1;
 
     private final ReviewProjectMapper projectMapper;
@@ -49,73 +50,49 @@ public class TaskAssignmentEngine {
     private final TypePersonnelConfigMapper personnelConfigMapper;
     private final UserMapper userMapper;
     private final DeptMapper deptMapper;
+    private final RoleMapper roleMapper;
     private final UserRoleMapper userRoleMapper;
     private final ObjectMapper objectMapper;
 
-    /**
-     * 为指定节点分配任务（七步算法）
-     *
-     * @param projectId    项目ID
-     * @param taskType     任务类型
-     * @param nodeSequence 节点序号（评审轮次序号 or 管理阶段序号）
-     */
     public void assignTasks(Long projectId, TaskType taskType, Integer nodeSequence) {
         ReviewProjectDO project = projectMapper.selectById(projectId);
         if (project == null) {
-            throw new BusinessException("项目不存在：" + projectId);
+            throw new BusinessException("Project not found: " + projectId);
         }
 
-        // Step 1: 转换为 personnel_config 查询 key
-        String personnelNodeType;
-        Integer personnelSeq;
-        if (taskType == TaskType.MANAGEMENT || taskType == TaskType.ACCEPTANCE) {
-            personnelNodeType = "STAGE";
-            personnelSeq = nodeSequence;
-        } else {
-            personnelNodeType = taskType.getValue();
-            personnelSeq = nodeSequence;
-        }
-
-        // Step 2: 查人员范围并展开为候选池（同一节点可存在多条不同 scopeType 的配置，取并集）
-        QueryWrapper<TypePersonnelConfigDO> configWrapper = new QueryWrapper<>();
-        configWrapper.eq("type_id", project.getTypeId())
-                .eq("node_type", personnelNodeType)
-                .eq("node_sequence", personnelSeq)
-                .eq("deleted", 0);
-        List<TypePersonnelConfigDO> personnelConfigs = personnelConfigMapper.selectList(configWrapper);
+        String personnelNodeType = resolvePersonnelNodeType(taskType);
+        List<TypePersonnelConfigDO> personnelConfigs = listPersonnelConfigs(project.getTypeId(), personnelNodeType, nodeSequence);
         if (personnelConfigs.isEmpty()) {
-            throw new BusinessException("未找到节点人员配置：typeId=" + project.getTypeId()
-                    + ", nodeType=" + personnelNodeType + ", nodeSequence=" + personnelSeq);
+            throw new BusinessException("Personnel config not found: typeId=" + project.getTypeId()
+                    + ", nodeType=" + personnelNodeType + ", nodeSequence=" + nodeSequence);
         }
 
-        Set<Long> candidatePool = new HashSet<>();
-        for (TypePersonnelConfigDO cfg : personnelConfigs) {
-            candidatePool.addAll(expandScope(cfg));
-        }
+        Set<Long> candidatePool = applyNodeRoleFilter(
+                collectScopedCandidates(personnelConfigs),
+                resolveNodeRoleCode(taskType, personnelNodeType)
+        );
         if (candidatePool.isEmpty()) {
-            throw new BusinessException("候选人员池为空，无法分配任务。节点：" + personnelNodeType + "_" + personnelSeq
-                    + "，请检查类型人员范围配置");
+            throw new BusinessException("No eligible assignees for node: " + buildNodeScope(taskType, nodeSequence));
         }
 
-        // Step 3: 确定分配人数
         int requiredCount = resolveRequiredCount(project, taskType, nodeSequence);
+        if (candidatePool.size() < requiredCount) {
+            throw new BusinessException("Insufficient eligible assignees for node " + buildNodeScope(taskType, nodeSequence)
+                    + ": required=" + requiredCount + ", actual=" + candidatePool.size());
+        }
 
-        // Step 4: 负载均衡筛选
         List<Long> priorityPool = candidatePool.stream()
                 .filter(uid -> taskMapper.countActiveTasks(uid, taskType.getValue()) < MAX_PENDING_SAME_TYPE)
                 .collect(Collectors.toList());
-
         if (priorityPool.size() < requiredCount && candidatePool.size() > priorityPool.size()) {
-            log.warn("[TaskAssignment] 项目{} 节点{}-{} 优先池不足，回退完整候选池。候选数={}, 优先数={}, 需求数={}",
+            log.warn("[TaskAssignment] project={} node={}-{} priorityPool insufficient, fallback to full pool. all={}, priority={}, required={}",
                     projectId, taskType, nodeSequence, candidatePool.size(), priorityPool.size(), requiredCount);
         }
 
-        // Step 5: 随机抽取
         List<Long> assignPool = priorityPool.size() >= requiredCount ? priorityPool : new ArrayList<>(candidatePool);
         Collections.shuffle(assignPool);
-        List<Long> selected = assignPool.subList(0, Math.min(requiredCount, assignPool.size()));
+        List<Long> selected = assignPool.subList(0, requiredCount);
 
-        // Step 6: 防重校验（幂等保护）
         QueryWrapper<ReviewTaskDO> existWrapper = new QueryWrapper<>();
         existWrapper.eq("project_id", projectId)
                 .eq("task_type", taskType.getValue())
@@ -125,20 +102,18 @@ public class TaskAssignmentEngine {
                         TaskStatusEnum.SAVED.getValue(),
                         TaskStatusEnum.COMPLETED.getValue()))
                 .eq("deleted", 0);
-        Set<Long> existingAssignees = taskMapper.selectList(existWrapper)
-                .stream().map(ReviewTaskDO::getAssigneeId).collect(Collectors.toSet());
+        Set<Long> existingAssignees = taskMapper.selectList(existWrapper).stream()
+                .map(ReviewTaskDO::getAssigneeId)
+                .collect(Collectors.toSet());
 
         List<Long> toAssign = selected.stream()
                 .filter(uid -> !existingAssignees.contains(uid))
                 .collect(Collectors.toList());
-
         if (toAssign.isEmpty()) {
-            log.info("[TaskAssignment] 项目{} 节点{}-{} 所有候选人已有任务，跳过分配（幂等）",
-                    projectId, taskType, nodeSequence);
+            log.info("[TaskAssignment] project={} node={}-{} all selected users already have tasks", projectId, taskType, nodeSequence);
             return;
         }
 
-        // Step 7: 批量创建任务
         List<ReviewTaskDO> tasks = toAssign.stream().map(uid -> {
             ReviewTaskDO task = new ReviewTaskDO();
             task.setProjectId(projectId);
@@ -152,55 +127,90 @@ public class TaskAssignmentEngine {
         }).collect(Collectors.toList());
         taskMapper.insertBatch(tasks);
 
-        log.info("[TaskAssignment] 项目{} 节点{}-{} 成功分配 {} 个任务", projectId, taskType, nodeSequence, tasks.size());
+        log.info("[TaskAssignment] project={} node={}-{} assigned {} tasks", projectId, taskType, nodeSequence, tasks.size());
     }
 
-    /**
-     * 展开人员范围为候选用户ID集合（过滤禁用/已删除账号）
-     */
+    public void validatePersonnelSufficiency(Long typeId, ProjectTypeSnapshot snapshot) {
+        if (snapshot.getRounds() != null) {
+            for (ProjectTypeSnapshot.RoundInfo round : snapshot.getRounds()) {
+                TaskType taskType = TaskType.valueOf(round.getRoundType());
+                Set<Long> candidates = findCandidates(typeId, taskType, round.getRoundSequence());
+                int requiredCount = resolveRequiredCount(snapshot, taskType, round.getRoundSequence());
+                if (candidates.size() < requiredCount) {
+                    throw new BusinessException("Insufficient eligible users for node "
+                            + round.getRoundType() + "_" + round.getRoundSequence()
+                            + ": required=" + requiredCount + ", actual=" + candidates.size());
+                }
+            }
+        }
+
+        if (snapshot.getStages() != null) {
+            for (ProjectTypeSnapshot.StageInfo stage : snapshot.getStages()) {
+                TaskType taskType = stageTypeToTaskType(stage.getStageType());
+                Set<Long> candidates = findCandidates(typeId, taskType, stage.getStageOrder());
+                int requiredCount = resolveRequiredCount(snapshot, taskType, stage.getStageOrder());
+                if (candidates.size() < requiredCount) {
+                    throw new BusinessException("Insufficient eligible users for stage "
+                            + stage.getStageName() + ": required=" + requiredCount + ", actual=" + candidates.size());
+                }
+            }
+        }
+    }
+
+    public void ensureApplicantEligible(Long typeId, Long userId) {
+        Set<Long> applicantPool = findApplicationCandidates(typeId);
+        if (!applicantPool.contains(userId)) {
+            throw new BusinessException("Current user is not eligible to apply for this project type");
+        }
+    }
+
+    public Set<Long> findCandidates(Long typeId, TaskType taskType, Integer nodeSequence) {
+        String personnelNodeType = resolvePersonnelNodeType(taskType);
+        List<TypePersonnelConfigDO> personnelConfigs = listPersonnelConfigs(typeId, personnelNodeType, nodeSequence);
+        if (personnelConfigs.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return applyNodeRoleFilter(collectScopedCandidates(personnelConfigs), resolveNodeRoleCode(taskType, personnelNodeType));
+    }
+
+    public Set<Long> findApplicationCandidates(Long typeId) {
+        List<TypePersonnelConfigDO> personnelConfigs = listPersonnelConfigs(typeId, "APPLICATION", null);
+        if (personnelConfigs.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return applyNodeRoleFilter(collectScopedCandidates(personnelConfigs), "APPLICANT");
+    }
+
     private Set<Long> expandScope(TypePersonnelConfigDO config) {
         Set<Long> rawIds = new HashSet<>();
         String scopeType = config.getScopeType() != null ? config.getScopeType().getValue() : "";
+        @SuppressWarnings("unchecked")
         Map<String, Object> scopeConfig = config.getScopeConfig() instanceof Map<?, ?>
-                ? (Map<String, Object>) config.getScopeConfig() : new HashMap<>();
+                ? (Map<String, Object>) config.getScopeConfig()
+                : new HashMap<>();
 
-        log.info("[TaskAssignment] expandScope configId={} scopeType={} scopeConfig={}", config.getId(), scopeType, scopeConfig);
         switch (scopeType) {
             case "USER" -> {
                 Object userIdsObj = scopeConfig.get("userIds");
                 if (userIdsObj instanceof List<?> list) {
-                    list.forEach(id -> {
-                        if (id != null) {
-                            try { rawIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
-                        }
-                    });
+                    list.forEach(id -> addLong(rawIds, id));
                 }
-                log.info("[TaskAssignment] USER rawIds={}", rawIds);
             }
             case "DEPT" -> {
                 Object deptIdsObj = scopeConfig.get("deptIds");
                 boolean includeSub = Boolean.TRUE.equals(scopeConfig.get("includeSub"));
                 if (deptIdsObj instanceof List<?> list) {
                     Set<Long> deptIds = expandDeptIds(list, includeSub);
-                    log.info("[TaskAssignment] DEPT expandedDeptIds={}", deptIds);
                     if (!deptIds.isEmpty()) {
-                        // 使用自定义 @Select 方法，绕过 @DataPermission 拦截
-                        List<Long> deptUserIds = userMapper.selectEnabledIdsByDeptIds(deptIds);
-                        log.info("[TaskAssignment] DEPT selectEnabledIdsByDeptIds={}", deptUserIds);
-                        rawIds.addAll(deptUserIds);
+                        rawIds.addAll(userMapper.selectEnabledIdsByDeptIds(deptIds));
                     }
                 }
             }
             case "ROLE" -> {
-                // I1: 按角色展开候选人员（查询持有指定角色的所有用户）
                 Object roleIdsObj = scopeConfig.get("roleIds");
                 if (roleIdsObj instanceof List<?> list) {
                     List<Long> roleIds = new ArrayList<>();
-                    list.forEach(id -> {
-                        if (id != null) {
-                            try { roleIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
-                        }
-                    });
+                    list.forEach(id -> addLong(roleIds, id));
                     if (!roleIds.isEmpty()) {
                         QueryWrapper<UserRoleDO> roleWrapper = new QueryWrapper<>();
                         roleWrapper.in("role_id", roleIds).select("user_id");
@@ -223,38 +233,29 @@ public class TaskAssignmentEngine {
                     }
                 }
             }
-            default -> log.warn("[TaskAssignment] 未知 scopeType：{}", scopeType);
+            default -> log.warn("[TaskAssignment] unknown scopeType={}", scopeType);
         }
 
-        log.info("[TaskAssignment] expandScope rawIds(before filter)={}", rawIds);
         if (rawIds.isEmpty()) {
             return Collections.emptySet();
         }
-
-        // 过滤禁用/已删除账号：用 selectBatchIds 绕过 @DataPermission 拦截（DataPermissionMapper 未覆盖此方法）
-        Set<Long> result = userMapper.selectBatchIds(rawIds).stream()
+        return userMapper.selectBatchIds(rawIds).stream()
                 .filter(u -> DisEnableStatusEnum.ENABLE.equals(u.getStatus()))
                 .map(UserDO::getId)
                 .collect(Collectors.toSet());
-        log.info("[TaskAssignment] expandScope finalCandidates={}", result);
-        return result;
     }
 
-    /**
-     * 展开单条 COMBINED 子规则（支持 USER / DEPT / ROLE）
-     */
     private Set<Long> expandSingleRule(Map<String, Object> rule) {
         Set<Long> ids = new HashSet<>();
         String type = String.valueOf(rule.getOrDefault("scopeType", ""));
         @SuppressWarnings("unchecked")
         Map<String, Object> cfg = rule.get("scopeConfig") instanceof Map
-                ? (Map<String, Object>) rule.get("scopeConfig") : new HashMap<>();
+                ? (Map<String, Object>) rule.get("scopeConfig")
+                : new HashMap<>();
         if ("USER".equals(type)) {
             Object userIdsObj = cfg.get("userIds");
             if (userIdsObj instanceof List<?> list) {
-                list.forEach(id -> {
-                    try { ids.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
-                });
+                list.forEach(id -> addLong(ids, id));
             }
         } else if ("DEPT".equals(type)) {
             Object deptIdsObj = cfg.get("deptIds");
@@ -262,7 +263,6 @@ public class TaskAssignmentEngine {
             if (deptIdsObj instanceof List<?> list) {
                 Set<Long> deptIds = expandDeptIds(list, includeSub);
                 if (!deptIds.isEmpty()) {
-                    // 使用自定义 @Select 方法，绕过 @DataPermission 拦截
                     userMapper.selectEnabledIdsByDeptIds(deptIds).forEach(ids::add);
                 }
             }
@@ -270,13 +270,11 @@ public class TaskAssignmentEngine {
             Object roleIdsObj = cfg.get("roleIds");
             if (roleIdsObj instanceof List<?> list) {
                 List<Long> roleIds = new ArrayList<>();
-                list.forEach(id -> {
-                    try { roleIds.add(Long.parseLong(String.valueOf(id))); } catch (NumberFormatException ignored) {}
-                });
+                list.forEach(id -> addLong(roleIds, id));
                 if (!roleIds.isEmpty()) {
-                    QueryWrapper<UserRoleDO> w = new QueryWrapper<>();
-                    w.in("role_id", roleIds).select("user_id");
-                    userRoleMapper.selectList(w).stream()
+                    QueryWrapper<UserRoleDO> wrapper = new QueryWrapper<>();
+                    wrapper.in("role_id", roleIds).select("user_id");
+                    userRoleMapper.selectList(wrapper).stream()
                             .map(UserRoleDO::getUserId)
                             .filter(Objects::nonNull)
                             .forEach(ids::add);
@@ -286,13 +284,12 @@ public class TaskAssignmentEngine {
         return ids;
     }
 
-    /**
-     * 展开部门ID（含子部门）
-     */
     private Set<Long> expandDeptIds(List<?> deptIdList, boolean includeSub) {
         Set<Long> result = new HashSet<>();
         for (Object id : deptIdList) {
-            if (id == null) continue;
+            if (id == null) {
+                continue;
+            }
             try {
                 long deptId = Long.parseLong(String.valueOf(id));
                 result.add(deptId);
@@ -301,58 +298,26 @@ public class TaskAssignmentEngine {
                     subWrapper.apply("FIND_IN_SET({0}, ancestors)", deptId).eq("deleted", 0);
                     deptMapper.selectList(subWrapper).stream().map(DeptDO::getId).forEach(result::add);
                 }
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         return result;
     }
 
-    /**
-     * C5: 校验快照中所有节点的人员配置均充足（提交前检查，提前暴露配置缺陷）
-     *
-     * @param typeId   项目类型ID
-     * @param snapshot 已构建的类型快照
-     */
-    public void validatePersonnelSufficiency(Long typeId, ProjectTypeSnapshot snapshot) {
-        // 校验评审轮次
-        if (snapshot.getRounds() != null) {
-            for (ProjectTypeSnapshot.RoundInfo round : snapshot.getRounds()) {
-                TaskType taskType = TaskType.valueOf(round.getRoundType());
-                Set<Long> candidates = findCandidates(typeId, taskType, round.getRoundSequence());
-                if (candidates.isEmpty()) {
-                    throw new top.continew.starter.core.exception.BusinessException(
-                            "节点 " + round.getRoundType() + "_" + round.getRoundSequence()
-                                    + "（" + round.getRoundName() + "）人员范围为空，请先完成人员配置再提交申请");
-                }
-            }
-        }
-        // 校验执行阶段（stageType 为 KICKOFF/EXECUTION/ACCEPTANCE，需转换为 TaskType）
-        if (snapshot.getStages() != null) {
-            for (ProjectTypeSnapshot.StageInfo stage : snapshot.getStages()) {
-                TaskType taskType = stageTypeToTaskType(stage.getStageType());
-                Set<Long> candidates = findCandidates(typeId, taskType, stage.getStageOrder());
-                if (candidates.isEmpty()) {
-                    throw new top.continew.starter.core.exception.BusinessException(
-                            "阶段「" + stage.getStageName() + "」人员范围为空，请先完成人员配置再提交申请");
-                }
-            }
-        }
-    }
-
-    /**
-     * 查询某节点的候选用户集合（不做任务创建，供校验和转办使用）
-     */
-    public Set<Long> findCandidates(Long typeId, TaskType taskType, Integer nodeSequence) {
-        String personnelNodeType = (taskType == TaskType.MANAGEMENT || taskType == TaskType.ACCEPTANCE)
-                ? "STAGE" : taskType.getValue();
+    private List<TypePersonnelConfigDO> listPersonnelConfigs(Long typeId, String nodeType, Integer nodeSequence) {
         QueryWrapper<TypePersonnelConfigDO> configWrapper = new QueryWrapper<>();
         configWrapper.eq("type_id", typeId)
-                .eq("node_type", personnelNodeType)
-                .eq("node_sequence", nodeSequence)
+                .eq("node_type", nodeType)
                 .eq("deleted", 0);
-        List<TypePersonnelConfigDO> personnelConfigs = personnelConfigMapper.selectList(configWrapper);
-        if (personnelConfigs.isEmpty()) {
-            return Collections.emptySet();
+        if (nodeSequence == null) {
+            configWrapper.isNull("node_sequence");
+        } else {
+            configWrapper.eq("node_sequence", nodeSequence);
         }
+        return personnelConfigMapper.selectList(configWrapper);
+    }
+
+    private Set<Long> collectScopedCandidates(List<TypePersonnelConfigDO> personnelConfigs) {
         Set<Long> candidates = new HashSet<>();
         for (TypePersonnelConfigDO cfg : personnelConfigs) {
             candidates.addAll(expandScope(cfg));
@@ -360,39 +325,122 @@ public class TaskAssignmentEngine {
         return candidates;
     }
 
-    /**
-     * 将管理阶段类型（KICKOFF/EXECUTION/ACCEPTANCE）转换为任务类型
-     * <ul>
-     *     <li>KICKOFF / EXECUTION → MANAGEMENT</li>
-     *     <li>ACCEPTANCE → ACCEPTANCE</li>
-     * </ul>
-     */
+    private Set<Long> applyNodeRoleFilter(Set<Long> candidatePool, String roleCode) {
+        if (candidatePool.isEmpty() || roleCode == null || roleCode.isBlank()) {
+            return candidatePool;
+        }
+
+        Long roleId = findRoleIdByCode(roleCode);
+        if (roleId == null) {
+            // 角色不存在时不过滤，直接使用范围配置的候选人
+            log.warn("[TaskAssignment] roleCode={} not found, skip role filter", roleCode);
+            return candidatePool;
+        }
+
+        QueryWrapper<UserRoleDO> roleWrapper = new QueryWrapper<>();
+        roleWrapper.eq("role_id", roleId).select("user_id");
+        Set<Long> roleUserIds = userRoleMapper.selectList(roleWrapper).stream()
+                .map(UserRoleDO::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (roleUserIds.isEmpty()) {
+            // 角色无成员时不过滤，兜底使用范围配置的候选人
+            log.warn("[TaskAssignment] roleCode={} has no members, skip role filter", roleCode);
+            return candidatePool;
+        }
+
+        Set<Long> filtered = new HashSet<>(candidatePool);
+        filtered.retainAll(roleUserIds);
+        if (filtered.isEmpty()) {
+            // 交集为空时兜底使用范围配置的候选人，避免任务分配失败
+            log.warn("[TaskAssignment] roleCode={} filter result empty, fallback to scope candidates", roleCode);
+            return candidatePool;
+        }
+        return filtered;
+    }
+
+    private Long findRoleIdByCode(String roleCode) {
+        QueryWrapper<RoleDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("code", roleCode)
+                .eq("deleted", 0)
+                .last("LIMIT 1");
+        RoleDO role = roleMapper.selectOne(wrapper);
+        return role != null ? role.getId() : null;
+    }
+
+    private String resolvePersonnelNodeType(TaskType taskType) {
+        return taskType == TaskType.MANAGEMENT || taskType == TaskType.ACCEPTANCE ? "STAGE" : taskType.getValue();
+    }
+
+    private String resolveNodeRoleCode(TaskType taskType, String personnelNodeType) {
+        if ("APPLICATION".equals(personnelNodeType)) {
+            return "APPLICANT";
+        }
+        return switch (taskType) {
+            case AUDIT -> "AUDITOR";
+            case REVIEW -> "REVIEWER";
+            case DECISION -> "DECISION_MAKER";
+            case MANAGEMENT -> "MANAGER";
+            case ACCEPTANCE -> "ACCEPTANCE_INSPECTOR";
+            default -> null;
+        };
+    }
+
     private TaskType stageTypeToTaskType(String stageType) {
         if ("ACCEPTANCE".equals(stageType)) {
             return TaskType.ACCEPTANCE;
         }
-        // KICKOFF / EXECUTION 均归为管理任务
         return TaskType.MANAGEMENT;
     }
 
-    /**
-     * 从快照读取分配人数（管理/验收阶段默认1人）
-     */
     private int resolveRequiredCount(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
-        if (taskType == TaskType.MANAGEMENT || taskType == TaskType.ACCEPTANCE) {
-            return DEFAULT_MANAGEMENT_COUNT;
-        }
-        // 评审阶段：从快照读 approvalRules[nodeScope].requiredReviewerCount
         try {
             ProjectTypeSnapshot snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
-            String nodeScope = taskType.getValue() + "_" + nodeSequence;
-            ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(nodeScope);
-            if (rule != null && rule.getRequiredReviewerCount() != null) {
-                return rule.getRequiredReviewerCount();
-            }
+            return resolveRequiredCount(snapshot, taskType, nodeSequence);
         } catch (Exception e) {
-            log.warn("[TaskAssignment] 读取快照失败，使用默认人数1：{}", e.getMessage());
+            log.warn("[TaskAssignment] failed to parse snapshot, fallback to default count: {}", e.getMessage());
+            return DEFAULT_MANAGEMENT_COUNT;
+        }
+    }
+
+    private int resolveRequiredCount(ProjectTypeSnapshot snapshot, TaskType taskType, Integer nodeSequence) {
+        if (snapshot == null || snapshot.getApprovalRules() == null) {
+            return DEFAULT_MANAGEMENT_COUNT;
+        }
+        if (taskType == TaskType.MANAGEMENT) {
+            return DEFAULT_MANAGEMENT_COUNT;
+        }
+        ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(buildNodeScope(taskType, nodeSequence));
+        if (rule != null && rule.getRequiredReviewerCount() != null) {
+            return rule.getRequiredReviewerCount();
         }
         return DEFAULT_MANAGEMENT_COUNT;
+    }
+
+    private String buildNodeScope(TaskType taskType, Integer nodeSequence) {
+        if (taskType == TaskType.ACCEPTANCE) {
+            return "ACCEPTANCE";
+        }
+        return taskType.getValue() + "_" + nodeSequence;
+    }
+
+    private void addLong(Set<Long> container, Object value) {
+        if (value == null) {
+            return;
+        }
+        try {
+            container.add(Long.parseLong(String.valueOf(value)));
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    private void addLong(List<Long> container, Object value) {
+        if (value == null) {
+            return;
+        }
+        try {
+            container.add(Long.parseLong(String.valueOf(value)));
+        } catch (NumberFormatException ignored) {
+        }
     }
 }

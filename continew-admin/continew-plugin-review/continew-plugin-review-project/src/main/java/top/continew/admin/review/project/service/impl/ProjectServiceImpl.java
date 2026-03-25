@@ -55,8 +55,12 @@ import top.continew.starter.core.exception.BadRequestException;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import cn.dev33.satoken.stp.StpUtil;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +91,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     private final FormTemplateService formTemplateService;
     private final TaskAssignmentEngine assignmentEngine;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     @Override
     public FormTemplateResp getApplicationForm(Long typeId) {
@@ -117,6 +122,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
 
         Long userId = UserContextHolder.getContext().getId();
         Long deptId = UserContextHolder.getContext().getDeptId();
+        assignmentEngine.ensureApplicantEligible(req.getTypeId(), userId);
 
         ReviewProjectDO project = new ReviewProjectDO();
         project.setTypeId(req.getTypeId());
@@ -142,6 +148,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
         ProjectTypeSnapshot snapshot = buildSnapshot(project.getTypeId());
 
         // C5: 提前校验所有节点人员配置充足性，避免流程启动后因人员为空报错
+        assignmentEngine.ensureApplicantEligible(project.getTypeId(), project.getApplicantId());
         assignmentEngine.validatePersonnelSufficiency(project.getTypeId(), snapshot);
 
         project.setStatus(ProjectStatus.SUBMITTED);
@@ -161,8 +168,10 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
         LambdaQueryWrapper<ReviewProjectDO> wrapper = new LambdaQueryWrapper<>();
 
         Long currentUserId = UserContextHolder.getContext().getId();
-        // 申请人只查自己的项目
-        wrapper.eq(ReviewProjectDO::getApplicantId, currentUserId);
+        // 有"查看全部项目"权限（PROJECT_ADMIN）时不限制申请人过滤
+        if (!StpUtil.hasPermission("review:project:list:all")) {
+            wrapper.eq(ReviewProjectDO::getApplicantId, currentUserId);
+        }
 
         if (query.getProjectName() != null) {
             wrapper.like(ReviewProjectDO::getProjectName, query.getProjectName());
@@ -225,6 +234,33 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                         .orderByAsc(ReviewProjectStageDO::getStageOrder));
         if (!stages.isEmpty()) {
             resp.setStages(stages.stream().map(this::toStageResp).collect(Collectors.toList()));
+        }
+
+        // 从快照构建申请表单模板和进度信息
+        if (project.getSnapshotConfig() != null) {
+            try {
+                ProjectTypeSnapshot snapshot = objectMapper.convertValue(
+                        project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+                if (snapshot != null) {
+                    // 填充申请表单模板
+                    if (snapshot.getFormMappings() != null) {
+                        Long formTemplateId = snapshot.getFormMappings().get("APPLICATION");
+                        if (formTemplateId != null) {
+                            try {
+                                resp.setApplicationFormTemplate(formTemplateService.getDetail(formTemplateId));
+                            } catch (Exception e) {
+                                log.warn("[Project] 查询申请表单模板失败：{}", e.getMessage());
+                            }
+                        }
+                    }
+                    // 构建评审阶段进度
+                    resp.setReviewProgress(buildReviewProgress(snapshot, project));
+                    // 构建管理阶段进度
+                    resp.setStageProgress(buildStageProgress(stages));
+                }
+            } catch (Exception e) {
+                log.warn("[Project] 解析快照失败：{}", e.getMessage());
+            }
         }
 
         return resp;
@@ -479,5 +515,80 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                 .eq(ReviewTaskDO::getProjectId, projectId)
                 .in(ReviewTaskDO::getStatus, List.of(TaskStatusEnum.PENDING, TaskStatusEnum.SAVED))
                 .eq(ReviewTaskDO::getDeleted, 0));
+    }
+
+    /**
+     * 从快照构建评审阶段进度列表
+     * 轮次顺序：AUDIT → REVIEW → DECISION，每类按 roundSequence 升序
+     */
+    private List<ProjectDetailResp.NodeProgressItem> buildReviewProgress(
+            ProjectTypeSnapshot snapshot, ReviewProjectDO project) {
+        if (snapshot.getRounds() == null || snapshot.getRounds().isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 执行阶段或归档阶段时，所有评审轮次均已完成
+        boolean allCompleted = project.getStatus() != null && project.getStatus().getValue() >= 50;
+        // currentNodeType 为 null 时（草稿/已提交等），所有节点均为 PENDING
+        if (!allCompleted && project.getCurrentNodeType() == null) {
+            return snapshot.getRounds().stream().map(round -> {
+                ProjectDetailResp.NodeProgressItem item = new ProjectDetailResp.NodeProgressItem();
+                item.setNodeType(round.getRoundType());
+                item.setNodeSequence(round.getRoundSequence());
+                item.setNodeName(round.getRoundName());
+                item.setNodeStatus("PENDING");
+                return item;
+            }).collect(Collectors.toList());
+        }
+        // 轮次类型顺序
+        List<String> typeOrder = Arrays.asList("AUDIT", "REVIEW", "DECISION");
+
+        return snapshot.getRounds().stream()
+                .sorted((a, b) -> {
+                    int ta = typeOrder.indexOf(a.getRoundType());
+                    int tb = typeOrder.indexOf(b.getRoundType());
+                    if (ta != tb) return Integer.compare(ta, tb);
+                    return Integer.compare(a.getRoundSequence(), b.getRoundSequence());
+                })
+                .map(round -> {
+                    ProjectDetailResp.NodeProgressItem item = new ProjectDetailResp.NodeProgressItem();
+                    item.setNodeType(round.getRoundType());
+                    item.setNodeSequence(round.getRoundSequence());
+                    item.setNodeName(round.getRoundName());
+                    if (allCompleted) {
+                        item.setNodeStatus("COMPLETED");
+                    } else if (round.getRoundType().equals(project.getCurrentNodeType())) {
+                        int cmp = Integer.compare(round.getRoundSequence(),
+                                project.getCurrentNodeSequence() != null ? project.getCurrentNodeSequence() : 0);
+                        if (cmp < 0) {
+                            item.setNodeStatus("COMPLETED");
+                        } else if (cmp == 0) {
+                            item.setNodeStatus("ACTIVE");
+                        } else {
+                            item.setNodeStatus("PENDING");
+                        }
+                    } else {
+                        // 判断该轮次类型是否在当前节点类型之前
+                        int tRound = typeOrder.indexOf(round.getRoundType());
+                        int tCurrent = typeOrder.indexOf(project.getCurrentNodeType());
+                        item.setNodeStatus(tRound < tCurrent ? "COMPLETED" : "PENDING");
+                    }
+                    return item;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 从 DB 阶段列表构建管理阶段进度
+     */
+    private List<ProjectDetailResp.StageProgressItem> buildStageProgress(List<ReviewProjectStageDO> stages) {
+        return stages.stream().map(s -> {
+            ProjectDetailResp.StageProgressItem item = new ProjectDetailResp.StageProgressItem();
+            item.setStageOrder(s.getStageOrder());
+            item.setStageName(s.getStageName());
+            item.setStageType(s.getStageType() != null ? s.getStageType().getValue() : null);
+            item.setStageStatus(s.getStatus() != null ? s.getStatus().getValue() : null);
+            item.setIsOverdue(s.getIsOverdue());
+            return item;
+        }).collect(Collectors.toList());
     }
 }

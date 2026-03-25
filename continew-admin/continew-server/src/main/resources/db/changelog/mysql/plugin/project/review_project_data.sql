@@ -56,3 +56,36 @@ VALUES
 (1737201294021, '任务详情',   1737201294001, 2, '/review/task/detail/:id',     'ReviewTaskDetail',    'review/task/detail/[id]',      b'0', b'0', b'1', 11, 1, 1, NOW());
 
 -- rollback DELETE FROM `sys_menu` WHERE `id` IN (1737201293021,1737201293022,1737201294021);
+
+-- changeset zjx:review-project-data-4
+-- comment 将终止项目权限分配给项目管理员角色
+
+INSERT INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT r.id, 1737201293016
+FROM sys_role r
+WHERE r.code = 'PROJECT_ADMIN' AND r.deleted = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM sys_role_menu rm
+    WHERE rm.role_id = r.id AND rm.menu_id = 1737201293016
+  );
+
+-- rollback DELETE FROM sys_role_menu rm USING sys_role r WHERE r.code = 'PROJECT_ADMIN' AND rm.role_id = r.id AND rm.menu_id = 1737201293016;
+
+-- changeset zjx:review-project-data-5
+-- comment 新增查看全部项目权限并分配给项目管理员角色
+
+INSERT INTO `sys_menu`
+(`id`, `title`, `parent_id`, `type`, `permission`, `sort`, `status`, `create_user`, `create_time`)
+VALUES
+(1737201293017, '查看全部项目', 1737201293001, 3, 'review:project:list:all', 7, 1, 1, NOW());
+
+INSERT INTO `sys_role_menu` (`role_id`, `menu_id`)
+SELECT r.id, 1737201293017
+FROM sys_role r
+WHERE r.code = 'PROJECT_ADMIN' AND r.deleted = 0
+  AND NOT EXISTS (
+    SELECT 1 FROM sys_role_menu rm
+    WHERE rm.role_id = r.id AND rm.menu_id = 1737201293017
+  );
+
+-- rollback DELETE FROM sys_role_menu rm USING sys_role r WHERE r.code = 'PROJECT_ADMIN' AND rm.role_id = r.id AND rm.menu_id = 1737201293017; DELETE FROM sys_menu WHERE id = 1737201293017;

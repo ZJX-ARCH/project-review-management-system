@@ -677,6 +677,27 @@ export interface ProjectDetailResp {
   applicationFormTemplate?: ProjectFormTemplateResp
   stages?: ProjectStageResp[]
   createTime: string
+  reviewProgress?: NodeProgressItem[]
+  stageProgress?: StageProgressItem[]
+}
+
+/** 评审节点进度项 */
+export interface NodeProgressItem {
+  nodeType: string
+  nodeSequence: number
+  nodeName: string
+  /** PENDING / ACTIVE / COMPLETED */
+  nodeStatus: string
+}
+
+/** 管理阶段进度项 */
+export interface StageProgressItem {
+  stageOrder: number
+  stageName: string
+  stageType: string
+  /** PENDING / IN_PROGRESS / SUBMITTED / COMPLETED / REJECTED */
+  stageStatus: string
+  isOverdue: boolean
 }
 
 /** 项目表单模板（用于项目模块，避免与 form-template 模块类型混淆） */
@@ -788,6 +809,13 @@ export interface TaskSaveReq {
 
 /** 转办请求 */
 export interface TaskTransferReq {
-  targetUserId: number
+  targetUserId: string
   transferRemark?: string
+}
+
+/** 转办候选人 */
+export interface TaskCandidateResp {
+  userId: string
+  nickname: string
+  username: string
 }

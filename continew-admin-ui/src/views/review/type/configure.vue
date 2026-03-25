@@ -1,5 +1,5 @@
 <template>
-  <GiPageLayout>
+  <GiPageLayout :body-style="{ overflowY: 'auto' }">
     <a-page-header
       :title="isCreate ? '新建项目类型' : '项目类型配置'"
       @back="handleBack"
@@ -172,6 +172,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import ProcessTab from './components/ProcessTab.vue'

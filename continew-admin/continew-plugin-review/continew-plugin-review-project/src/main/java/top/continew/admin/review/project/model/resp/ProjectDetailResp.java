@@ -10,6 +10,7 @@ import lombok.EqualsAndHashCode;
 import top.continew.admin.common.base.model.resp.BaseDetailResp;
 import top.continew.admin.common.constant.ContainerConstants;
 import top.continew.admin.review.common.enums.ProjectStatus;
+import top.continew.admin.review.form.model.resp.FormTemplateResp;
 
 import java.io.Serial;
 import java.time.LocalDateTime;
@@ -103,4 +104,52 @@ public class ProjectDetailResp extends BaseDetailResp {
      */
     @Schema(description = "管理阶段列表")
     private List<ProjectStageResp> stages;
+
+    /**
+     * 申请表单模板（供前端只读渲染字段结构）
+     */
+    @Schema(description = "申请表单模板")
+    private FormTemplateResp applicationFormTemplate;
+
+    /**
+     * 评审阶段进度（从快照构建，含所有轮次及当前状态）
+     */
+    @Schema(description = "评审阶段进度")
+    private List<NodeProgressItem> reviewProgress;
+
+    /**
+     * 管理阶段进度（从快照构建，含所有阶段及当前状态）
+     */
+    @Schema(description = "管理阶段进度")
+    private List<StageProgressItem> stageProgress;
+
+    @Data
+    @Schema(description = "评审节点进度项")
+    public static class NodeProgressItem {
+        @Schema(description = "节点类型（AUDIT/REVIEW/DECISION）")
+        private String nodeType;
+        @Schema(description = "节点序号")
+        private Integer nodeSequence;
+        @Schema(description = "节点名称")
+        private String nodeName;
+        /** PENDING / ACTIVE / COMPLETED */
+        @Schema(description = "节点状态")
+        private String nodeStatus;
+    }
+
+    @Data
+    @Schema(description = "管理阶段进度项")
+    public static class StageProgressItem {
+        @Schema(description = "阶段序号")
+        private Integer stageOrder;
+        @Schema(description = "阶段名称")
+        private String stageName;
+        @Schema(description = "阶段类型（KICKOFF/EXECUTION/ACCEPTANCE）")
+        private String stageType;
+        /** PENDING / IN_PROGRESS / SUBMITTED / COMPLETED / REJECTED */
+        @Schema(description = "阶段状态")
+        private String stageStatus;
+        @Schema(description = "是否超期")
+        private Boolean isOverdue;
+    }
 }

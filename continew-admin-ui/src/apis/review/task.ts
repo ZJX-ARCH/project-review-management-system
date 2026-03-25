@@ -6,6 +6,7 @@ import type {
   TaskSubmitReq,
   TaskSaveReq,
   TaskTransferReq,
+  TaskCandidateResp,
 } from './type'
 
 const BASE = '/review/task'
@@ -33,4 +34,9 @@ export function submitTask(id: number | string, data: TaskSubmitReq) {
 /** 转办任务 */
 export function transferTask(id: number | string, data: TaskTransferReq) {
   return http.post<void>(`${BASE}/${id}/transfer`, data)
+}
+
+/** 查询转办候选人列表 */
+export function getTaskCandidates(id: number | string) {
+  return http.get<TaskCandidateResp[]>(`${BASE}/${id}/candidates`)
 }

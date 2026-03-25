@@ -1,5 +1,5 @@
 <template>
-  <GiPageLayout>
+  <GiPageLayout :body-style="{ overflowY: 'auto' }">
     <a-page-header
       :title="isCreate ? '新建评审流程模板' : '编辑评审流程模板'"
       @back="handleBack"
