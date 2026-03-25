@@ -19,6 +19,7 @@ import top.continew.admin.review.project.model.entity.ReviewTaskDO;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 结果汇总引擎（投票/评分判定，并发安全）
@@ -77,9 +78,14 @@ public class ResultAggregationEngine {
         }
 
         // 仅取 COMPLETED 的任务参与决策计算
+        // 转办场景：同一处理人可能有多条记录，只取最后一条
         List<ReviewTaskDO> completedTasks = tasks.stream()
                 .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED)
-                .toList();
+                .collect(Collectors.toMap(
+                        ReviewTaskDO::getAssigneeId,
+                        t -> t,
+                        (t1, t2) -> t1.getCompleteTime().isAfter(t2.getCompleteTime()) ? t1 : t2))
+                .values().stream().toList();
         if (completedTasks.isEmpty()) {
             log.warn("[Aggregation] 项目{} 节点{}-{} 无已完成任务，无法汇总", projectId, taskType, nodeSequence);
             return;

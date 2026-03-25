@@ -107,13 +107,18 @@ public class NodeHistoryBuilder {
             node.setNodeName(resolveNodeName(project, sample.getTaskType(), sample.getNodeSequence()));
 
             // 汇总（转办场景下可能有多条记录，按不重复处理人统计）
-            Set<Long> uniqueAssignees = nodeTasks.stream()
-                    .map(ReviewTaskDO::getAssigneeId).collect(Collectors.toSet());
-            long passCount = nodeTasks.stream()
+            // 按处理人分组，每人只取最后一条任务的决策
+            Map<Long, ReviewTaskDO> latestByAssignee = nodeTasks.stream()
+                    .collect(Collectors.toMap(
+                            ReviewTaskDO::getAssigneeId,
+                            t -> t,
+                            (t1, t2) -> t1.getCompleteTime().isAfter(t2.getCompleteTime()) ? t1 : t2));
+
+            long passCount = latestByAssignee.values().stream()
                     .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
             node.setPassCount((int) passCount);
-            node.setTotalCount(uniqueAssignees.size());
-            node.setNodeResult(passCount > 0 ? "PASS" : "REJECT");
+            node.setTotalCount(latestByAssignee.size());
+            node.setNodeResult(passCount == latestByAssignee.size() ? "PASS" : "REJECT");
             OptionalDouble avg = nodeTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue()).average();
