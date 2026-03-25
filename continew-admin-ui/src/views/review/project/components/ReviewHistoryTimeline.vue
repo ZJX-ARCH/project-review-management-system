@@ -79,7 +79,6 @@ function formatTime(t?: string) {
             <IconFile v-else-if="node.nodeType === 'APPLICATION'" />
             <span v-else>{{ idx }}</span>
           </div>
-          <div v-if="idx < nodeHistory.length - 1 && node.nodeType !== 'APPLICATION'" class="node-line" />
         </div>
         <!-- 右侧：节点信息 -->
         <div class="node-header-content">
