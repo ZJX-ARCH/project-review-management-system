@@ -118,7 +118,11 @@ public class NodeHistoryBuilder {
                     .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
             node.setPassCount((int) passCount);
             node.setTotalCount(latestByAssignee.size());
-            node.setNodeResult(passCount == latestByAssignee.size() ? "PASS" : "REJECT");
+            String nodeResult = passCount == latestByAssignee.size() ? "PASS" : "REJECT";
+            node.setNodeResult(nodeResult);
+            log.info("[NodeHistory] 节点{}-{}: 原始任务数={}, 去重后处理人数={}, 通过人数={}, 节点结果={}",
+                    sample.getTaskType(), sample.getNodeSequence(), nodeTasks.size(),
+                    latestByAssignee.size(), passCount, nodeResult);
             OptionalDouble avg = nodeTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue()).average();

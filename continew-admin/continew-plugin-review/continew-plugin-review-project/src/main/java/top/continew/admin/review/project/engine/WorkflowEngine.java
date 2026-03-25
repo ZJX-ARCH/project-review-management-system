@@ -171,8 +171,10 @@ public class WorkflowEngine {
                                          TaskType taskType, Integer nodeSequence, TaskDecisionEnum result) {
         Long projectId = project.getId();
 
+        log.info("[Workflow] handleReviewNodeResult: 项目={}, 节点={}-{}, 结果={}", projectId, taskType, nodeSequence, result);
         if (result == TaskDecisionEnum.REJECT) {
             // 驳回 → 终止
+            log.info("[Workflow] 评审节点驳回，即将终止项目{}", projectId);
             terminateProject(project, "评审节点 " + taskType + "-" + nodeSequence + " 驳回");
             return;
         }

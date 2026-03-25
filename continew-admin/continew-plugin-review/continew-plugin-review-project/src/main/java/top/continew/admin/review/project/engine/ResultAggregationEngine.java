@@ -86,6 +86,12 @@ public class ResultAggregationEngine {
                         t -> t,
                         (t1, t2) -> t1.getCompleteTime().isAfter(t2.getCompleteTime()) ? t1 : t2))
                 .values().stream().toList();
+        log.info("[Aggregation] 项目{} 节点{}-{} 任务统计: 总任务数={}, COMPLETED任务数={}, 去重后处理人数={}",
+                projectId, taskType, nodeSequence, tasks.size(),
+                tasks.stream().filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED).count(),
+                completedTasks.size());
+        completedTasks.forEach(t -> log.info("[Aggregation] 处理人ID={}, 决策={}, 状态={}",
+                t.getAssigneeId(), t.getDecision(), t.getStatus()));
         if (completedTasks.isEmpty()) {
             log.warn("[Aggregation] 项目{} 节点{}-{} 无已完成任务，无法汇总", projectId, taskType, nodeSequence);
             return;
@@ -124,6 +130,8 @@ public class ResultAggregationEngine {
             // 转办场景：需要检查完成人数是否等于原始需要人数
             boolean allPass = completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS);
             boolean allRequired = completedTasks.size() == originalRequiredCount;
+            log.info("[Aggregation] 项目{} 节点{}-{} VOTE_ALL_PASS: allPass={}, allRequired={}, completedSize={}, originalRequired={}",
+                    projectId, taskType, nodeSequence, allPass, allRequired, completedTasks.size(), originalRequiredCount);
             result = (allPass && allRequired) ? TaskDecisionEnum.PASS : TaskDecisionEnum.REJECT;
         } else {
             result = switch (rule.getApprovalMode()) {
