@@ -160,11 +160,14 @@
     <a-drawer
       v-model:visible="drawerVisible"
       :title="detail?.projectName"
-      :width="560"
+      :width="drawerWidth"
       :mask="false"
       placement="right"
       @cancel="closeDrawer"
     >
+      <!-- 拖拽调宽手柄 -->
+      <div class="drawer-resize-handle" @mousedown="onResizeStart" />
+
       <a-tabs v-model:active-key="drawerTab" type="line" size="small">
 
         <!-- 申请表单 Tab -->
@@ -409,6 +412,7 @@ const sidePanels = computed(() => {
 const drawerVisible = ref(false)
 const drawerTab = ref('application')
 const activePanel = ref<string | null>(null)
+const drawerWidth = ref(560)
 
 function togglePanel(key: string) {
   if (activePanel.value === key && drawerVisible.value) {
@@ -425,6 +429,31 @@ function togglePanel(key: string) {
 function closeDrawer() {
   drawerVisible.value = false
   activePanel.value = null
+}
+
+// 拖拽调整抽屉宽度
+function onResizeStart(e: MouseEvent) {
+  e.preventDefault()
+  const startX = e.clientX
+  const startWidth = drawerWidth.value
+
+  const onMouseMove = (ev: MouseEvent) => {
+    const delta = startX - ev.clientX
+    const newWidth = Math.min(Math.max(startWidth + delta, 320), window.innerWidth * 0.8)
+    drawerWidth.value = Math.round(newWidth)
+  }
+
+  const onMouseUp = () => {
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
 }
 
 // ——— Task 5: 决策选项 ———
@@ -618,6 +647,21 @@ const onTransfer = async () => {
 }
 
 /* Task 3: 抽屉内容 */
+.drawer-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.drawer-resize-handle:hover {
+  background: rgb(var(--primary-4));
+}
+
 .history-node .node-title {
   font-weight: 500;
 }
