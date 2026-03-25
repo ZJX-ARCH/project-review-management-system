@@ -111,32 +111,50 @@ function formatTime(t?: string) {
         v-if="expandedNodes.has(`${node.nodeType}_${node.nodeSequence}`)"
         class="history-node-entries"
       >
-        <div
-          v-for="(entry, ei) in node.entries"
-          :key="ei"
-          class="person-entry"
-        >
-          <!-- 人员头部 -->
+        <!-- 多人时使用标签页 -->
+        <a-tabs v-if="node.entries.length > 1" type="card" size="small">
+          <a-tab-pane
+            v-for="(entry, ei) in node.entries"
+            :key="ei"
+            :title="`${entry.assigneeName}${entry.decision ? ` - ${entry.decision === 'PASS' ? '通过' : '驳回'}` : ''}`"
+          >
+            <div class="person-entry-content">
+              <div class="person-entry-meta">
+                <span v-if="entry.score != null" class="person-score">{{ entry.score }} 分</span>
+                <span class="person-time">{{ formatTime(entry.completeTime) }}</span>
+              </div>
+              <div v-if="entry.formTemplate && entry.formData" class="person-form">
+                <FormRenderer
+                  :model-value="entry.formData"
+                  :template="entry.formTemplate"
+                  readonly
+                />
+              </div>
+            </div>
+          </a-tab-pane>
+        </a-tabs>
+
+        <!-- 单人时直接显示 -->
+        <div v-else-if="node.entries.length === 1" class="person-entry">
           <div class="person-entry-header">
             <a-avatar :size="28" style="background: var(--color-primary-6); font-size: 12px;">
-              {{ entry.assigneeName?.charAt(0) }}
+              {{ node.entries[0].assigneeName?.charAt(0) }}
             </a-avatar>
-            <span class="person-name">{{ entry.assigneeName }}</span>
+            <span class="person-name">{{ node.entries[0].assigneeName }}</span>
             <a-tag
-              v-if="entry.decision"
-              :color="entry.decision === 'PASS' ? 'green' : 'red'"
+              v-if="node.entries[0].decision"
+              :color="node.entries[0].decision === 'PASS' ? 'green' : 'red'"
               size="small"
             >
-              {{ entry.decision === 'PASS' ? '通过' : '驳回' }}
+              {{ node.entries[0].decision === 'PASS' ? '通过' : '驳回' }}
             </a-tag>
-            <span v-if="entry.score != null" class="person-score">{{ entry.score }} 分</span>
-            <span class="person-time">{{ formatTime(entry.completeTime) }}</span>
+            <span v-if="node.entries[0].score != null" class="person-score">{{ node.entries[0].score }} 分</span>
+            <span class="person-time">{{ formatTime(node.entries[0].completeTime) }}</span>
           </div>
-          <!-- 表单内容 -->
-          <div v-if="entry.formTemplate && entry.formData" class="person-form">
+          <div v-if="node.entries[0].formTemplate && node.entries[0].formData" class="person-form">
             <FormRenderer
-              :model-value="entry.formData"
-              :template="entry.formTemplate"
+              :model-value="node.entries[0].formData"
+              :template="node.entries[0].formTemplate"
               readonly
             />
           </div>
@@ -154,6 +172,15 @@ function formatTime(t?: string) {
 .history-node-item {
   display: flex;
   flex-direction: column;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--color-border-3);
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
 }
 
 .history-node-header {
@@ -245,6 +272,19 @@ function formatTime(t?: string) {
   border-left: 2px solid var(--color-border-2);
   padding-left: 16px;
   margin-bottom: 8px;
+}
+
+.person-entry-content {
+  padding: 12px 0;
+}
+
+.person-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-2);
 }
 
 .person-entry {

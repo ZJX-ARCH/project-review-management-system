@@ -163,6 +163,7 @@
       :width="drawerWidth"
       :mask="false"
       placement="right"
+      class="history-drawer"
       @cancel="closeDrawer"
     >
       <!-- 拖拽调宽手柄 -->
@@ -581,9 +582,9 @@ const onTransfer = async () => {
 }
 
 /* Task 3: 抽屉内容 */
-:deep(.arco-drawer) {
-  border-left: 1px solid var(--color-border-3);
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+.history-drawer :deep(.arco-drawer-container) {
+  border-left: 2px solid rgb(var(--primary-6));
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
 .drawer-resize-handle {
