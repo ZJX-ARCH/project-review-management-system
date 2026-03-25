@@ -587,12 +587,18 @@ const onTransfer = async () => {
   box-shadow: -4px 0 12px rgba(var(--primary-6), 0.2);
 }
 
+.history-drawer :deep(.arco-drawer-body) {
+  padding-left: 8px;
+}
+
 .drawer-resize-handle {
-  position: absolute;
+  position: sticky;
   left: 0;
   top: 0;
-  bottom: 0;
+  height: 100vh;
   width: 8px;
+  margin-left: -8px;
+  float: left;
   cursor: ew-resize;
   z-index: 10;
   transition: background 0.15s;
