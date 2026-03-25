@@ -1,13 +1,18 @@
 <template>
   <GiPageLayout :body-style="{ overflowY: 'auto' }">
+    <!-- Task 4: 页头精简，任务类型/节点名/状态内联到 subtitle -->
     <a-page-header
       :title="detail?.projectName ?? '任务详情'"
       @back="router.push({ path: '/review/task', query: { t: Date.now() } })"
     >
       <template #subtitle>
-        <a-tag v-if="detail" style="margin-left: 4px;">
-          {{ PROJECT_TASK_TYPE_MAP[detail.taskType] ?? detail.taskType }}
-        </a-tag>
+        <a-space v-if="detail" size="small" style="margin-left: 8px;">
+          <a-tag>{{ PROJECT_TASK_TYPE_MAP[detail.taskType] ?? detail.taskType }}</a-tag>
+          <span style="color: var(--color-text-3); font-size: 13px;">{{ detail.nodeName }}</span>
+          <a-tag :color="PROJECT_TASK_STATUS_MAP[detail.taskStatus]?.color ?? 'gray'">
+            {{ PROJECT_TASK_STATUS_MAP[detail.taskStatus]?.label ?? detail.taskStatus }}
+          </a-tag>
+        </a-space>
       </template>
       <template #extra>
         <a-button @click="router.push({ path: '/review/task', query: { t: Date.now() } })">返回列表</a-button>
@@ -16,24 +21,39 @@
 
     <a-spin :loading="loading" style="width: 100%;">
       <div v-if="detail">
-        <a-row :gutter="16">
-          <!-- 左栏：任务处理区 -->
-          <a-col :span="16">
+        <!-- Task 1: 全宽主区域 + 右侧 48px 按钮列 -->
+        <div class="task-detail-layout">
+          <!-- 主内容区 -->
+          <div class="task-main">
 
-            <!-- 任务信息卡片 -->
-            <a-card title="任务信息" style="margin-bottom: 16px;">
-              <a-descriptions :column="3" size="medium">
-                <a-descriptions-item label="任务类型">
-                  <a-tag>{{ PROJECT_TASK_TYPE_MAP[detail.taskType] ?? detail.taskType }}</a-tag>
-                </a-descriptions-item>
-                <a-descriptions-item label="节点名称">{{ detail.nodeName }}</a-descriptions-item>
-                <a-descriptions-item label="任务状态">
-                  <a-tag :color="PROJECT_TASK_STATUS_MAP[detail.taskStatus]?.color ?? 'gray'">
-                    {{ PROJECT_TASK_STATUS_MAP[detail.taskStatus]?.label ?? detail.taskStatus }}
-                  </a-tag>
-                </a-descriptions-item>
-                <a-descriptions-item label="分配时间">{{ detail.assignTime }}</a-descriptions-item>
-              </a-descriptions>
+            <!-- Task 2: 水平流程进度条 -->
+            <a-card v-if="allProgressSteps.length" :body-style="{ padding: '16px 20px' }" style="margin-bottom: 16px;">
+              <a-steps :current="currentProgressStep" size="small">
+                <a-step
+                  v-for="(step, idx) in allProgressSteps"
+                  :key="idx"
+                  :title="step.title"
+                  :status="step.status"
+                >
+                  <template v-if="step.description" #description>
+                    <a-popover v-if="step.clickable" position="bottom">
+                      <span class="step-desc-link">{{ step.description }}</span>
+                      <template #content>
+                        <div class="step-popover">
+                          <div>通过：{{ step.passCount }} / {{ step.totalCount }} 人</div>
+                          <div v-if="step.averageScore != null">平均分：{{ step.averageScore }}</div>
+                          <div>结果：
+                            <a-tag :color="step.result === 'PASS' ? 'green' : 'red'" size="small">
+                              {{ step.result === 'PASS' ? '通过' : '驳回' }}
+                            </a-tag>
+                          </div>
+                        </div>
+                      </template>
+                    </a-popover>
+                    <span v-else>{{ step.description }}</span>
+                  </template>
+                </a-step>
+              </a-steps>
             </a-card>
 
             <!-- 任务表单（可填写） -->
@@ -58,149 +78,177 @@
               />
             </a-card>
 
-            <!-- 决策区（可操作时展示） -->
-            <a-card v-if="isEditable" title="提交决策" style="margin-bottom: 16px;">
-              <a-form :model="submitForm" layout="vertical">
-                <a-form-item v-if="!hasScoreTable" label="决策结果" required>
-                  <a-radio-group v-model="submitForm.decision">
-                    <a-radio value="PASS">
-                      <a-tag color="green">通过</a-tag>
-                    </a-radio>
-                    <a-radio value="REJECT">
-                      <a-tag color="red">驳回</a-tag>
-                    </a-radio>
-                    <template v-if="detail.taskType === 'MANAGEMENT'">
-                      <a-radio value="UNQUALIFIED">
-                        <a-tag color="orange">不合格</a-tag>
-                      </a-radio>
-                      <a-radio value="WITHDRAW">
-                        <a-tag color="gray">撤回</a-tag>
-                      </a-radio>
-                    </template>
-                  </a-radio-group>
-                </a-form-item>
+            <!-- Task 5: 决策区 UI 优化 -->
+            <a-card v-if="isEditable" style="margin-bottom: 16px;">
+              <template #title>
+                <span>提交决策</span>
+                <span style="font-size: 12px; color: var(--color-text-3); margin-left: 8px;">
+                  分配时间：{{ detail.assignTime }}
+                </span>
+              </template>
 
-                <a-alert
-                  v-if="hasScoreTable"
-                  type="info"
-                  style="margin-bottom: 16px;"
+              <!-- 卡片式决策选项（非评分表模式） -->
+              <div v-if="!hasScoreTable" class="decision-options">
+                <div
+                  v-for="opt in decisionOptions"
+                  :key="opt.value"
+                  class="decision-option"
+                  :class="{ selected: submitForm.decision === opt.value }"
+                  @click="submitForm.decision = opt.value"
                 >
-                  表单中包含评分表，提交后系统将自动汇总评分并生成决策结果。
-                </a-alert>
+                  <component :is="opt.icon" class="option-icon" />
+                  <span>{{ opt.label }}</span>
+                </div>
+              </div>
 
-                <a-form-item
-                  v-if="detail.taskType === 'ACCEPTANCE' && submitForm.decision === 'REJECT'"
-                  label="驳回回退到阶段"
-                  required
-                >
-                  <a-select
-                    v-model="submitForm.rejectBackToStageOrder"
-                    placeholder="请选择回退到的阶段"
-                    style="width: 280px;"
-                  >
-                    <a-option
-                      v-for="stage in detail.allStages"
-                      :key="stage.stageOrder"
-                      :value="stage.stageOrder"
-                    >{{ stage.stageName }}</a-option>
-                  </a-select>
-                </a-form-item>
-              </a-form>
+              <a-alert v-if="hasScoreTable" type="info" style="margin-bottom: 16px;">
+                表单中包含评分表，提交后系统将自动汇总评分并生成决策结果。
+              </a-alert>
+
+              <!-- 验收驳回回退阶段 -->
+              <a-form-item
+                v-if="detail.taskType === 'ACCEPTANCE' && submitForm.decision === 'REJECT'"
+                label="驳回回退到阶段"
+                required
+                style="margin-top: 16px;"
+              >
+                <a-select v-model="submitForm.rejectBackToStageOrder" placeholder="请选择回退到的阶段" style="width: 280px;">
+                  <a-option v-for="stage in detail.allStages" :key="stage.stageOrder" :value="stage.stageOrder">
+                    {{ stage.stageName }}
+                  </a-option>
+                </a-select>
+              </a-form-item>
 
               <div class="decision-actions">
                 <a-space>
-                  <a-button :loading="saving" @click="onSave">暂存</a-button>
-                  <a-button @click="openTransferModal">转办</a-button>
-                  <a-button type="primary" :loading="submitting" @click="onSubmit">提交决策</a-button>
+                  <a-button :loading="saving" @click="onSave">
+                    <template #icon><icon-save /></template>
+                    暂存
+                  </a-button>
+                  <a-button @click="openTransferModal">
+                    <template #icon><icon-swap /></template>
+                    转办
+                  </a-button>
+                  <a-button type="primary" :loading="submitting" @click="onSubmit">
+                    <template #icon><icon-send /></template>
+                    提交决策
+                  </a-button>
                 </a-space>
               </div>
             </a-card>
 
-          </a-col>
+          </div>
 
-          <!-- 右栏：项目信息 + 历史节点 -->
-          <a-col :span="8">
-
-            <!-- 流程进度条 -->
-            <a-card v-if="allProgressSteps.length" title="流程进度" style="margin-bottom: 16px;">
-              <a-steps :current="currentProgressStep" size="small" direction="vertical">
-                <a-step
-                  v-for="(step, idx) in allProgressSteps"
-                  :key="idx"
-                  :title="step.title"
-                  :status="step.status"
-                  :description="step.description"
-                />
-              </a-steps>
-            </a-card>
-
-            <a-card title="项目信息" style="margin-bottom: 16px;">
-              <a-descriptions :column="1" size="small">
-                <a-descriptions-item label="项目名称">{{ detail.projectName }}</a-descriptions-item>
-                <a-descriptions-item label="申请人">{{ detail.applicantName }}</a-descriptions-item>
-                <a-descriptions-item label="提交时间">{{ detail.submittedTime ?? '—' }}</a-descriptions-item>
-                <a-descriptions-item v-if="detail.description" label="项目描述">{{ detail.description }}</a-descriptions-item>
-              </a-descriptions>
-            </a-card>
-
-            <a-card
-              v-if="detail.applicationFormTemplate"
-              title="申请表单"
-              :body-style="{ padding: '12px' }"
-              style="margin-bottom: 16px;"
+          <!-- Task 1: 右侧参考面板按钮列 -->
+          <div class="task-side-panel">
+            <div
+              v-for="panel in sidePanels"
+              :key="panel.key"
+              class="side-panel-btn"
+              :class="{ active: activePanel === panel.key }"
+              @click="togglePanel(panel.key)"
             >
-              <FormRenderer
-                :model-value="detail.applicationFormData ?? {}"
-                :template="detail.applicationFormTemplate"
-                readonly
-              />
-            </a-card>
-
-            <a-card v-if="detail.previousNodes?.length" title="历史节点" style="margin-bottom: 16px;">
-              <a-timeline>
-                <a-timeline-item
-                  v-for="node in detail.previousNodes"
-                  :key="`${node.nodeType}_${node.nodeSequence}`"
-                  :color="node.result === 'PASS' ? 'green' : 'red'"
-                >
-                  <template #dot>
-                    <icon-check-circle v-if="node.result === 'PASS'" style="color: green;" />
-                    <icon-close-circle v-else style="color: red;" />
-                  </template>
-                  <div class="history-node">
-                    <div class="node-title">{{ node.nodeName }}</div>
-                    <div class="node-stats">
-                      通过 {{ node.passCount }} / 共 {{ node.totalCount }} 人
-                      <span v-if="node.averageScore != null">均分：{{ node.averageScore }}</span>
-                    </div>
-                  </div>
-                </a-timeline-item>
-              </a-timeline>
-            </a-card>
-
-            <a-card
-              v-if="detail.currentStage && (detail.taskType === 'MANAGEMENT' || detail.taskType === 'ACCEPTANCE')"
-              title="当前阶段"
-              style="margin-bottom: 16px;"
-            >
-              <a-descriptions :column="1" size="small">
-                <a-descriptions-item label="阶段名称">{{ detail.currentStage.stageName }}</a-descriptions-item>
-                <a-descriptions-item label="阶段状态">
-                  <a-tag :color="PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.color ?? 'gray'">
-                    {{ PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.label ?? detail.currentStage.status }}
-                  </a-tag>
-                </a-descriptions-item>
-                <a-descriptions-item v-if="detail.currentStage.deadline" label="截止日期">
-                  {{ detail.currentStage.deadline }}
-                  <a-tag v-if="detail.currentStage.isOverdue" color="red" size="small">已超时</a-tag>
-                </a-descriptions-item>
-              </a-descriptions>
-            </a-card>
-
-          </a-col>
-        </a-row>
+              <component :is="panel.icon" class="panel-btn-icon" />
+              <span class="panel-btn-label">{{ panel.label }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </a-spin>
+
+    <!-- Task 3: 参考面板抽屉 -->
+    <a-drawer
+      v-model:visible="drawerVisible"
+      :title="detail?.projectName"
+      :width="560"
+      :mask="false"
+      placement="right"
+      @cancel="closeDrawer"
+    >
+      <a-tabs v-model:active-key="drawerTab" type="line" size="small">
+
+        <!-- 申请表单 Tab -->
+        <a-tab-pane key="application" title="申请表单">
+          <div v-if="detail?.applicationFormTemplate" style="padding: 4px 0;">
+            <FormRenderer
+              :model-value="detail.applicationFormData ?? {}"
+              :template="detail.applicationFormTemplate"
+              readonly
+            />
+          </div>
+          <a-empty v-else description="暂无申请表单" />
+        </a-tab-pane>
+
+        <!-- 历史节点 Tab -->
+        <a-tab-pane key="history" title="历史节点">
+          <div v-if="detail?.previousNodes?.length">
+            <a-timeline>
+              <a-timeline-item
+                v-for="node in detail.previousNodes"
+                :key="`${node.nodeType}_${node.nodeSequence}`"
+                :color="node.result === 'PASS' ? 'green' : 'red'"
+              >
+                <template #dot>
+                  <icon-check-circle v-if="node.result === 'PASS'" style="color: #00b42a;" />
+                  <icon-close-circle v-else style="color: #f53f3f;" />
+                </template>
+                <div class="history-node">
+                  <div class="node-title">{{ node.nodeName }}</div>
+                  <div class="node-stats">
+                    通过 {{ node.passCount }} / 共 {{ node.totalCount }} 人
+                    <span v-if="node.averageScore != null"> · 均分 {{ node.averageScore }}</span>
+                  </div>
+                </div>
+              </a-timeline-item>
+            </a-timeline>
+          </div>
+          <a-empty v-else description="暂无历史节点" />
+        </a-tab-pane>
+
+        <!-- 阶段成果 Tab（仅 MANAGEMENT/ACCEPTANCE 显示） -->
+        <a-tab-pane
+          v-if="detail?.taskType === 'MANAGEMENT' || detail?.taskType === 'ACCEPTANCE'"
+          key="stage"
+          title="阶段成果"
+        >
+          <!-- MANAGEMENT：当前阶段 -->
+          <template v-if="detail?.taskType === 'MANAGEMENT' && detail?.currentStage">
+            <a-descriptions :column="1" size="small" style="margin-bottom: 12px;">
+              <a-descriptions-item label="阶段名称">{{ detail.currentStage.stageName }}</a-descriptions-item>
+              <a-descriptions-item label="阶段状态">
+                <a-tag :color="PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.color ?? 'gray'" size="small">
+                  {{ PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.label ?? detail.currentStage.status }}
+                </a-tag>
+                <a-tag v-if="detail.currentStage.isOverdue" color="red" size="small" style="margin-left: 4px;">已超时</a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item v-if="detail.currentStage.deadline" label="截止日期">
+                {{ detail.currentStage.deadline }}
+              </a-descriptions-item>
+            </a-descriptions>
+            <a-empty v-if="!detail.currentStage.stageFormData" description="申请人尚未提交阶段成果" />
+          </template>
+          <!-- ACCEPTANCE：全部阶段 -->
+          <template v-else-if="detail?.taskType === 'ACCEPTANCE' && detail?.allStages?.length">
+            <a-collapse :default-active-key="[detail.allStages[detail.allStages.length - 1]?.stageOrder]" :bordered="false">
+              <a-collapse-item
+                v-for="stage in detail.allStages"
+                :key="stage.stageOrder"
+                :header="stage.stageName"
+              >
+                <template #extra>
+                  <a-tag :color="PROJECT_STAGE_STATUS_MAP[stage.status]?.color ?? 'gray'" size="small">
+                    {{ PROJECT_STAGE_STATUS_MAP[stage.status]?.label ?? stage.status }}
+                  </a-tag>
+                </template>
+                <a-empty v-if="!stage.stageFormData" description="暂无成果数据" />
+              </a-collapse-item>
+            </a-collapse>
+          </template>
+          <a-empty v-else description="暂无阶段数据" />
+        </a-tab-pane>
+
+      </a-tabs>
+    </a-drawer>
 
     <!-- 转办弹窗 -->
     <a-modal
@@ -240,6 +288,15 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
+import {
+  IconFile,
+  IconHistory,
+  IconLayers,
+  IconCheckCircle,
+  IconCloseCircle,
+  IconExclamationCircle,
+  IconUndo,
+} from '@arco-design/web-vue/es/icon'
 import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates } from '@/apis/review'
 import {
   PROJECT_TASK_TYPE_MAP,
@@ -253,7 +310,6 @@ defineOptions({ name: 'ReviewTaskDetail' })
 
 const router = useRouter()
 const route = useRoute()
-// 保持字符串传输，避免雪花 ID 超出 JS 安全整数范围导致精度丢失
 const taskId = computed(() => route.params.id as string)
 
 // ——— 数据 ———
@@ -295,7 +351,7 @@ const submitForm = reactive({
   rejectBackToStageOrder: undefined as number | undefined,
 })
 
-// ——— 流程进度条 ———
+// ——— Task 2: 水平流程进度条 ———
 const TASK_TYPE_LABEL: Record<string, string> = {
   AUDIT: '审核', REVIEW: '评审', DECISION: '决策',
   MANAGEMENT: '管理', ACCEPTANCE: '验收',
@@ -305,28 +361,86 @@ interface ProgressStep {
   title: string
   status: 'wait' | 'process' | 'finish' | 'error'
   description?: string
+  clickable?: boolean
+  passCount?: number
+  totalCount?: number
+  averageScore?: number | null
+  result?: string
 }
 
 const allProgressSteps = computed<ProgressStep[]>(() => {
   if (!detail.value) return []
   const steps: ProgressStep[] = []
-  // 已完成的历史节点
   for (const node of (detail.value.previousNodes ?? [])) {
     steps.push({
       title: node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`,
       status: node.result === 'PASS' ? 'finish' : 'error',
-      description: `通过 ${node.passCount}/${node.totalCount}`,
+      description: `${node.passCount}/${node.totalCount} 人通过`,
+      clickable: true,
+      passCount: node.passCount,
+      totalCount: node.totalCount,
+      averageScore: node.averageScore ?? null,
+      result: node.result,
     })
   }
-  // 当前节点
   steps.push({
-    title: detail.value.nodeName || `${TASK_TYPE_LABEL[detail.value.taskType] ?? detail.value.taskType} 第${detail.value.nodeSequence}轮`,
+    title: detail.value.nodeName || `${TASK_TYPE_LABEL[detail.value.taskType] ?? detail.value.taskType}`,
     status: 'process',
+    description: '处理中',
   })
   return steps
 })
 
 const currentProgressStep = computed(() => allProgressSteps.value.length - 1)
+
+// ——— Task 1: 右侧参考面板 ———
+const sidePanels = computed(() => {
+  const panels = [
+    { key: 'application', label: '申请表单', icon: IconFile },
+    { key: 'history', label: '历史节点', icon: IconHistory },
+  ]
+  if (detail.value?.taskType === 'MANAGEMENT' || detail.value?.taskType === 'ACCEPTANCE') {
+    panels.push({ key: 'stage', label: '阶段成果', icon: IconLayers })
+  }
+  return panels
+})
+
+// ——— Task 3: 抽屉状态 ———
+const drawerVisible = ref(false)
+const drawerTab = ref('application')
+const activePanel = ref<string | null>(null)
+
+function togglePanel(key: string) {
+  if (activePanel.value === key && drawerVisible.value) {
+    drawerVisible.value = false
+    activePanel.value = null
+  }
+  else {
+    activePanel.value = key
+    drawerTab.value = key
+    drawerVisible.value = true
+  }
+}
+
+function closeDrawer() {
+  drawerVisible.value = false
+  activePanel.value = null
+}
+
+// ——— Task 5: 决策选项 ———
+const decisionOptions = computed(() => {
+  const base = [
+    { value: 'PASS', label: '通过', icon: IconCheckCircle },
+    { value: 'REJECT', label: '驳回', icon: IconCloseCircle },
+  ]
+  if (detail.value?.taskType === 'MANAGEMENT') {
+    base.push(
+      { value: 'UNQUALIFIED', label: '不合格', icon: IconExclamationCircle },
+      { value: 'WITHDRAW', label: '撤回', icon: IconUndo },
+    )
+  }
+  return base
+})
 
 // ——— 暂存 ———
 const saving = ref(false)
@@ -344,7 +458,6 @@ const onSave = async () => {
 // ——— 提交决策 ———
 const submitting = ref(false)
 const onSubmit = async () => {
-  // 校验表单必填字段（含评分表）
   const formErrors = await formRendererRef.value?.validate()
   if (formErrors) return
 
@@ -431,12 +544,80 @@ const onTransfer = async () => {
 </script>
 
 <style scoped>
-.decision-actions {
-  margin-top: 16px;
+/* Task 1: 布局 */
+.task-detail-layout {
   display: flex;
-  justify-content: flex-end;
+  gap: 0;
+  align-items: flex-start;
 }
 
+.task-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+}
+
+.task-side-panel {
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 16px;
+}
+
+.side-panel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-2);
+  background: var(--color-fill-1);
+  border: 1px solid var(--color-border-2);
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.side-panel-btn:hover {
+  color: rgb(var(--primary-6));
+  border-color: rgb(var(--primary-4));
+  background: rgb(var(--primary-1));
+}
+
+.side-panel-btn.active {
+  color: #fff;
+  background: rgb(var(--primary-6));
+  border-color: rgb(var(--primary-6));
+}
+
+.panel-btn-icon {
+  font-size: 16px;
+}
+
+.panel-btn-label {
+  font-size: 11px;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+}
+
+/* Task 2: 进度条 */
+.step-desc-link {
+  cursor: pointer;
+  color: rgb(var(--primary-6));
+  text-decoration: underline dotted;
+}
+
+.step-popover {
+  min-width: 140px;
+  line-height: 1.8;
+  font-size: 13px;
+}
+
+/* Task 3: 抽屉内容 */
 .history-node .node-title {
   font-weight: 500;
 }
@@ -445,5 +626,49 @@ const onTransfer = async () => {
   font-size: 12px;
   color: var(--color-text-3);
   margin-top: 2px;
+}
+
+/* Task 5: 决策区 */
+.decision-options {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.decision-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: 2px solid var(--color-border-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-1);
+  transition: all 0.2s;
+  background: var(--color-bg-1);
+}
+
+.decision-option:hover {
+  border-color: rgb(var(--primary-4));
+  color: rgb(var(--primary-6));
+}
+
+.decision-option.selected {
+  border-color: rgb(var(--primary-6));
+  background: rgb(var(--primary-1));
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+}
+
+.option-icon {
+  font-size: 16px;
+}
+
+.decision-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
