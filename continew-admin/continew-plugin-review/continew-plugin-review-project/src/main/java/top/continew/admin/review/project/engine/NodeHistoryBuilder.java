@@ -1,5 +1,6 @@
 package top.continew.admin.review.project.engine;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import top.continew.admin.review.common.enums.TaskType;
 import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.form.service.FormTemplateService;
 import top.continew.admin.review.project.enums.TaskDecisionEnum;
+import top.continew.admin.review.project.enums.TaskStatusEnum;
 import top.continew.admin.review.project.mapper.ReviewTaskMapper;
 import top.continew.admin.review.project.model.entity.ProjectTypeSnapshot;
 import top.continew.admin.review.project.model.entity.ReviewProjectDO;
@@ -20,11 +22,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -108,6 +110,15 @@ public class NodeHistoryBuilder {
             node.setNodeSequence(sample.getNodeSequence());
             node.setNodeName(resolveNodeName(project, sample.getTaskType(), sample.getNodeSequence()));
 
+            // 查询该节点的所有任务（包括 TRANSFERRED），用于计算原始需要人数
+            List<ReviewTaskDO> allNodeTasks = taskMapper.selectList(
+                    new LambdaQueryWrapper<ReviewTaskDO>()
+                            .eq(ReviewTaskDO::getProjectId, project.getId())
+                            .eq(ReviewTaskDO::getTaskType, sample.getTaskType())
+                            .eq(ReviewTaskDO::getNodeSequence, sample.getNodeSequence())
+                            .ne(ReviewTaskDO::getStatus, TaskStatusEnum.CANCELLED)
+                            .eq(ReviewTaskDO::getDeleted, 0));
+
             // 汇总（转办场景下可能有多条记录，按不重复处理人统计）
             // 按处理人分组，每人只取最后一条任务的决策
             Map<Long, ReviewTaskDO> latestByAssignee = nodeTasks.stream()
@@ -124,7 +135,7 @@ public class NodeHistoryBuilder {
 
             // 使用与 ResultAggregationEngine 相同的判定逻辑
             String nodeResult = calculateNodeResult(project, sample.getTaskType(),
-                    sample.getNodeSequence(), completedTasks, nodeTasks);
+                    sample.getNodeSequence(), completedTasks, allNodeTasks);
             node.setNodeResult(nodeResult);
 
             log.info("[NodeHistory] 节点{}-{}: 原始任务数={}, 去重后处理人数={}, 通过人数={}, 节点结果={}",
