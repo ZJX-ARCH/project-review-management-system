@@ -83,6 +83,15 @@
           </a-steps>
         </a-card>
 
+        <!-- 基本信息 -->
+        <a-card title="基本信息" style="margin-bottom: 16px;">
+          <a-descriptions :column="2">
+            <a-descriptions-item label="项目名称">{{ detail.projectName }}</a-descriptions-item>
+            <a-descriptions-item label="项目类型">{{ detail.typeName }}</a-descriptions-item>
+            <a-descriptions-item label="项目描述" :span="2">{{ detail.description ?? '—' }}</a-descriptions-item>
+          </a-descriptions>
+        </a-card>
+
         <!-- 评审历史（申请人视角） -->
         <a-card v-if="reviewHistory.length" title="评审历史" style="margin-bottom: 16px;">
           <ReviewHistoryTimeline :node-history="reviewHistory" :loading="reviewHistoryLoading" />
