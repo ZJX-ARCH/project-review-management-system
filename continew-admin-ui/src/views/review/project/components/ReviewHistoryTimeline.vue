@@ -250,9 +250,10 @@ function formatTime(t?: string) {
 .person-entry {
   margin-bottom: 16px;
   padding: 12px;
-  border: 1px solid var(--color-border-2);
+  border: 1px solid var(--color-border-3);
   border-radius: 6px;
   background: var(--color-bg-2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .person-entry-header {
