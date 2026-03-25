@@ -163,7 +163,9 @@ public class LogDaoLocalImpl implements LogDao {
         // 解析登录接口信息
         if (requestUri.startsWith(AuthConstants.LOGIN_URI) && LogStatusEnum.SUCCESS.equals(logDO.getStatus())) {
             String requestBody = logRequest.getBody();
-            logDO.setDescription(JSONUtil.toBean(requestBody, LoginReq.class).getAuthType().getDescription() + "登录");
+            LoginReq loginReq = JSONUtil.toBean(requestBody, LoginReq.class);
+            String authTypeDesc = loginReq.getAuthType() != null ? loginReq.getAuthType().getDescription() : "未知";
+            logDO.setDescription(authTypeDesc + "登录");
             // 解析账号登录用户为操作人
             if (requestBody.contains(AuthTypeEnum.ACCOUNT.getValue())) {
                 AccountLoginReq authReq = JSONUtil.toBean(requestBody, AccountLoginReq.class);
