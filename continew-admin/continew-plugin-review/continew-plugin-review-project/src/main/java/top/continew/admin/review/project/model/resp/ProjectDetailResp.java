@@ -137,12 +137,16 @@ public class ProjectDetailResp extends BaseDetailResp {
         private String nodeStatus;
         @Schema(description = "通过人数（已完成节点才有）")
         private Integer passCount;
-        @Schema(description = "总人数（已完成节点才有）")
+        @Schema(description = "总人数（已分配人数）")
         private Integer totalCount;
         @Schema(description = "平均分（SCORE_PASS 模式才有）")
         private java.math.BigDecimal averageScore;
         @Schema(description = "节点结果（PASS/REJECT，已完成节点才有）")
         private String nodeResult;
+        @Schema(description = "已完成人数（进行中节点用于展示进度）")
+        private Integer completedCount;
+        @Schema(description = "需要人数（从审批规则读取）")
+        private Integer requiredCount;
     }
 
     @Data

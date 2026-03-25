@@ -55,21 +55,29 @@
               :title="node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`"
               :status="nodeStatusToStep(node.nodeStatus)"
             >
-              <template v-if="node.nodeResult" #description>
-                <a-popover position="bottom" trigger="hover">
-                  <span class="node-result-link">
-                    <a-tag
-                      :color="node.nodeResult === 'PASS' ? 'green' : 'red'"
-                      size="small"
-                    >{{ node.nodeResult === 'PASS' ? '通过' : '驳回' }}</a-tag>
+              <template #description>
+                <!-- 已完成节点：显示通过/驳回结果，hover 弹详情 -->
+                <template v-if="node.nodeResult">
+                  <a-popover position="bottom" trigger="hover">
+                    <span class="node-result-link">
+                      <a-tag :color="node.nodeResult === 'PASS' ? 'green' : 'red'" size="small">
+                        {{ node.nodeResult === 'PASS' ? '通过' : '驳回' }}
+                      </a-tag>
+                    </span>
+                    <template #content>
+                      <div class="node-result-popover">
+                        <div>通过：{{ node.passCount }} / {{ node.totalCount }} 人</div>
+                        <div v-if="node.averageScore != null">平均分：{{ node.averageScore }}</div>
+                      </div>
+                    </template>
+                  </a-popover>
+                </template>
+                <!-- 进行中节点：显示已完成人数进度 -->
+                <template v-else-if="node.nodeStatus === 'ACTIVE' && node.requiredCount">
+                  <span class="node-progress-text">
+                    已完成 {{ node.completedCount ?? 0 }}/{{ node.requiredCount }} 人
                   </span>
-                  <template #content>
-                    <div class="node-result-popover">
-                      <div>通过：{{ node.passCount }} / {{ node.totalCount }} 人</div>
-                      <div v-if="node.averageScore != null">平均分：{{ node.averageScore }}</div>
-                    </div>
-                  </template>
-                </a-popover>
+                </template>
               </template>
             </a-step>
           </a-steps>
@@ -212,17 +220,26 @@ const loadDetail = async () => {
 onMounted(loadDetail)
 
 // ——— 状态判断 ———
-const REVIEW_PHASE_STATUSES = [10, 20, 30, 40]
-const EXECUTION_PHASE_STATUSES = [50, 55, 60]
-
-const isReviewPhase = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
+const isReviewPhase = computed(() => {
+  const s = detail.value?.status ?? 0
+  return s >= 2 && s < 40
+})
 const hasReviewProgress = computed(() => (detail.value?.reviewProgress?.length ?? 0) > 0)
-const isExecutionPhase = computed(() => EXECUTION_PHASE_STATUSES.includes(detail.value?.status ?? 0))
-const canRevoke = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
-const canUpdateForm = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
+const isExecutionPhase = computed(() => {
+  const s = detail.value?.status ?? 0
+  return s >= 50 && s < 90
+})
+const canRevoke = computed(() => {
+  const s = detail.value?.status ?? 0
+  return s >= 2 && s < 40
+})
+const canUpdateForm = computed(() => {
+  const s = detail.value?.status ?? 0
+  return s >= 2 && s < 40
+})
 const canTerminate = computed(() => {
   const s = detail.value?.status ?? 0
-  const notArchived = s !== 0 && ![49, 90, 91, 92, 99].includes(s)
+  const notArchived = s !== 0 && ![40, 90, 91, 92, 99].includes(s)
   return notArchived && has.hasPerm('review:project:terminate')
 })
 
@@ -387,5 +404,10 @@ const onSubmitStageForm = async () => {
   min-width: 130px;
   line-height: 1.8;
   font-size: 13px;
+}
+
+.node-progress-text {
+  font-size: 12px;
+  color: var(--color-text-3);
 }
 </style>

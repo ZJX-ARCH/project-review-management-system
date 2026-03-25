@@ -223,7 +223,7 @@ function formatCurrentNode(record: ProjectListResp): string {
 
 /** 评审阶段（已提交~决策中）可撤销 */
 function canRevoke(status: number): boolean {
-  return [10, 20, 30, 40].includes(status)
+  return status >= 2 && status < 40
 }
 
 // ——— 操作 ———

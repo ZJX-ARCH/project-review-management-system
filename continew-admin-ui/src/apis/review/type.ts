@@ -530,14 +530,35 @@ export interface ProjectTypeDetailResp extends ProjectTypeResp {
 /** 项目状态枚举（与后端 ProjectStatus 对应） */
 export enum ProjectStatus {
   DRAFT = 1,
-  SUBMITTED = 10,
-  AUDITING = 20,
-  REVIEWING = 30,
-  DECIDING = 40,
-  TERMINATED = 49,
+  SUBMITTED = 2,
+  // 审核流程
+  AUDITING = 10,
+  AUDIT_PASSED = 11,
+  NEEDS_REVISION_AUDIT = 12,
+  AUDIT_REJECTED = 13,
+  WAITING_AUDIT = 14,
+  // 评审流程
+  REVIEWING = 20,
+  REVIEW_PASSED = 21,
+  NEEDS_REVISION_REVIEW = 22,
+  REVIEW_REJECTED = 23,
+  WAITING_REVIEW = 24,
+  // 决策流程
+  DECIDING = 30,
+  DECISION_PASSED = 31,
+  NEEDS_REVISION_DECISION = 32,
+  DECISION_REJECTED = 33,
+  WAITING_DECISION = 34,
+  // 终止
+  TERMINATED = 40,
+  // 执行阶段
   EXECUTING = 50,
-  OVERTIME = 55,
-  ACCEPTING = 60,
+  OVERTIME = 51,
+  SUSPENDED = 52,
+  ACCEPTING = 53,
+  ACCEPTANCE_PASSED = 54,
+  ACCEPTANCE_FAILED = 55,
+  // 归档
   ARCHIVED_COMPLETED = 90,
   ARCHIVED_UNQUALIFIED = 91,
   ARCHIVED_CANCELLED = 92,
@@ -546,19 +567,34 @@ export enum ProjectStatus {
 
 /** 项目状态标签与颜色映射 */
 export const PROJECT_STATUS_MAP: Record<number, { label: string; color: string }> = {
-  1:  { label: '草稿',     color: 'gray'   },
-  10: { label: '已提交',   color: 'blue'   },
-  20: { label: '审核中',   color: 'orange' },
-  30: { label: '评审中',   color: 'orange' },
-  40: { label: '决策中',   color: 'orange' },
-  49: { label: '已终止',   color: 'red'    },
-  50: { label: '执行中',   color: 'blue'   },
-  55: { label: '执行超时', color: 'red'    },
-  60: { label: '验收中',   color: 'purple' },
-  90: { label: '已完成',   color: 'green'  },
-  91: { label: '不合格',   color: 'red'    },
-  92: { label: '已取消',   color: 'gray'   },
-  99: { label: '已作废',   color: 'gray'   },
+  1:  { label: '草稿',       color: 'gray'   },
+  2:  { label: '已提交',     color: 'blue'   },
+  10: { label: '审核中',     color: 'orange' },
+  11: { label: '审核通过',   color: 'green'  },
+  12: { label: '需修改',     color: 'gray'   },
+  13: { label: '审核驳回',   color: 'red'    },
+  14: { label: '等待中',     color: 'orange' },
+  20: { label: '评审中',     color: 'orange' },
+  21: { label: '评审通过',   color: 'green'  },
+  22: { label: '需修改',     color: 'gray'   },
+  23: { label: '评审驳回',   color: 'red'    },
+  24: { label: '等待中',     color: 'orange' },
+  30: { label: '决策中',     color: 'orange' },
+  31: { label: '决策通过',   color: 'green'  },
+  32: { label: '需修改',     color: 'gray'   },
+  33: { label: '决策驳回',   color: 'red'    },
+  34: { label: '等待中',     color: 'orange' },
+  40: { label: '已终止',     color: 'red'    },
+  50: { label: '执行中',     color: 'blue'   },
+  51: { label: '执行超时',   color: 'red'    },
+  52: { label: '项目暂停',   color: 'orange' },
+  53: { label: '验收中',     color: 'purple' },
+  54: { label: '验收通过',   color: 'green'  },
+  55: { label: '验收不通过', color: 'red'    },
+  90: { label: '已完成',     color: 'green'  },
+  91: { label: '不合格',     color: 'red'    },
+  92: { label: '已取消',     color: 'gray'   },
+  99: { label: '已作废',     color: 'gray'   },
 }
 
 /** 任务类型枚举 */
@@ -690,12 +726,16 @@ export interface NodeProgressItem {
   nodeStatus: string
   /** 通过人数（已完成节点才有） */
   passCount?: number
-  /** 总人数（已完成节点才有） */
+  /** 总人数（已分配人数） */
   totalCount?: number
   /** 平均分（SCORE_PASS 模式才有） */
   averageScore?: number
   /** 节点结果（PASS/REJECT，已完成节点才有） */
   nodeResult?: string
+  /** 已完成人数（进行中节点用于展示进度） */
+  completedCount?: number
+  /** 需要人数（从审批规则读取） */
+  requiredCount?: number
 }
 
 /** 管理阶段进度项 */

@@ -566,10 +566,11 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                     if (allCompleted) {
                         item.setNodeStatus("COMPLETED");
                     } else if (isTerminated) {
-                        // 终止时：有结果记录的节点按实际结果显示，无记录的节点显示 PENDING
+                        // 终止时：有已完成结果记录的节点按实际结果显示，无记录的节点显示 PENDING
                         String key = round.getRoundType() + "_" + round.getRoundSequence();
-                        if (nodeResultMap.containsKey(key)) {
-                            item.setNodeStatus("PASS".equals(nodeResultMap.get(key).result) ? "COMPLETED" : "REJECTED");
+                        NodeResult terminatedNr = nodeResultMap.get(key);
+                        if (terminatedNr != null && terminatedNr.isFinished) {
+                            item.setNodeStatus("PASS".equals(terminatedNr.result) ? "COMPLETED" : "REJECTED");
                         } else {
                             item.setNodeStatus("PENDING");
                         }
@@ -589,17 +590,31 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                         int tCurrent = typeOrder.indexOf(project.getCurrentNodeType());
                         item.setNodeStatus(tRound < tCurrent ? "COMPLETED" : "PENDING");
                     }
-                    // 填充已完成节点的结果
+                    // 填充节点结果和进度
                     String key = round.getRoundType() + "_" + round.getRoundSequence();
                     NodeResult nr = nodeResultMap.get(key);
                     if (nr != null) {
-                        item.setPassCount(nr.passCount);
+                        item.setCompletedCount(nr.completedCount);
                         item.setTotalCount(nr.totalCount);
-                        item.setAverageScore(nr.averageScore);
-                        item.setNodeResult(nr.result);
-                        // 用实际结果覆盖推断的 nodeStatus（仅 COMPLETED 状态时）
-                        if ("COMPLETED".equals(item.getNodeStatus())) {
-                            item.setNodeStatus("PASS".equals(nr.result) ? "COMPLETED" : "REJECTED");
+                        if (nr.isFinished) {
+                            item.setPassCount(nr.passCount);
+                            item.setAverageScore(nr.averageScore);
+                            item.setNodeResult(nr.result);
+                            // 用实际结果覆盖推断的 nodeStatus（仅 COMPLETED 状态时）
+                            if ("COMPLETED".equals(item.getNodeStatus())) {
+                                item.setNodeStatus("PASS".equals(nr.result) ? "COMPLETED" : "REJECTED");
+                            }
+                        }
+                        // 从快照读取 requiredCount
+                        if (snapshot.getApprovalRules() != null) {
+                            ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(key);
+                            if (rule != null && rule.getRequiredReviewerCount() != null) {
+                                item.setRequiredCount(rule.getRequiredReviewerCount());
+                            }
+                        }
+                        // requiredCount 兜底用 totalCount
+                        if (item.getRequiredCount() == null) {
+                            item.setRequiredCount(nr.totalCount);
                         }
                     }
                     return item;
@@ -608,34 +623,50 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     }
 
     /**
-     * 查询项目已完成的评审任务，按节点分组汇总结果
+     * 查询项目评审任务（非 CANCELLED），按节点分组汇总结果
      * key 格式：taskType_nodeSequence（如 AUDIT_1）
      */
     private Map<String, NodeResult> buildNodeResultMap(Long projectId) {
-        List<ReviewTaskDO> completedTasks = taskMapper.selectList(
+        List<ReviewTaskDO> allTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<ReviewTaskDO>()
                         .eq(ReviewTaskDO::getProjectId, projectId)
-                        .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
                         .in(ReviewTaskDO::getTaskType, List.of(TaskType.AUDIT, TaskType.REVIEW, TaskType.DECISION))
+                        .ne(ReviewTaskDO::getStatus, TaskStatusEnum.CANCELLED)
                         .eq(ReviewTaskDO::getDeleted, 0));
 
-        Map<String, List<ReviewTaskDO>> grouped = completedTasks.stream()
+        Map<String, List<ReviewTaskDO>> grouped = allTasks.stream()
                 .collect(Collectors.groupingBy(t -> t.getTaskType().getValue() + "_" + t.getNodeSequence()));
 
         Map<String, NodeResult> result = new HashMap<>();
         for (Map.Entry<String, List<ReviewTaskDO>> entry : grouped.entrySet()) {
             List<ReviewTaskDO> tasks = entry.getValue();
-            long passCount = tasks.stream().filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
-            OptionalDouble avg = tasks.stream()
+            // 已完成任务（COMPLETED 或 TRANSFERRED）
+            List<ReviewTaskDO> completedTasks = tasks.stream()
+                    .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED
+                            || t.getStatus() == TaskStatusEnum.TRANSFERRED)
+                    .toList();
+            // 节点是否已全部完成（可以汇总）
+            boolean isFinished = !tasks.isEmpty() && tasks.stream()
+                    .allMatch(t -> t.getStatus() == TaskStatusEnum.COMPLETED
+                            || t.getStatus() == TaskStatusEnum.TRANSFERRED);
+
+            long passCount = completedTasks.stream()
+                    .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
+            OptionalDouble avg = completedTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue())
                     .average();
+
             NodeResult nr = new NodeResult();
-            nr.passCount = (int) passCount;
+            nr.completedCount = completedTasks.size();
             nr.totalCount = tasks.size();
-            nr.averageScore = avg.isPresent()
-                    ? BigDecimal.valueOf(avg.getAsDouble()).setScale(2, RoundingMode.HALF_UP) : null;
-            nr.result = passCount == tasks.size() ? "PASS" : "REJECT";
+            nr.isFinished = isFinished;
+            if (isFinished && !completedTasks.isEmpty()) {
+                nr.passCount = (int) passCount;
+                nr.averageScore = avg.isPresent()
+                        ? BigDecimal.valueOf(avg.getAsDouble()).setScale(2, RoundingMode.HALF_UP) : null;
+                nr.result = passCount == completedTasks.size() ? "PASS" : "REJECT";
+            }
             result.put(entry.getKey(), nr);
         }
         return result;
@@ -645,8 +676,10 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     private static class NodeResult {
         int passCount;
         int totalCount;
+        int completedCount;
+        boolean isFinished;
         BigDecimal averageScore;
-        String result; // PASS / REJECT
+        String result; // PASS / REJECT（节点已汇总时才有）
     }
 
     /**
