@@ -18,6 +18,12 @@ import top.continew.admin.system.model.entity.user.UserDO;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -75,6 +81,10 @@ public class NodeHistoryBuilder {
      */
     public List<NodeHistoryResp> buildNodeHistoryList(
             ReviewProjectDO project, List<ReviewTaskDO> tasks) {
+        if (tasks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         // 按 taskType_nodeSequence 分组
         Map<String, List<ReviewTaskDO>> grouped = tasks.stream()
                 .collect(Collectors.groupingBy(
