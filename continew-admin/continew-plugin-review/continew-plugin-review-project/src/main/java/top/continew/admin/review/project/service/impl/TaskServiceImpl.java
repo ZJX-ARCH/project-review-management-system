@@ -606,6 +606,17 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         // 排除自己
         candidatePool.remove(task.getAssigneeId());
 
+        // 排除当前节点已有任务的人（避免重复分配）
+        List<ReviewTaskDO> existingTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<ReviewTaskDO>()
+                        .eq(ReviewTaskDO::getProjectId, project.getId())
+                        .eq(ReviewTaskDO::getTaskType, task.getTaskType())
+                        .eq(ReviewTaskDO::getNodeSequence, task.getNodeSequence())
+                        .eq(ReviewTaskDO::getDeleted, 0));
+        Set<Long> existingAssignees = existingTasks.stream()
+                .map(ReviewTaskDO::getAssigneeId).collect(Collectors.toSet());
+        candidatePool.removeAll(existingAssignees);
+
         if (candidatePool.isEmpty()) {
             return Collections.emptyList();
         }
