@@ -583,8 +583,8 @@ const onTransfer = async () => {
 
 /* Task 3: 抽屉内容 */
 .history-drawer :deep(.arco-drawer-container) {
-  border-left: 2px solid rgb(var(--primary-6));
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  border-left: 3px solid rgb(var(--primary-6));
+  box-shadow: -4px 0 12px rgba(var(--primary-6), 0.2);
 }
 
 .drawer-resize-handle {
@@ -592,14 +592,15 @@ const onTransfer = async () => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 5px;
+  width: 8px;
   cursor: ew-resize;
   z-index: 10;
   transition: background 0.15s;
+  background: rgba(var(--primary-6), 0.05);
 }
 
 .drawer-resize-handle:hover {
-  background: rgb(var(--primary-4));
+  background: rgba(var(--primary-6), 0.15);
 }
 
 .history-node .node-title {
