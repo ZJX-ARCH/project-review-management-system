@@ -127,9 +127,9 @@ public class ResultAggregationEngine {
             result = (allPass && allRequired) ? TaskDecisionEnum.PASS : TaskDecisionEnum.REJECT;
         } else {
             result = switch (rule.getApprovalMode()) {
-                case "VOTE_MAJORITY_PASS" -> aggregateByMajority(completedTasks, rule);
+                case "VOTE_MAJORITY_PASS" -> aggregateByMajority(completedTasks, rule, originalRequiredCount);
                 case "VOTE_ONE_PASS" -> aggregateByOnePass(completedTasks);
-                case "SCORE_PASS" -> aggregateByScore(completedTasks, rule);
+                case "SCORE_PASS" -> aggregateByScore(completedTasks, rule, originalRequiredCount);
                 default -> TaskDecisionEnum.REJECT;
             };
         }
@@ -149,7 +149,11 @@ public class ResultAggregationEngine {
                 new NodeResultEvent(this, projectId, taskType, nodeSequence, result, rejectBackToStageOrder));
     }
 
-    private TaskDecisionEnum aggregateByMajority(List<ReviewTaskDO> tasks, ProjectTypeSnapshot.ApprovalRuleInfo rule) {
+    private TaskDecisionEnum aggregateByMajority(List<ReviewTaskDO> tasks, ProjectTypeSnapshot.ApprovalRuleInfo rule, long originalRequiredCount) {
+        // 转办场景：完成人数必须等于需要人数
+        if (tasks.size() != originalRequiredCount) {
+            return TaskDecisionEnum.REJECT;
+        }
         long passCount = tasks.stream().filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
         BigDecimal ratio = rule.getMajorityRatio() != null ? rule.getMajorityRatio() : new BigDecimal("0.67");
         BigDecimal actualRatio = BigDecimal.valueOf(passCount)
@@ -162,7 +166,11 @@ public class ResultAggregationEngine {
                 ? TaskDecisionEnum.PASS : TaskDecisionEnum.REJECT;
     }
 
-    private TaskDecisionEnum aggregateByScore(List<ReviewTaskDO> tasks, ProjectTypeSnapshot.ApprovalRuleInfo rule) {
+    private TaskDecisionEnum aggregateByScore(List<ReviewTaskDO> tasks, ProjectTypeSnapshot.ApprovalRuleInfo rule, long originalRequiredCount) {
+        // 转办场景：完成人数必须等于需要人数
+        if (tasks.size() != originalRequiredCount) {
+            return TaskDecisionEnum.REJECT;
+        }
         if (rule.getPassThreshold() == null) {
             return TaskDecisionEnum.REJECT;
         }
