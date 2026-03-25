@@ -189,7 +189,7 @@ function formatTime(t?: string) {
   font-weight: 600;
   color: #fff;
 
-  &.dot-application { background: var(--color-primary-6); }
+  &.dot-application { background: #00b42a; }
   &.dot-pass        { background: #00b42a; }
   &.dot-reject      { background: #f53f3f; }
   &.dot-pending     { background: var(--color-fill-4); color: var(--color-text-3); }
