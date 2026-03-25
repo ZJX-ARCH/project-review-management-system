@@ -29,12 +29,14 @@ if (props.nodeHistory.length > 0) {
 }
 
 function toggleNode(key: string) {
-  if (expandedNodes.value.has(key)) {
-    expandedNodes.value.delete(key)
+  const newSet = new Set(expandedNodes.value)
+  if (newSet.has(key)) {
+    newSet.delete(key)
   }
   else {
-    expandedNodes.value.add(key)
+    newSet.add(key)
   }
+  expandedNodes.value = newSet
 }
 
 function nodeDotClass(node: NodeHistoryResp) {

@@ -639,16 +639,19 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                 nodeHistoryBuilder.buildApplicationNode(project);
         result.add(appNode);
 
-        // 2. 前序已完成节点（不含当前节点的同轮任务）
-        // 查所有 COMPLETED 任务，排除当前节点（同 taskType + nodeSequence）
+        // 2. 前序已完成节点（不含当前节点的同轮其他人任务）
+        // 查所有 COMPLETED 任务，排除当前节点的其他人（同轮互不可见，但可见自己）
         List<ReviewTaskDO> completedTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<ReviewTaskDO>()
                         .eq(ReviewTaskDO::getProjectId, project.getId())
                         .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
                         .eq(ReviewTaskDO::getDeleted, 0)
-                        // 排除当前节点的所有任务（同轮互不可见）
-                        .not(w -> w.eq(ReviewTaskDO::getTaskType, task.getTaskType())
-                                .eq(ReviewTaskDO::getNodeSequence, task.getNodeSequence())));
+                        .and(w -> w
+                                // 前序节点（taskType 或 sequence 不同）
+                                .ne(ReviewTaskDO::getTaskType, task.getTaskType())
+                                .or().ne(ReviewTaskDO::getNodeSequence, task.getNodeSequence())
+                                // 或者是当前节点但是自己的任务
+                                .or().eq(ReviewTaskDO::getAssigneeId, task.getAssigneeId())));
 
         result.addAll(nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks));
         return result;

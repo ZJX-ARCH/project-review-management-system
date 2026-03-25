@@ -874,7 +874,7 @@ export interface PersonEntryResp {
   decision?: string
   score?: number
   formData?: Record<string, unknown>
-  formTemplate?: ProjectFormTemplateResp
+  formTemplate?: FormTemplateResp
   completeTime?: string
 }
 
