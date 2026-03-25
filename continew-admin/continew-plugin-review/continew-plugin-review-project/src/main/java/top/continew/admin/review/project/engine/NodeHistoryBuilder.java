@@ -125,6 +125,7 @@ public class NodeHistoryBuilder {
             log.info("[NodeHistory] 节点{}-{}: 原始任务数={}, 去重后处理人数={}, 通过人数={}, 节点结果={}",
                     sample.getTaskType(), sample.getNodeSequence(), nodeTasks.size(),
                     latestByAssignee.size(), passCount, nodeResult);
+            log.warn("[NodeHistory] ⚠️ 注意：此节点结果是基于投票逻辑计算的，可能与 SCORE_PASS 等模式的实际判定不一致！");
             OptionalDouble avg = nodeTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue()).average();
