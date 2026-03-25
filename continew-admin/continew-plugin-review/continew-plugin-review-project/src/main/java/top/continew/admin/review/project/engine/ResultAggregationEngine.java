@@ -91,6 +91,11 @@ public class ResultAggregationEngine {
             return;
         }
 
+        // 计算原本需要的人数：初始分配的任务数（transferCount=0或null的任务）
+        long originalRequiredCount = tasks.stream()
+                .filter(t -> t.getTransferCount() == null || t.getTransferCount() == 0)
+                .count();
+
         // 特殊处理：MANAGEMENT 任务中的 UNQUALIFIED/WITHDRAW 直接透传（不经过投票/评分聚合）
         if (taskType == TaskType.MANAGEMENT) {
             for (ReviewTaskDO task : completedTasks) {
@@ -116,8 +121,10 @@ public class ResultAggregationEngine {
 
         if (rule == null || "VOTE_ALL_PASS".equals(rule.getApprovalMode())) {
             // 默认：全部通过才算通过
-            result = completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS)
-                    ? TaskDecisionEnum.PASS : TaskDecisionEnum.REJECT;
+            // 转办场景：需要检查完成人数是否等于原始需要人数
+            boolean allPass = completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS);
+            boolean allRequired = completedTasks.size() == originalRequiredCount;
+            result = (allPass && allRequired) ? TaskDecisionEnum.PASS : TaskDecisionEnum.REJECT;
         } else {
             result = switch (rule.getApprovalMode()) {
                 case "VOTE_MAJORITY_PASS" -> aggregateByMajority(completedTasks, rule);
