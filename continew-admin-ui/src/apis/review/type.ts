@@ -686,8 +686,16 @@ export interface NodeProgressItem {
   nodeType: string
   nodeSequence: number
   nodeName: string
-  /** PENDING / ACTIVE / COMPLETED */
+  /** PENDING / ACTIVE / COMPLETED / REJECTED */
   nodeStatus: string
+  /** 通过人数（已完成节点才有） */
+  passCount?: number
+  /** 总人数（已完成节点才有） */
+  totalCount?: number
+  /** 平均分（SCORE_PASS 模式才有） */
+  averageScore?: number
+  /** 节点结果（PASS/REJECT，已完成节点才有） */
+  nodeResult?: string
 }
 
 /** 管理阶段进度项 */

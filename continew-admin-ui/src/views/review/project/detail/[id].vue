@@ -46,15 +46,32 @@
           </a-descriptions>
         </a-card>
 
-        <!-- 评审阶段进度（评审阶段才显示） -->
-        <a-card v-if="isReviewPhase && detail.reviewProgress?.length" title="评审流程进度" style="margin-bottom: 16px;">
+        <!-- 评审阶段进度（有快照就显示） -->
+        <a-card v-if="hasReviewProgress" title="评审流程进度" style="margin-bottom: 16px;">
           <a-steps size="small">
             <a-step
               v-for="(node, idx) in detail.reviewProgress"
               :key="idx"
               :title="node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`"
               :status="nodeStatusToStep(node.nodeStatus)"
-            />
+            >
+              <template v-if="node.nodeResult" #description>
+                <a-popover position="bottom" trigger="hover">
+                  <span class="node-result-link">
+                    <a-tag
+                      :color="node.nodeResult === 'PASS' ? 'green' : 'red'"
+                      size="small"
+                    >{{ node.nodeResult === 'PASS' ? '通过' : '驳回' }}</a-tag>
+                  </span>
+                  <template #content>
+                    <div class="node-result-popover">
+                      <div>通过：{{ node.passCount }} / {{ node.totalCount }} 人</div>
+                      <div v-if="node.averageScore != null">平均分：{{ node.averageScore }}</div>
+                    </div>
+                  </template>
+                </a-popover>
+              </template>
+            </a-step>
           </a-steps>
         </a-card>
 
@@ -199,6 +216,7 @@ const REVIEW_PHASE_STATUSES = [10, 20, 30, 40]
 const EXECUTION_PHASE_STATUSES = [50, 55, 60]
 
 const isReviewPhase = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
+const hasReviewProgress = computed(() => (detail.value?.reviewProgress?.length ?? 0) > 0)
 const isExecutionPhase = computed(() => EXECUTION_PHASE_STATUSES.includes(detail.value?.status ?? 0))
 const canRevoke = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
 const canUpdateForm = computed(() => REVIEW_PHASE_STATUSES.includes(detail.value?.status ?? 0))
@@ -217,6 +235,7 @@ const TASK_TYPE_LABEL: Record<string, string> = {
 function nodeStatusToStep(status: string): 'wait' | 'process' | 'finish' | 'error' {
   if (status === 'COMPLETED') return 'finish'
   if (status === 'ACTIVE') return 'process'
+  if (status === 'REJECTED') return 'error'
   return 'wait'
 }
 
@@ -358,5 +377,15 @@ const onSubmitStageForm = async () => {
   color: var(--color-text-3);
   text-align: center;
   padding: 20px 0;
+}
+
+.node-result-link {
+  cursor: default;
+}
+
+.node-result-popover {
+  min-width: 130px;
+  line-height: 1.8;
+  font-size: 13px;
 }
 </style>

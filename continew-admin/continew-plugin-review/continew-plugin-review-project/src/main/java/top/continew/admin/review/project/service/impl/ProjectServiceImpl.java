@@ -17,6 +17,7 @@ import top.continew.admin.review.common.enums.TaskType;
 import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.form.service.FormTemplateService;
 import top.continew.admin.review.project.enums.StageStatusEnum;
+import top.continew.admin.review.project.enums.TaskDecisionEnum;
 import top.continew.admin.review.project.event.ProjectSubmittedEvent;
 import top.continew.admin.review.project.event.StageFormSubmittedEvent;
 import top.continew.admin.review.project.engine.TaskAssignmentEngine;
@@ -58,12 +59,15 @@ import top.continew.starter.extension.crud.model.resp.PageResp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.dev33.satoken.stp.StpUtil;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 
 /**
@@ -528,8 +532,13 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
         }
         // 执行阶段或归档阶段时，所有评审轮次均已完成
         boolean allCompleted = project.getStatus() != null && project.getStatus().getValue() >= 50;
-        // currentNodeType 为 null 时（草稿/已提交等），所有节点均为 PENDING
-        if (!allCompleted && project.getCurrentNodeType() == null) {
+        boolean isTerminated = project.getStatus() == ProjectStatus.TERMINATED;
+
+        // 查询已完成任务的节点结果
+        Map<String, NodeResult> nodeResultMap = buildNodeResultMap(project.getId());
+
+        // currentNodeType 为 null 且非终止/全完成时（草稿/已提交等），所有节点均为 PENDING
+        if (!allCompleted && !isTerminated && project.getCurrentNodeType() == null) {
             return snapshot.getRounds().stream().map(round -> {
                 ProjectDetailResp.NodeProgressItem item = new ProjectDetailResp.NodeProgressItem();
                 item.setNodeType(round.getRoundType());
@@ -556,6 +565,14 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                     item.setNodeName(round.getRoundName());
                     if (allCompleted) {
                         item.setNodeStatus("COMPLETED");
+                    } else if (isTerminated) {
+                        // 终止时：有结果记录的节点按实际结果显示，无记录的节点显示 PENDING
+                        String key = round.getRoundType() + "_" + round.getRoundSequence();
+                        if (nodeResultMap.containsKey(key)) {
+                            item.setNodeStatus("PASS".equals(nodeResultMap.get(key).result) ? "COMPLETED" : "REJECTED");
+                        } else {
+                            item.setNodeStatus("PENDING");
+                        }
                     } else if (round.getRoundType().equals(project.getCurrentNodeType())) {
                         int cmp = Integer.compare(round.getRoundSequence(),
                                 project.getCurrentNodeSequence() != null ? project.getCurrentNodeSequence() : 0);
@@ -572,9 +589,64 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                         int tCurrent = typeOrder.indexOf(project.getCurrentNodeType());
                         item.setNodeStatus(tRound < tCurrent ? "COMPLETED" : "PENDING");
                     }
+                    // 填充已完成节点的结果
+                    String key = round.getRoundType() + "_" + round.getRoundSequence();
+                    NodeResult nr = nodeResultMap.get(key);
+                    if (nr != null) {
+                        item.setPassCount(nr.passCount);
+                        item.setTotalCount(nr.totalCount);
+                        item.setAverageScore(nr.averageScore);
+                        item.setNodeResult(nr.result);
+                        // 用实际结果覆盖推断的 nodeStatus（仅 COMPLETED 状态时）
+                        if ("COMPLETED".equals(item.getNodeStatus())) {
+                            item.setNodeStatus("PASS".equals(nr.result) ? "COMPLETED" : "REJECTED");
+                        }
+                    }
                     return item;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 查询项目已完成的评审任务，按节点分组汇总结果
+     * key 格式：taskType_nodeSequence（如 AUDIT_1）
+     */
+    private Map<String, NodeResult> buildNodeResultMap(Long projectId) {
+        List<ReviewTaskDO> completedTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<ReviewTaskDO>()
+                        .eq(ReviewTaskDO::getProjectId, projectId)
+                        .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                        .in(ReviewTaskDO::getTaskType, List.of(TaskType.AUDIT, TaskType.REVIEW, TaskType.DECISION))
+                        .eq(ReviewTaskDO::getDeleted, 0));
+
+        Map<String, List<ReviewTaskDO>> grouped = completedTasks.stream()
+                .collect(Collectors.groupingBy(t -> t.getTaskType().getValue() + "_" + t.getNodeSequence()));
+
+        Map<String, NodeResult> result = new HashMap<>();
+        for (Map.Entry<String, List<ReviewTaskDO>> entry : grouped.entrySet()) {
+            List<ReviewTaskDO> tasks = entry.getValue();
+            long passCount = tasks.stream().filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
+            OptionalDouble avg = tasks.stream()
+                    .filter(t -> t.getScore() != null)
+                    .mapToDouble(t -> t.getScore().doubleValue())
+                    .average();
+            NodeResult nr = new NodeResult();
+            nr.passCount = (int) passCount;
+            nr.totalCount = tasks.size();
+            nr.averageScore = avg.isPresent()
+                    ? BigDecimal.valueOf(avg.getAsDouble()).setScale(2, RoundingMode.HALF_UP) : null;
+            nr.result = passCount == tasks.size() ? "PASS" : "REJECT";
+            result.put(entry.getKey(), nr);
+        }
+        return result;
+    }
+
+    /** 节点汇总结果内部数据类 */
+    private static class NodeResult {
+        int passCount;
+        int totalCount;
+        BigDecimal averageScore;
+        String result; // PASS / REJECT
     }
 
     /**

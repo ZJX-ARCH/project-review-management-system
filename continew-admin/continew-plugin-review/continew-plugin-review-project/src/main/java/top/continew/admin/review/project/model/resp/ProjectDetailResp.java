@@ -132,9 +132,17 @@ public class ProjectDetailResp extends BaseDetailResp {
         private Integer nodeSequence;
         @Schema(description = "节点名称")
         private String nodeName;
-        /** PENDING / ACTIVE / COMPLETED */
+        /** PENDING / ACTIVE / COMPLETED / REJECTED */
         @Schema(description = "节点状态")
         private String nodeStatus;
+        @Schema(description = "通过人数（已完成节点才有）")
+        private Integer passCount;
+        @Schema(description = "总人数（已完成节点才有）")
+        private Integer totalCount;
+        @Schema(description = "平均分（SCORE_PASS 模式才有）")
+        private java.math.BigDecimal averageScore;
+        @Schema(description = "节点结果（PASS/REJECT，已完成节点才有）")
+        private String nodeResult;
     }
 
     @Data
