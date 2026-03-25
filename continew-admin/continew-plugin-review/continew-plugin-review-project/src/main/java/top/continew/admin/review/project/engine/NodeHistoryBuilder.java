@@ -245,16 +245,21 @@ public class NodeHistoryBuilder {
                 : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
 
             if (snapshot == null || snapshot.getApprovalRules() == null) {
+                log.warn("[NodeHistory] 快照或审批规则为空，使用默认投票逻辑");
                 return completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS) ? "PASS" : "REJECT";
             }
 
             String nodeScope = taskType == TaskType.ACCEPTANCE ? "ACCEPTANCE" : taskType.getValue() + "_" + nodeSequence;
             ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(nodeScope);
+            log.info("[NodeHistory] 节点{}-{} 审批规则: mode={}, threshold={}",
+                    taskType, nodeSequence, rule != null ? rule.getApprovalMode() : "null",
+                    rule != null ? rule.getPassThreshold() : "null");
 
             // 计算原始需要人数
             long originalRequiredCount = allTasks.stream()
                 .filter(t -> t.getTransferCount() == null || t.getTransferCount() == 0)
                 .count();
+            log.info("[NodeHistory] 完成人数={}, 原始需要人数={}", completedTasks.size(), originalRequiredCount);
 
             if (rule == null || "VOTE_ALL_PASS".equals(rule.getApprovalMode())) {
                 boolean allPass = completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS);
