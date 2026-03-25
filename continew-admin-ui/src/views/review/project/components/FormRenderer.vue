@@ -105,7 +105,27 @@
                 </a-button>
               </template>
             </a-upload>
-            <span v-else class="readonly-value">{{ formatValue(formDataProxy[field.fieldCode]) }}</span>
+            <!-- 只读：文件卡片列表 -->
+            <div v-else class="readonly-file-list">
+              <template v-if="getFileList(field.fieldCode).length">
+                <a
+                  v-for="(file, fi) in getFileList(field.fieldCode)"
+                  :key="fi"
+                  class="readonly-file-card"
+                  :href="file.url || undefined"
+                  :target="file.url ? '_blank' : undefined"
+                  rel="noopener noreferrer"
+                  :style="{ cursor: file.url ? 'pointer' : 'default', textDecoration: 'none' }"
+                >
+                  <span class="file-card-icon">
+                    <icon-file />
+                  </span>
+                  <span class="file-card-name">{{ file.name || file.url || '未知文件' }}</span>
+                  <icon-link v-if="file.url" class="file-card-link-icon" />
+                </a>
+              </template>
+              <span v-else class="readonly-value">—</span>
+            </div>
           </template>
 
           <!-- 自定义表格 -->
@@ -564,6 +584,51 @@ function calcLevelText(field: any): string {
 <style lang="scss" scoped>
 .readonly-value {
   color: var(--color-text-2);
+}
+
+.readonly-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.readonly-file-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-fill-1);
+  color: var(--color-text-1);
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+  max-width: 100%;
+
+  &[href]:hover {
+    background: var(--color-primary-1);
+    border-color: var(--color-primary-4);
+    color: var(--color-primary-6);
+  }
+
+  .file-card-icon {
+    font-size: 15px;
+    color: var(--color-primary-6);
+    flex-shrink: 0;
+  }
+
+  .file-card-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-card-link-icon {
+    font-size: 12px;
+    color: var(--color-text-3);
+    flex-shrink: 0;
+  }
 }
 
 // 自定义表格
