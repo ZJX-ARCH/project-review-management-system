@@ -83,25 +83,6 @@
           </a-steps>
         </a-card>
 
-        <!-- 申请信息（折叠面板） -->
-        <a-card title="申请信息" style="margin-bottom: 16px;">
-          <a-collapse :default-active-key="['basic']">
-            <a-collapse-item key="basic" header="基本信息">
-              <a-descriptions :column="2">
-                <a-descriptions-item label="项目名称">{{ detail.projectName }}</a-descriptions-item>
-                <a-descriptions-item label="项目描述">{{ detail.description ?? '—' }}</a-descriptions-item>
-              </a-descriptions>
-            </a-collapse-item>
-            <a-collapse-item v-if="detail.applicationFormTemplate && detail.applicationFormData" key="form" header="申请表单数据">
-              <FormRenderer
-                :model-value="detail.applicationFormData ?? {}"
-                :template="detail.applicationFormTemplate"
-                readonly
-              />
-            </a-collapse-item>
-          </a-collapse>
-        </a-card>
-
         <!-- 评审历史（申请人视角） -->
         <a-card v-if="reviewHistory.length" title="评审历史" style="margin-bottom: 16px;">
           <ReviewHistoryTimeline :node-history="reviewHistory" :loading="reviewHistoryLoading" />
