@@ -106,12 +106,14 @@ public class NodeHistoryBuilder {
             node.setNodeSequence(sample.getNodeSequence());
             node.setNodeName(resolveNodeName(project, sample.getTaskType(), sample.getNodeSequence()));
 
-            // 汇总
+            // 汇总（转办场景下可能有多条记录，按不重复处理人统计）
+            Set<Long> uniqueAssignees = nodeTasks.stream()
+                    .map(ReviewTaskDO::getAssigneeId).collect(Collectors.toSet());
             long passCount = nodeTasks.stream()
                     .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
             node.setPassCount((int) passCount);
-            node.setTotalCount(nodeTasks.size());
-            node.setNodeResult(passCount == nodeTasks.size() ? "PASS" : "REJECT");
+            node.setTotalCount(uniqueAssignees.size());
+            node.setNodeResult(passCount > 0 ? "PASS" : "REJECT");
             OptionalDouble avg = nodeTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue()).average();
