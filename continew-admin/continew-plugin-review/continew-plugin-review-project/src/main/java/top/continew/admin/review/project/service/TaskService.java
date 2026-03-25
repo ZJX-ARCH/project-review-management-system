@@ -79,4 +79,13 @@ public interface TaskService {
      * @return 任务列表
      */
     List<ReviewTaskDO> listByNode(Long projectId, String taskType, Integer nodeSequence);
+
+    /**
+     * 获取任务的节点历史（处理人视角）
+     * 返回：申请表单节点 + 前序已完成节点每人内容（不含当前节点同轮其他人）
+     *
+     * @param taskId 任务ID
+     * @return 节点历史列表
+     */
+    List<top.continew.admin.review.project.model.resp.NodeHistoryResp> getNodeHistory(Long taskId);
 }

@@ -168,89 +168,8 @@
       <!-- 拖拽调宽手柄 -->
       <div class="drawer-resize-handle" @mousedown="onResizeStart" />
 
-      <a-tabs v-model:active-key="drawerTab" type="line" size="small">
-
-        <!-- 申请表单 Tab -->
-        <a-tab-pane key="application" title="申请表单">
-          <div v-if="detail?.applicationFormTemplate" style="padding: 4px 0;">
-            <FormRenderer
-              :model-value="detail.applicationFormData ?? {}"
-              :template="detail.applicationFormTemplate"
-              readonly
-            />
-          </div>
-          <a-empty v-else description="暂无申请表单" />
-        </a-tab-pane>
-
-        <!-- 历史节点 Tab -->
-        <a-tab-pane key="history" title="历史节点">
-          <div v-if="detail?.previousNodes?.length">
-            <a-timeline>
-              <a-timeline-item
-                v-for="node in detail.previousNodes"
-                :key="`${node.nodeType}_${node.nodeSequence}`"
-                :color="node.result === 'PASS' ? 'green' : 'red'"
-              >
-                <template #dot>
-                  <icon-check-circle v-if="node.result === 'PASS'" style="color: #00b42a;" />
-                  <icon-close-circle v-else style="color: #f53f3f;" />
-                </template>
-                <div class="history-node">
-                  <div class="node-title">{{ node.nodeName }}</div>
-                  <div class="node-stats">
-                    通过 {{ node.passCount }} / 共 {{ node.totalCount }} 人
-                    <span v-if="node.averageScore != null"> · 均分 {{ node.averageScore }}</span>
-                  </div>
-                </div>
-              </a-timeline-item>
-            </a-timeline>
-          </div>
-          <a-empty v-else description="暂无历史节点" />
-        </a-tab-pane>
-
-        <!-- 阶段成果 Tab（仅 MANAGEMENT/ACCEPTANCE 显示） -->
-        <a-tab-pane
-          v-if="detail?.taskType === 'MANAGEMENT' || detail?.taskType === 'ACCEPTANCE'"
-          key="stage"
-          title="阶段成果"
-        >
-          <!-- MANAGEMENT：当前阶段 -->
-          <template v-if="detail?.taskType === 'MANAGEMENT' && detail?.currentStage">
-            <a-descriptions :column="1" size="small" style="margin-bottom: 12px;">
-              <a-descriptions-item label="阶段名称">{{ detail.currentStage.stageName }}</a-descriptions-item>
-              <a-descriptions-item label="阶段状态">
-                <a-tag :color="PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.color ?? 'gray'" size="small">
-                  {{ PROJECT_STAGE_STATUS_MAP[detail.currentStage.status]?.label ?? detail.currentStage.status }}
-                </a-tag>
-                <a-tag v-if="detail.currentStage.isOverdue" color="red" size="small" style="margin-left: 4px;">已超时</a-tag>
-              </a-descriptions-item>
-              <a-descriptions-item v-if="detail.currentStage.deadline" label="截止日期">
-                {{ detail.currentStage.deadline }}
-              </a-descriptions-item>
-            </a-descriptions>
-            <a-empty v-if="!detail.currentStage.stageFormData" description="申请人尚未提交阶段成果" />
-          </template>
-          <!-- ACCEPTANCE：全部阶段 -->
-          <template v-else-if="detail?.taskType === 'ACCEPTANCE' && detail?.allStages?.length">
-            <a-collapse :default-active-key="[detail.allStages[detail.allStages.length - 1]?.stageOrder]" :bordered="false">
-              <a-collapse-item
-                v-for="stage in detail.allStages"
-                :key="stage.stageOrder"
-                :header="stage.stageName"
-              >
-                <template #extra>
-                  <a-tag :color="PROJECT_STAGE_STATUS_MAP[stage.status]?.color ?? 'gray'" size="small">
-                    {{ PROJECT_STAGE_STATUS_MAP[stage.status]?.label ?? stage.status }}
-                  </a-tag>
-                </template>
-                <a-empty v-if="!stage.stageFormData" description="暂无成果数据" />
-              </a-collapse-item>
-            </a-collapse>
-          </template>
-          <a-empty v-else description="暂无阶段数据" />
-        </a-tab-pane>
-
-      </a-tabs>
+      <!-- 使用 ReviewHistoryTimeline 组件 -->
+      <ReviewHistoryTimeline :node-history="nodeHistory" :loading="historyLoading" />
     </a-drawer>
 
     <!-- 转办弹窗 -->
@@ -300,14 +219,15 @@ import {
   IconExclamationCircle,
   IconUndo,
 } from '@arco-design/web-vue/es/icon'
-import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates } from '@/apis/review'
+import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates, getTaskNodeHistory } from '@/apis/review'
 import {
   PROJECT_TASK_TYPE_MAP,
   PROJECT_TASK_STATUS_MAP,
   PROJECT_STAGE_STATUS_MAP,
 } from '@/apis/review/type'
-import type { TaskDetailResp, TaskCandidateResp } from '@/apis/review/type'
+import type { TaskDetailResp, TaskCandidateResp, NodeHistoryResp } from '@/apis/review/type'
 import FormRenderer from '../../project/components/FormRenderer.vue'
+import ReviewHistoryTimeline from '../../project/components/ReviewHistoryTimeline.vue'
 
 defineOptions({ name: 'ReviewTaskDetail' })
 
@@ -398,14 +318,9 @@ const currentProgressStep = computed(() => allProgressSteps.value.length - 1)
 
 // ——— Task 1: 右侧参考面板 ———
 const sidePanels = computed(() => {
-  const panels = [
-    { key: 'application', label: '申请表单', icon: IconFile },
-    { key: 'history', label: '历史节点', icon: IconHistory },
+  return [
+    { key: 'history', label: '查看历史', icon: IconHistory },
   ]
-  if (detail.value?.taskType === 'MANAGEMENT' || detail.value?.taskType === 'ACCEPTANCE') {
-    panels.push({ key: 'stage', label: '阶段成果', icon: IconLayers })
-  }
-  return panels
 })
 
 // ——— Task 3: 抽屉状态 ———
@@ -413,6 +328,21 @@ const drawerVisible = ref(false)
 const drawerTab = ref('application')
 const activePanel = ref<string | null>(null)
 const drawerWidth = ref(560)
+
+// 节点历史数据
+const nodeHistory = ref<NodeHistoryResp[]>([])
+const historyLoading = ref(false)
+
+async function loadNodeHistory() {
+  historyLoading.value = true
+  try {
+    const res = await getTaskNodeHistory(taskId.value)
+    nodeHistory.value = res.data ?? []
+  }
+  finally {
+    historyLoading.value = false
+  }
+}
 
 function togglePanel(key: string) {
   if (activePanel.value === key && drawerVisible.value) {
@@ -423,6 +353,10 @@ function togglePanel(key: string) {
     activePanel.value = key
     drawerTab.value = key
     drawerVisible.value = true
+    // 打开抽屉时加载节点历史
+    if (nodeHistory.value.length === 0) {
+      loadNodeHistory()
+    }
   }
 }
 

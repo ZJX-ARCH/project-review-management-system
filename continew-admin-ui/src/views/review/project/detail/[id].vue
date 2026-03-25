@@ -102,6 +102,11 @@
           </a-collapse>
         </a-card>
 
+        <!-- 评审历史（申请人视角） -->
+        <a-card v-if="reviewHistory.length" title="评审历史" style="margin-bottom: 16px;">
+          <ReviewHistoryTimeline :node-history="reviewHistory" :loading="reviewHistoryLoading" />
+        </a-card>
+
         <!-- 执行阶段进度（执行阶段才显示） -->
         <a-card v-if="isExecutionPhase && detail.stageProgress?.length" title="执行阶段进度" style="margin-bottom: 16px;">
           <a-steps size="small" style="margin-bottom: 16px;">
@@ -187,11 +192,12 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import { getProjectDetail, revokeProject, terminateProject, updateProjectForm, submitStageForm } from '@/apis/review'
+import { getProjectDetail, revokeProject, terminateProject, updateProjectForm, submitStageForm, getProjectReviewHistory } from '@/apis/review'
 import { PROJECT_STATUS_MAP, PROJECT_STAGE_STATUS_MAP } from '@/apis/review/type'
-import type { ProjectDetailResp, ProjectStageResp } from '@/apis/review/type'
+import type { ProjectDetailResp, ProjectStageResp, NodeHistoryResp } from '@/apis/review/type'
 import has from '@/utils/has'
 import FormRenderer from '../components/FormRenderer.vue'
+import ReviewHistoryTimeline from '../components/ReviewHistoryTimeline.vue'
 
 defineOptions({ name: 'ReviewProjectDetail' })
 
@@ -205,6 +211,8 @@ const detail = ref<ProjectDetailResp | null>(null)
 const loading = ref(false)
 const revoking = ref(false)
 const terminating = ref(false)
+const reviewHistory = ref<NodeHistoryResp[]>([])
+const reviewHistoryLoading = ref(false)
 
 const loadDetail = async () => {
   loading.value = true
@@ -217,7 +225,21 @@ const loadDetail = async () => {
   }
 }
 
-onMounted(loadDetail)
+const loadReviewHistory = async () => {
+  reviewHistoryLoading.value = true
+  try {
+    const res = await getProjectReviewHistory(projectId.value)
+    reviewHistory.value = res.data ?? []
+  }
+  finally {
+    reviewHistoryLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadDetail()
+  loadReviewHistory()
+})
 
 // ——— 状态判断 ———
 const isReviewPhase = computed(() => {

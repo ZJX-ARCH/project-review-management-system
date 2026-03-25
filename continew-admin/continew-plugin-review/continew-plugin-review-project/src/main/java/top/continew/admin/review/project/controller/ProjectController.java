@@ -146,4 +146,14 @@ public class ProjectController {
         projectService.submitStageForm(projectId, stageId, req);
         return R.ok();
     }
+
+    /**
+     * 获取评审历史（申请人视角）
+     */
+    @GetMapping("/{projectId}/review-history")
+    @Operation(summary = "获取评审历史（申请人视角）")
+    @SaCheckPermission("review:project:query")
+    public R<java.util.List<top.continew.admin.review.project.model.resp.NodeHistoryResp>> getReviewHistory(@PathVariable Long projectId) {
+        return R.ok(projectService.getReviewHistory(projectId));
+    }
 }

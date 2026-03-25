@@ -96,6 +96,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     private final TaskAssignmentEngine assignmentEngine;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final top.continew.admin.review.project.engine.NodeHistoryBuilder nodeHistoryBuilder;
 
     @Override
     public FormTemplateResp getApplicationForm(Long typeId) {
@@ -695,5 +696,27 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
             item.setIsOverdue(s.getIsOverdue());
             return item;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<top.continew.admin.review.project.model.resp.NodeHistoryResp> getReviewHistory(Long projectId) {
+        ReviewProjectDO project = getProjectAndCheckOwner(projectId);
+
+        List<top.continew.admin.review.project.model.resp.NodeHistoryResp> result = new ArrayList<>();
+
+        // 1. 申请表单节点
+        result.add(nodeHistoryBuilder.buildApplicationNode(project));
+
+        // 2. 所有已完成的评审任务（申请人可看全部）
+        List<ReviewTaskDO> completedTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<ReviewTaskDO>()
+                        .eq(ReviewTaskDO::getProjectId, projectId)
+                        .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                        .in(ReviewTaskDO::getTaskType,
+                                List.of(TaskType.AUDIT, TaskType.REVIEW, TaskType.DECISION))
+                        .eq(ReviewTaskDO::getDeleted, 0));
+
+        result.addAll(nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks));
+        return result;
     }
 }

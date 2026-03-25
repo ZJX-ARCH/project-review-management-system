@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'FormRenderer' })
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import type { FormInstance, RequestOption } from '@arco-design/web-vue'

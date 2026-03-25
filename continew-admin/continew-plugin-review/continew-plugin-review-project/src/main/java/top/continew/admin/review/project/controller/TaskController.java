@@ -99,4 +99,14 @@ public class TaskController {
     public R<List<TaskCandidateResp>> listCandidates(@PathVariable Long taskId) {
         return R.ok(taskService.listCandidates(taskId));
     }
+
+    /**
+     * 获取节点历史（处理人视角）
+     */
+    @GetMapping("/{taskId}/history")
+    @Operation(summary = "获取节点历史（处理人视角）")
+    @SaCheckPermission("review:task:query")
+    public R<List<top.continew.admin.review.project.model.resp.NodeHistoryResp>> getNodeHistory(@PathVariable Long taskId) {
+        return R.ok(taskService.getNodeHistory(taskId));
+    }
 }

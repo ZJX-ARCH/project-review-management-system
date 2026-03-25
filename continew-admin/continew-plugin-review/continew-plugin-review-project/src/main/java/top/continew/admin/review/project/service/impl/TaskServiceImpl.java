@@ -74,6 +74,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
     private final TaskAssignmentEngine assignmentEngine;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final top.continew.admin.review.project.engine.NodeHistoryBuilder nodeHistoryBuilder;
 
     @Override
     public PageResp<TaskListResp> myTasks(TaskQuery query, PageQuery pageQuery) {
@@ -621,5 +622,35 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                 .sorted(Comparator.comparing(TaskCandidateResp::getNickname,
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<top.continew.admin.review.project.model.resp.NodeHistoryResp> getNodeHistory(Long taskId) {
+        ReviewTaskDO task = getTaskAndCheckAssignee(taskId);
+        ReviewProjectDO project = projectMapper.selectById(task.getProjectId());
+        if (project == null) {
+            throw new BusinessException("关联项目不存在");
+        }
+
+        List<top.continew.admin.review.project.model.resp.NodeHistoryResp> result = new ArrayList<>();
+
+        // 1. 申请表单节点（固定第一个）
+        top.continew.admin.review.project.model.resp.NodeHistoryResp appNode =
+                nodeHistoryBuilder.buildApplicationNode(project);
+        result.add(appNode);
+
+        // 2. 前序已完成节点（不含当前节点的同轮任务）
+        // 查所有 COMPLETED 任务，排除当前节点（同 taskType + nodeSequence）
+        List<ReviewTaskDO> completedTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<ReviewTaskDO>()
+                        .eq(ReviewTaskDO::getProjectId, project.getId())
+                        .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                        .eq(ReviewTaskDO::getDeleted, 0)
+                        // 排除当前节点的所有任务（同轮互不可见）
+                        .not(w -> w.eq(ReviewTaskDO::getTaskType, task.getTaskType())
+                                .eq(ReviewTaskDO::getNodeSequence, task.getNodeSequence())));
+
+        result.addAll(nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks));
+        return result;
     }
 }

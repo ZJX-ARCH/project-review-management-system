@@ -90,4 +90,13 @@ public interface ProjectService {
      * @param req       阶段成果表单数据
      */
     void submitStageForm(Long projectId, Long stageId, StageFormSubmitReq req);
+
+    /**
+     * 获取项目完整评审历史（申请人视角）
+     * 返回：申请表单节点 + 所有已完成节点每人内容
+     *
+     * @param projectId 项目ID
+     * @return 节点历史列表
+     */
+    java.util.List<top.continew.admin.review.project.model.resp.NodeHistoryResp> getReviewHistory(Long projectId);
 }

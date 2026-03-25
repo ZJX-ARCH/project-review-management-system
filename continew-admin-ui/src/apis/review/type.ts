@@ -867,3 +867,25 @@ export interface TaskCandidateResp {
   nickname: string
   username: string
 }
+
+/** 节点历史中每人的填写记录 */
+export interface PersonEntryResp {
+  assigneeName: string
+  decision?: string
+  score?: number
+  formData?: Record<string, unknown>
+  formTemplate?: ProjectFormTemplateResp
+  completeTime?: string
+}
+
+/** 节点历史（含每人填写） */
+export interface NodeHistoryResp {
+  nodeType: string        // APPLICATION / AUDIT / REVIEW / DECISION
+  nodeSequence: number
+  nodeName: string
+  nodeResult?: string     // PASS / REJECT
+  passCount?: number
+  totalCount?: number
+  averageScore?: number
+  entries: PersonEntryResp[]
+}

@@ -7,6 +7,7 @@ import type {
   TaskSaveReq,
   TaskTransferReq,
   TaskCandidateResp,
+  NodeHistoryResp,
 } from './type'
 
 const BASE = '/review/task'
@@ -39,4 +40,9 @@ export function transferTask(id: number | string, data: TaskTransferReq) {
 /** 查询转办候选人列表 */
 export function getTaskCandidates(id: number | string) {
   return http.get<TaskCandidateResp[]>(`${BASE}/${id}/candidates`)
+}
+
+/** 获取任务节点历史（处理人视角） */
+export function getTaskNodeHistory(id: number | string) {
+  return http.get<NodeHistoryResp[]>(`${BASE}/${id}/history`)
 }
