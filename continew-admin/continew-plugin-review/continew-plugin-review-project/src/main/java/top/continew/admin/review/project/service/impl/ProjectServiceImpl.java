@@ -244,8 +244,10 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
         // 从快照构建申请表单模板和进度信息
         if (project.getSnapshotConfig() != null) {
             try {
-                ProjectTypeSnapshot snapshot = objectMapper.convertValue(
-                        project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+                Object config = project.getSnapshotConfig();
+                ProjectTypeSnapshot snapshot = config instanceof String
+                    ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                    : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
                 if (snapshot != null) {
                     // 填充申请表单模板
                     if (snapshot.getFormMappings() != null) {

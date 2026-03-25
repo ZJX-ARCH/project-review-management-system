@@ -353,7 +353,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         if (project == null) return null;
         ProjectTypeSnapshot snapshot;
         try {
-            snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
         } catch (Exception e) {
             log.warn("[Score] snapshot parse failed taskId={}", task.getId());
             return null;
@@ -447,7 +450,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
      */
     private String resolveNodeName(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot == null) {
                 return taskType.getDescription() + "-" + nodeSequence;
             }
@@ -482,7 +488,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
      */
     private FormTemplateResp resolveTaskFormTemplate(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot == null || snapshot.getFormMappings() == null) {
                 return null;
             }
@@ -505,7 +514,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
      */
     private FormTemplateResp resolveApplicationFormTemplate(ReviewProjectDO project) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot == null || snapshot.getFormMappings() == null) {
                 return null;
             }

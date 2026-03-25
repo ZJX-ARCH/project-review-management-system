@@ -395,7 +395,10 @@ public class TaskAssignmentEngine {
 
     private int resolveRequiredCount(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             return resolveRequiredCount(snapshot, taskType, nodeSequence);
         } catch (Exception e) {
             log.warn("[TaskAssignment] failed to parse snapshot, fallback to default count: {}", e.getMessage());

@@ -61,8 +61,10 @@ public class NodeHistoryBuilder {
 
         // 申请表单模板
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(
-                    project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot != null && snapshot.getFormMappings() != null) {
                 Long tplId = snapshot.getFormMappings().get("APPLICATION");
                 if (tplId != null) {
@@ -163,8 +165,10 @@ public class NodeHistoryBuilder {
      */
     private String resolveNodeName(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(
-                    project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot == null) {
                 return taskType.getDescription() + "-" + nodeSequence;
             }
@@ -199,8 +203,10 @@ public class NodeHistoryBuilder {
      */
     private FormTemplateResp resolveTaskFormTemplate(ReviewProjectDO project, TaskType taskType, Integer nodeSequence) {
         try {
-            ProjectTypeSnapshot snapshot = objectMapper.convertValue(
-                    project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
             if (snapshot == null || snapshot.getFormMappings() == null) {
                 return null;
             }

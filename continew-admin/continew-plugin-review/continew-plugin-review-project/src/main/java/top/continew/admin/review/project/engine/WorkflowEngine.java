@@ -479,7 +479,11 @@ public class WorkflowEngine {
 
     private ProjectTypeSnapshot parseSnapshot(ReviewProjectDO project) {
         try {
-            return objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            if (config instanceof String) {
+                return objectMapper.readValue((String) config, ProjectTypeSnapshot.class);
+            }
+            return objectMapper.convertValue(config, ProjectTypeSnapshot.class);
         } catch (Exception e) {
             log.error("[Workflow] 解析快照失败，projectId={}：{}", project.getId(), e.getMessage());
             return null;

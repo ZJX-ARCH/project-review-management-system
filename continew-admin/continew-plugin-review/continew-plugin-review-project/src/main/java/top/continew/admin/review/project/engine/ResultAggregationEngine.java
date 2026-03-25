@@ -203,7 +203,11 @@ public class ResultAggregationEngine {
 
     private ProjectTypeSnapshot parseSnapshot(ReviewProjectDO project) {
         try {
-            return objectMapper.convertValue(project.getSnapshotConfig(), ProjectTypeSnapshot.class);
+            Object config = project.getSnapshotConfig();
+            if (config instanceof String) {
+                return objectMapper.readValue((String) config, ProjectTypeSnapshot.class);
+            }
+            return objectMapper.convertValue(config, ProjectTypeSnapshot.class);
         } catch (Exception e) {
             log.warn("[Aggregation] 解析项目快照失败：{}", e.getMessage());
             return null;
