@@ -116,16 +116,20 @@ public class NodeHistoryBuilder {
                             t -> t,
                             (t1, t2) -> t1.getCompleteTime().isAfter(t2.getCompleteTime()) ? t1 : t2));
 
-            long passCount = latestByAssignee.values().stream()
+            List<ReviewTaskDO> completedTasks = new ArrayList<>(latestByAssignee.values());
+            long passCount = completedTasks.stream()
                     .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
             node.setPassCount((int) passCount);
-            node.setTotalCount(latestByAssignee.size());
-            String nodeResult = passCount == latestByAssignee.size() ? "PASS" : "REJECT";
+            node.setTotalCount(completedTasks.size());
+
+            // 使用与 ResultAggregationEngine 相同的判定逻辑
+            String nodeResult = calculateNodeResult(project, sample.getTaskType(),
+                    sample.getNodeSequence(), completedTasks, nodeTasks);
             node.setNodeResult(nodeResult);
+
             log.info("[NodeHistory] 节点{}-{}: 原始任务数={}, 去重后处理人数={}, 通过人数={}, 节点结果={}",
                     sample.getTaskType(), sample.getNodeSequence(), nodeTasks.size(),
-                    latestByAssignee.size(), passCount, nodeResult);
-            log.warn("[NodeHistory] ⚠️ 注意：此节点结果是基于投票逻辑计算的，可能与 SCORE_PASS 等模式的实际判定不一致！");
+                    completedTasks.size(), passCount, nodeResult);
             OptionalDouble avg = nodeTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue()).average();
@@ -227,5 +231,62 @@ public class NodeHistoryBuilder {
 
     private boolean isReviewTask(TaskType taskType) {
         return taskType == TaskType.AUDIT || taskType == TaskType.REVIEW || taskType == TaskType.DECISION;
+    }
+
+    /**
+     * 计算节点实际结果（使用与 ResultAggregationEngine 相同的逻辑）
+     */
+    private String calculateNodeResult(ReviewProjectDO project, TaskType taskType, Integer nodeSequence,
+                                        List<ReviewTaskDO> completedTasks, List<ReviewTaskDO> allTasks) {
+        try {
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
+
+            if (snapshot == null || snapshot.getApprovalRules() == null) {
+                return completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS) ? "PASS" : "REJECT";
+            }
+
+            String nodeScope = taskType == TaskType.ACCEPTANCE ? "ACCEPTANCE" : taskType.getValue() + "_" + nodeSequence;
+            ProjectTypeSnapshot.ApprovalRuleInfo rule = snapshot.getApprovalRules().get(nodeScope);
+
+            // 计算原始需要人数
+            long originalRequiredCount = allTasks.stream()
+                .filter(t -> t.getTransferCount() == null || t.getTransferCount() == 0)
+                .count();
+
+            if (rule == null || "VOTE_ALL_PASS".equals(rule.getApprovalMode())) {
+                boolean allPass = completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS);
+                boolean allRequired = completedTasks.size() == originalRequiredCount;
+                return (allPass && allRequired) ? "PASS" : "REJECT";
+            }
+
+            return switch (rule.getApprovalMode()) {
+                case "VOTE_MAJORITY_PASS" -> {
+                    if (completedTasks.size() != originalRequiredCount) yield "REJECT";
+                    long passCount = completedTasks.stream().filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
+                    BigDecimal ratio = rule.getMajorityRatio() != null ? rule.getMajorityRatio() : new BigDecimal("0.67");
+                    BigDecimal actualRatio = BigDecimal.valueOf(passCount).divide(BigDecimal.valueOf(completedTasks.size()), 4, RoundingMode.HALF_UP);
+                    yield actualRatio.compareTo(ratio) >= 0 ? "PASS" : "REJECT";
+                }
+                case "VOTE_ONE_PASS" -> completedTasks.stream().anyMatch(t -> t.getDecision() == TaskDecisionEnum.PASS) ? "PASS" : "REJECT";
+                case "SCORE_PASS" -> {
+                    if (completedTasks.size() != originalRequiredCount || rule.getPassThreshold() == null) yield "REJECT";
+                    List<BigDecimal> scores = completedTasks.stream().filter(t -> t.getScore() != null).map(ReviewTaskDO::getScore).toList();
+                    if (scores.isEmpty()) yield "REJECT";
+                    BigDecimal finalScore = switch (rule.getScoreCalcMethod() != null ? rule.getScoreCalcMethod() : "SIMPLE_AVG") {
+                        case "MAX_SCORE" -> scores.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+                        case "MIN_SCORE" -> scores.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+                        default -> scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add).divide(BigDecimal.valueOf(scores.size()), 4, RoundingMode.HALF_UP);
+                    };
+                    yield finalScore.compareTo(rule.getPassThreshold()) >= 0 ? "PASS" : "REJECT";
+                }
+                default -> "REJECT";
+            };
+        } catch (Exception e) {
+            log.warn("[NodeHistory] 计算节点结果失败：{}", e.getMessage());
+            return completedTasks.stream().allMatch(t -> t.getDecision() == TaskDecisionEnum.PASS) ? "PASS" : "REJECT";
+        }
     }
 }
