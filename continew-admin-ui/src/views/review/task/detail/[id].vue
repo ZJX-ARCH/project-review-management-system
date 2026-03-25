@@ -581,6 +581,11 @@ const onTransfer = async () => {
 }
 
 /* Task 3: 抽屉内容 */
+:deep(.arco-drawer) {
+  border-left: 1px solid var(--color-border-3);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
 .drawer-resize-handle {
   position: absolute;
   left: 0;
