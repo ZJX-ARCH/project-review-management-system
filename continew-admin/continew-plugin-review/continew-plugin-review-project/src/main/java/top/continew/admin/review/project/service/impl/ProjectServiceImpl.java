@@ -630,6 +630,11 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
      * key 格式：taskType_nodeSequence（如 AUDIT_1）
      */
     private Map<String, NodeResult> buildNodeResultMap(Long projectId) {
+        ReviewProjectDO project = projectMapper.selectById(projectId);
+        if (project == null) {
+            return new HashMap<>();
+        }
+
         List<ReviewTaskDO> allTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<ReviewTaskDO>()
                         .eq(ReviewTaskDO::getProjectId, projectId)
@@ -643,32 +648,49 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
         Map<String, NodeResult> result = new HashMap<>();
         for (Map.Entry<String, List<ReviewTaskDO>> entry : grouped.entrySet()) {
             List<ReviewTaskDO> tasks = entry.getValue();
-            // 已完成任务（COMPLETED 或 TRANSFERRED）
+            // 已完成任务（COMPLETED）
             List<ReviewTaskDO> completedTasks = tasks.stream()
-                    .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED
-                            || t.getStatus() == TaskStatusEnum.TRANSFERRED)
+                    .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED)
                     .toList();
+
+            // 按处理人去重，每人只取最后一条
+            Map<Long, ReviewTaskDO> latestByAssignee = completedTasks.stream()
+                    .collect(Collectors.toMap(
+                            ReviewTaskDO::getAssigneeId,
+                            t -> t,
+                            (t1, t2) -> t1.getCompleteTime().isAfter(t2.getCompleteTime()) ? t1 : t2));
+            List<ReviewTaskDO> uniqueCompletedTasks = new ArrayList<>(latestByAssignee.values());
+
             // 节点是否已全部完成（可以汇总）
             boolean isFinished = !tasks.isEmpty() && tasks.stream()
                     .allMatch(t -> t.getStatus() == TaskStatusEnum.COMPLETED
                             || t.getStatus() == TaskStatusEnum.TRANSFERRED);
 
-            long passCount = completedTasks.stream()
+            long passCount = uniqueCompletedTasks.stream()
                     .filter(t -> t.getDecision() == TaskDecisionEnum.PASS).count();
-            OptionalDouble avg = completedTasks.stream()
+            OptionalDouble avg = uniqueCompletedTasks.stream()
                     .filter(t -> t.getScore() != null)
                     .mapToDouble(t -> t.getScore().doubleValue())
                     .average();
 
             NodeResult nr = new NodeResult();
-            nr.completedCount = completedTasks.size();
+            nr.completedCount = uniqueCompletedTasks.size();
             nr.totalCount = tasks.size();
             nr.isFinished = isFinished;
-            if (isFinished && !completedTasks.isEmpty()) {
+            if (isFinished && !uniqueCompletedTasks.isEmpty()) {
                 nr.passCount = (int) passCount;
                 nr.averageScore = avg.isPresent()
                         ? BigDecimal.valueOf(avg.getAsDouble()).setScale(2, RoundingMode.HALF_UP) : null;
-                nr.result = passCount == completedTasks.size() ? "PASS" : "REJECT";
+                // 使用 NodeHistoryBuilder 的判定逻辑
+                ReviewTaskDO sample = tasks.get(0);
+                List<top.continew.admin.review.project.model.resp.NodeHistoryResp> nodeHistory =
+                        nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks);
+                String nodeKey = sample.getTaskType().getValue() + "_" + sample.getNodeSequence();
+                nr.result = nodeHistory.stream()
+                        .filter(n -> (n.getNodeType() + "_" + n.getNodeSequence()).equals(nodeKey))
+                        .findFirst()
+                        .map(top.continew.admin.review.project.model.resp.NodeHistoryResp::getNodeResult)
+                        .orElse("REJECT");
             }
             result.put(entry.getKey(), nr);
         }
