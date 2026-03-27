@@ -22,13 +22,19 @@ const props = withDefaults(defineProps<Props>(), {
 
 const expandedNodes = ref<Set<string>>(new Set())
 
-// 分离评审阶段和管理阶段
+// 分离评审阶段和管理阶段（只显示已完成的节点）
 const reviewPhaseNodes = computed(() =>
-  props.nodeHistory.filter(n => ['APPLICATION', 'AUDIT', 'REVIEW', 'DECISION'].includes(n.nodeType))
+  props.nodeHistory.filter(n =>
+    ['APPLICATION', 'AUDIT', 'REVIEW', 'DECISION'].includes(n.nodeType) &&
+    (n.nodeType === 'APPLICATION' || n.nodeResult != null)
+  )
 )
 
 const managementPhaseNodes = computed(() =>
-  props.nodeHistory.filter(n => ['MANAGEMENT', 'ACCEPTANCE', 'STAGE_SUBMISSION'].includes(n.nodeType))
+  props.nodeHistory.filter(n =>
+    ['MANAGEMENT', 'ACCEPTANCE', 'STAGE_SUBMISSION'].includes(n.nodeType) &&
+    n.nodeResult != null
+  )
 )
 
 // 默认展开第一个节点

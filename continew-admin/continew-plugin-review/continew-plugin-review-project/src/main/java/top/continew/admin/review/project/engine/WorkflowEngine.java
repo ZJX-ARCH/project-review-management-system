@@ -534,6 +534,18 @@ public class WorkflowEngine {
     }
 
     private void resetStagesFrom(Long projectId, Integer fromStageOrder) {
+        // 保存驳回前的阶段快照到历史表
+        List<ReviewProjectStageDO> stagesToReset = stageMapper.selectList(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, projectId)
+                        .ge(ReviewProjectStageDO::getStageOrder, fromStageOrder)
+                        .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.PENDING)
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        for (ReviewProjectStageDO stage : stagesToReset) {
+            saveStageSnapshot(stage, "REJECTED");
+        }
+
+        // 重置阶段状态
         LambdaQueryWrapper<ReviewProjectStageDO> wrapper = new LambdaQueryWrapper<ReviewProjectStageDO>()
                 .eq(ReviewProjectStageDO::getProjectId, projectId)
                 .ge(ReviewProjectStageDO::getStageOrder, fromStageOrder);
@@ -543,6 +555,27 @@ public class WorkflowEngine {
         update.setDeadline(null);
         update.setStageFormData(null);
         stageMapper.update(update, wrapper);
+    }
+
+    /**
+     * 保存阶段快照到历史表（驳回前调用）
+     */
+    private void saveStageSnapshot(ReviewProjectStageDO stage, String newStatus) {
+        ReviewProjectStageHistoryDO history = new ReviewProjectStageHistoryDO();
+        history.setProjectId(stage.getProjectId());
+        history.setStageId(stage.getId());
+        history.setStageType(stage.getStageType());
+        history.setStageOrder(stage.getStageOrder());
+        history.setStageName(stage.getStageName());
+        history.setOldStatus(stage.getStatus() != null ? stage.getStatus().getValue() : null);
+        history.setNewStatus(newStatus);
+        history.setStartDate(stage.getStartDate());
+        history.setDeadline(stage.getDeadline());
+        history.setStageFormData(stage.getStageFormData());
+        history.setChangeTime(LocalDateTime.now());
+        history.setRemark(stage.getStageName() + " " + history.getOldStatus() + " → " + newStatus);
+        stageHistoryMapper.insert(history);
+        log.info("[Workflow] 保存阶段快照：项目{} 阶段{} {} → {}", stage.getProjectId(), stage.getStageOrder(), history.getOldStatus(), newStatus);
     }
 
     private ReviewProjectStageDO findStageByOrder(Long projectId, Integer stageOrder) {

@@ -214,6 +214,7 @@
       v-model:visible="drawerVisible"
       :title="detail?.projectName"
       :width="drawerWidth"
+      :mask="false"
       placement="right"
       class="history-drawer"
       @cancel="closeDrawer"
@@ -325,13 +326,6 @@ const submitForm = reactive({
   decision: '' as string,
   score: undefined as number | undefined,
   rejectBackToStageOrder: undefined as number | undefined,
-})
-
-// 监听决策变化，驳回时自动设置当前阶段为默认值
-watch(() => submitForm.decision, (newDecision) => {
-  if (newDecision === 'REJECT' && detail.value?.taskType === 'MANAGEMENT' && detail.value?.currentStage) {
-    submitForm.rejectBackToStageOrder = detail.value.currentStage.stageOrder
-  }
 })
 
 // ——— Task 2: 水平流程进度条 ———
@@ -678,13 +672,11 @@ const onTransfer = async () => {
 }
 
 .drawer-resize-handle {
-  position: sticky;
+  position: absolute;
   left: 0;
   top: 0;
-  height: 100vh;
+  height: 100%;
   width: 8px;
-  margin-left: -8px;
-  float: left;
   cursor: ew-resize;
   z-index: 10;
   transition: background 0.15s;

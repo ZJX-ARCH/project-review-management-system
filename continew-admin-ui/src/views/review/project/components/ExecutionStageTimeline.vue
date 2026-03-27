@@ -90,13 +90,35 @@ function canExpand(stage: ProjectStageResp) {
         v-if="expandedStages.has(stage.stageOrder)"
         class="stage-node-content"
       >
-        <a-card v-if="stage.stageFormData && stage.stageFormTemplate" :body-style="{ padding: '16px' }">
+        <!-- 历史记录（驳回重做产生的快照） -->
+        <div v-if="stage.historyList && stage.historyList.length" class="stage-history-list">
+          <div v-for="(history, hIdx) in stage.historyList" :key="history.id" class="stage-history-item">
+            <div class="history-header">
+              <span class="history-label">第 {{ hIdx + 1 }} 次执行</span>
+              <a-tag color="red" size="small">{{ history.newStatus === 'REJECTED' ? '已驳回' : history.newStatus }}</a-tag>
+              <span class="history-time">{{ history.changeTime }}</span>
+            </div>
+            <div v-if="history.stageFormData && stage.stageFormTemplate" class="stage-form-card">
+              <FormRenderer
+                :model-value="history.stageFormData"
+                :template="stage.stageFormTemplate"
+                readonly
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 当前数据 -->
+        <div v-if="stage.stageFormData && stage.stageFormTemplate" class="stage-form-card">
+          <div v-if="stage.historyList && stage.historyList.length" class="current-label">
+            当前执行（第 {{ stage.historyList.length + 1 }} 次）
+          </div>
           <FormRenderer
             :model-value="stage.stageFormData"
             :template="stage.stageFormTemplate"
             readonly
           />
-        </a-card>
+        </div>
         <div v-else-if="stage.stageFormData" class="no-template-tip">
           阶段成果已提交（无表单模板）
         </div>
@@ -219,6 +241,57 @@ function canExpand(stage: ProjectStageResp) {
   margin-left: 11px;
   padding-left: 16px;
   margin-bottom: 8px;
+}
+
+.stage-form-card {
+  padding: 12px;
+  border: 1px solid var(--color-border-3);
+  border-radius: 6px;
+  background: var(--color-bg-2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stage-history-list {
+  margin-bottom: 12px;
+}
+
+.stage-history-item {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px dashed var(--color-border-3);
+  border-radius: 6px;
+  background: var(--color-fill-1);
+  opacity: 0.85;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.history-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-left: auto;
+}
+
+.current-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: rgb(var(--primary-6));
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-2);
 }
 
 .no-template-tip {

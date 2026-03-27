@@ -56,6 +56,8 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/project/review_project_data.sql
   - include:
       file: db/changelog/mysql/plugin/project/review_project_stage_enhancement.sql
+  - include:
+      file: db/changelog/mysql/plugin/project/review_project_stage_history_enhancement.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql

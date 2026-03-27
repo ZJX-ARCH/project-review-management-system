@@ -88,4 +88,44 @@ public class ProjectStageResp implements Serializable {
      */
     @Schema(description = "阶段成果表单模板（只读渲染用）")
     private FormTemplateResp stageFormTemplate;
+
+    /**
+     * 阶段历史记录列表（驳回重做产生的历史快照）
+     */
+    @Schema(description = "阶段历史记录")
+    private java.util.List<StageHistoryItem> historyList;
+
+    /**
+     * 阶段历史项
+     */
+    @Data
+    @Schema(description = "阶段历史项")
+    public static class StageHistoryItem implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        @Schema(description = "历史记录ID")
+        private Long id;
+
+        @Schema(description = "原状态")
+        private String oldStatus;
+
+        @Schema(description = "新状态")
+        private String newStatus;
+
+        @Schema(description = "开始日期")
+        private LocalDate startDate;
+
+        @Schema(description = "截止日期")
+        private LocalDate deadline;
+
+        @Schema(description = "阶段成果数据")
+        private Map<String, Object> stageFormData;
+
+        @Schema(description = "变更时间")
+        private java.time.LocalDateTime changeTime;
+
+        @Schema(description = "备注")
+        private String remark;
+    }
 }

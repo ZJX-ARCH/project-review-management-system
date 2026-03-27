@@ -22,6 +22,7 @@ import top.continew.admin.review.project.enums.TaskStatusEnum;
 import top.continew.admin.review.project.engine.TaskAssignmentEngine;
 import top.continew.admin.review.project.event.TaskCompletedEvent;
 import top.continew.admin.review.project.mapper.ReviewProjectMapper;
+import top.continew.admin.review.project.mapper.ReviewProjectStageHistoryMapper;
 import top.continew.admin.review.project.mapper.ReviewProjectStageMapper;
 import top.continew.admin.review.project.mapper.ReviewTaskMapper;
 import top.continew.admin.review.project.model.entity.ProjectTypeSnapshot;
@@ -69,6 +70,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
     private final ReviewTaskMapper taskMapper;
     private final ReviewProjectMapper projectMapper;
     private final ReviewProjectStageMapper stageMapper;
+    private final ReviewProjectStageHistoryMapper stageHistoryMapper;
     private final FormTemplateService formTemplateService;
     private final UserMapper userMapper;
     private final TaskAssignmentEngine assignmentEngine;
@@ -661,6 +663,31 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             } catch (Exception e) {
                 log.warn("[Stage] 解析阶段表单模板失败 stageId={}: {}", stage.getId(), e.getMessage());
             }
+        }
+
+        // 查询阶段历史记录
+        List<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO> historyList =
+                stageHistoryMapper.selectList(new LambdaQueryWrapper<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO>()
+                        .eq(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getStageId, stage.getId())
+                        .orderByAsc(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getChangeTime));
+        if (!historyList.isEmpty()) {
+            List<ProjectStageResp.StageHistoryItem> items = historyList.stream().map(h -> {
+                ProjectStageResp.StageHistoryItem item = new ProjectStageResp.StageHistoryItem();
+                item.setId(h.getId());
+                item.setOldStatus(h.getOldStatus());
+                item.setNewStatus(h.getNewStatus());
+                item.setStartDate(h.getStartDate());
+                item.setDeadline(h.getDeadline());
+                if (h.getStageFormData() instanceof Map<?, ?> hMap) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> hFormData = (Map<String, Object>) hMap;
+                    item.setStageFormData(hFormData);
+                }
+                item.setChangeTime(h.getChangeTime());
+                item.setRemark(h.getRemark());
+                return item;
+            }).collect(Collectors.toList());
+            resp.setHistoryList(items);
         }
 
         return resp;
