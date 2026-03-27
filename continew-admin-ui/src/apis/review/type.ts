@@ -608,11 +608,12 @@ export enum ProjectTaskType {
 
 /** 任务类型中文映射 */
 export const PROJECT_TASK_TYPE_MAP: Record<string, string> = {
-  AUDIT:      '审核',
-  REVIEW:     '评审',
-  DECISION:   '决策',
-  MANAGEMENT: '管理',
-  ACCEPTANCE: '验收',
+  AUDIT:            '审核',
+  REVIEW:           '评审',
+  DECISION:         '决策',
+  MANAGEMENT:       '管理',
+  ACCEPTANCE:       '验收',
+  STAGE_SUBMISSION: '阶段提交',
 }
 
 /** 任务状态枚举 */
@@ -695,6 +696,7 @@ export interface ProjectStageResp {
   status: ProjectStageStatus
   isOverdue: boolean
   stageFormData?: Record<string, unknown>
+  stageFormTemplate?: ProjectFormTemplateResp
 }
 
 /** 项目详情响应 */

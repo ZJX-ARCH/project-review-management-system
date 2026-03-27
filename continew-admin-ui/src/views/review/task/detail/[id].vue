@@ -78,8 +78,45 @@
               />
             </a-card>
 
-            <!-- Task 5: 决策区 UI 优化 -->
-            <a-card v-if="isEditable" style="margin-bottom: 16px;">
+            <!-- MANAGEMENT 专属：展示申请人提交的阶段成果（只读） -->
+            <a-card
+              v-if="detail.taskType === 'MANAGEMENT' && detail.currentStage"
+              :title="`阶段成果：${detail.currentStage.stageName}`"
+              style="margin-bottom: 16px;"
+            >
+              <FormRenderer
+                v-if="detail.currentStage.stageFormTemplate && detail.currentStage.stageFormData"
+                :model-value="detail.currentStage.stageFormData ?? {}"
+                :template="detail.currentStage.stageFormTemplate"
+                readonly
+              />
+              <a-empty v-else :description="`申请人尚未提交阶段成果 [调试: hasTemplate=${!!detail.currentStage.stageFormTemplate}, hasData=${!!detail.currentStage.stageFormData}]`" />
+            </a-card>
+
+            <!-- STAGE_SUBMISSION 专属：仅显示提交按钮，无决策选项 -->
+            <a-card v-if="isEditable && isStageSubmissionTask" style="margin-bottom: 16px;">
+              <template #title>
+                <span>提交阶段成果</span>
+                <span style="font-size: 12px; color: var(--color-text-3); margin-left: 8px;">
+                  分配时间：{{ detail.assignTime }}
+                </span>
+              </template>
+              <div class="decision-actions">
+                <a-space>
+                  <a-button :loading="saving" @click="onSave">
+                    <template #icon><icon-save /></template>
+                    暂存
+                  </a-button>
+                  <a-button type="primary" :loading="submitting" @click="onSubmitStageForm">
+                    <template #icon><icon-send /></template>
+                    提交成果
+                  </a-button>
+                </a-space>
+              </div>
+            </a-card>
+
+            <!-- 普通任务决策区域（审核/评审/决策/管理/验收）-->
+            <a-card v-if="isEditable && !isStageSubmissionTask" style="margin-bottom: 16px;">
               <template #title>
                 <span>提交决策</span>
                 <span style="font-size: 12px; color: var(--color-text-3); margin-left: 8px;">
@@ -117,6 +154,22 @@
                     {{ stage.stageName }}
                   </a-option>
                 </a-select>
+              </a-form-item>
+
+              <!-- 新增：MANAGEMENT REJECT 回退阶段选择 -->
+              <a-form-item
+                v-if="detail.taskType === 'MANAGEMENT' && submitForm.decision === 'REJECT'"
+                label="驳回回退到阶段"
+                style="margin-top: 16px;"
+              >
+                <a-select v-model="submitForm.rejectBackToStageOrder" placeholder="请选择回退到的阶段（不选则重做当前阶段）" style="width: 320px;">
+                  <a-option v-for="stage in detail.allStages" :key="stage.stageOrder" :value="stage.stageOrder">
+                    {{ stage.stageName }}
+                  </a-option>
+                </a-select>
+                <div style="font-size: 12px; color: var(--color-text-3); margin-top: 4px;">
+                  不选择则默认重做当前阶段
+                </div>
               </a-form-item>
 
               <div class="decision-actions">
@@ -161,7 +214,6 @@
       v-model:visible="drawerVisible"
       :title="detail?.projectName"
       :width="drawerWidth"
-      :mask="false"
       placement="right"
       class="history-drawer"
       @cancel="closeDrawer"
@@ -217,8 +269,6 @@ import {
   IconLayers,
   IconCheckCircle,
   IconCloseCircle,
-  IconExclamationCircle,
-  IconUndo,
 } from '@arco-design/web-vue/es/icon'
 import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates, getTaskNodeHistory } from '@/apis/review'
 import {
@@ -261,6 +311,8 @@ const isEditable = computed(() =>
   detail.value?.taskStatus === 'PENDING' || detail.value?.taskStatus === 'SAVED',
 )
 
+const isStageSubmissionTask = computed(() => detail.value?.taskType === 'STAGE_SUBMISSION')
+
 const hasScoreTable = computed(() =>
   detail.value?.taskFormTemplate?.fields?.some(f => f.fieldType === 'SCORE_TABLE'),
 )
@@ -273,6 +325,13 @@ const submitForm = reactive({
   decision: '' as string,
   score: undefined as number | undefined,
   rejectBackToStageOrder: undefined as number | undefined,
+})
+
+// 监听决策变化，驳回时自动设置当前阶段为默认值
+watch(() => submitForm.decision, (newDecision) => {
+  if (newDecision === 'REJECT' && detail.value?.taskType === 'MANAGEMENT' && detail.value?.currentStage) {
+    submitForm.rejectBackToStageOrder = detail.value.currentStage.stageOrder
+  }
 })
 
 // ——— Task 2: 水平流程进度条 ———
@@ -292,21 +351,30 @@ interface ProgressStep {
   result?: string
 }
 
+const isManagementPhaseTask = computed(() =>
+  ['MANAGEMENT', 'ACCEPTANCE', 'STAGE_SUBMISSION'].includes(detail.value?.taskType ?? ''),
+)
+
 const allProgressSteps = computed<ProgressStep[]>(() => {
   if (!detail.value) return []
   const steps: ProgressStep[] = []
-  for (const node of (detail.value.previousNodes ?? [])) {
-    steps.push({
-      title: node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`,
-      status: node.result === 'PASS' ? 'finish' : 'error',
-      description: `${node.passCount}/${node.totalCount} 人通过`,
-      clickable: true,
-      passCount: node.passCount,
-      totalCount: node.totalCount,
-      averageScore: node.averageScore ?? null,
-      result: node.result,
-    })
+
+  // 管理/验收/阶段提交任务：不在进度条显示评审历史（通过右侧抽屉查看）
+  if (!isManagementPhaseTask.value) {
+    for (const node of (detail.value.previousNodes ?? [])) {
+      steps.push({
+        title: node.nodeName || `${TASK_TYPE_LABEL[node.nodeType] ?? node.nodeType} 第${node.nodeSequence}轮`,
+        status: node.result === 'PASS' ? 'finish' : 'error',
+        description: `${node.passCount}/${node.totalCount} 人通过`,
+        clickable: true,
+        passCount: node.passCount,
+        totalCount: node.totalCount,
+        averageScore: node.averageScore ?? null,
+        result: node.result,
+      })
+    }
   }
+
   steps.push({
     title: detail.value.nodeName || `${TASK_TYPE_LABEL[detail.value.taskType] ?? detail.value.taskType}`,
     status: 'process',
@@ -393,17 +461,10 @@ function onResizeStart(e: MouseEvent) {
 
 // ——— Task 5: 决策选项 ———
 const decisionOptions = computed(() => {
-  const base = [
+  return [
     { value: 'PASS', label: '通过', icon: IconCheckCircle },
     { value: 'REJECT', label: '驳回', icon: IconCloseCircle },
   ]
-  if (detail.value?.taskType === 'MANAGEMENT') {
-    base.push(
-      { value: 'UNQUALIFIED', label: '不合格', icon: IconExclamationCircle },
-      { value: 'WITHDRAW', label: '撤回', icon: IconUndo },
-    )
-  }
-  return base
 })
 
 // ——— 暂存 ———
@@ -453,6 +514,31 @@ const onSubmit = async () => {
           formData: taskFormData.value,
         })
         Message.success('决策提交成功')
+        router.replace({ path: '/review/task', query: { t: Date.now() } })
+      }
+      finally {
+        submitting.value = false
+      }
+    },
+  })
+}
+
+// ——— STAGE_SUBMISSION 专用提交 ———
+const onSubmitStageForm = async () => {
+  const formErrors = await formRendererRef.value?.validate()
+  if (formErrors) return
+
+  Modal.confirm({
+    title: '确认提交阶段成果',
+    content: '确定提交本阶段成果吗？提交后管理人员将对成果进行审核。',
+    onOk: async () => {
+      submitting.value = true
+      try {
+        await submitTask(taskId.value, {
+          decision: 'PASS',
+          formData: taskFormData.value,
+        })
+        Message.success('阶段成果提交成功')
         router.replace({ path: '/review/task', query: { t: Date.now() } })
       }
       finally {

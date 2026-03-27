@@ -239,6 +239,8 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                         .orderByAsc(ReviewProjectStageDO::getStageOrder));
         if (!stages.isEmpty()) {
             resp.setStages(stages.stream().map(this::toStageResp).collect(Collectors.toList()));
+            // 填充每个阶段的表单模板（用于时间线展示）
+            fillStageFormTemplates(resp.getStages(), project);
         }
 
         // 从快照构建申请表单模板和进度信息
@@ -742,5 +744,33 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
 
         result.addAll(nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks));
         return result;
+    }
+
+    /**
+     * 为阶段列表填充表单模板（用于时间线展示）
+     */
+    private void fillStageFormTemplates(List<ProjectStageResp> stages, ReviewProjectDO project) {
+        try {
+            Object config = project.getSnapshotConfig();
+            ProjectTypeSnapshot snapshot = config instanceof String
+                    ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                    : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
+            if (snapshot == null || snapshot.getFormMappings() == null) {
+                return;
+            }
+            for (ProjectStageResp stage : stages) {
+                String key = "STAGE_" + stage.getStageOrder();
+                Long templateId = snapshot.getFormMappings().get(key);
+                if (templateId != null) {
+                    try {
+                        stage.setStageFormTemplate(formTemplateService.getDetail(templateId));
+                    } catch (Exception e) {
+                        log.warn("[Project] 加载阶段表单模板失败 key={}", key);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Project] 填充阶段表单模板失败：{}", e.getMessage());
+        }
     }
 }

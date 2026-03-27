@@ -97,41 +97,13 @@
           <ReviewHistoryTimeline :node-history="reviewHistory" :loading="reviewHistoryLoading" />
         </a-card>
 
-        <!-- 执行阶段进度（执行阶段才显示） -->
-        <a-card v-if="isExecutionPhase && detail.stageProgress?.length" title="执行阶段进度" style="margin-bottom: 16px;">
-          <a-steps size="small" style="margin-bottom: 16px;">
-            <a-step
-              v-for="(sp, idx) in detail.stageProgress"
-              :key="idx"
-              :title="sp.stageName"
-              :status="stageStatusToStep(sp.stageStatus)"
-            />
-          </a-steps>
-          <div v-for="stage in detail.stages" :key="stage.id" class="stage-item">
-            <div class="stage-header">
-              <span class="stage-name">{{ stage.stageName }}</span>
-              <a-tag :color="PROJECT_STAGE_STATUS_MAP[stage.status]?.color ?? 'gray'">
-                {{ PROJECT_STAGE_STATUS_MAP[stage.status]?.label ?? stage.status }}
-              </a-tag>
-              <a-tag v-if="stage.isOverdue" color="red">已超时</a-tag>
-            </div>
-            <div class="stage-meta">
-              <span v-if="stage.startDate">开始：{{ stage.startDate }}</span>
-              <span v-if="stage.deadline">截止：{{ stage.deadline }}</span>
-              <span v-if="stage.plannedDays">计划天数：{{ stage.plannedDays }} 天</span>
-            </div>
-            <a-alert v-if="stage.status === 'REJECTED'" type="warning" style="margin-top: 8px;">
-              该阶段成果已被驳回，请重新提交
-            </a-alert>
-            <a-button
-              v-if="stage.status === 'IN_PROGRESS' || stage.status === 'REJECTED'"
-              v-permission="['review:project:submit']"
-              type="primary"
-              size="small"
-              style="margin-top: 8px;"
-              @click="openStageFormModal(stage)"
-            >提交阶段成果</a-button>
-          </div>
+        <!-- 执行阶段进度（执行阶段或已归档时显示） -->
+        <a-card
+          v-if="(isExecutionPhase || isArchived) && detail.stages?.length"
+          title="执行阶段进度"
+          style="margin-bottom: 16px;"
+        >
+          <ExecutionStageTimeline :stages="detail.stages" />
         </a-card>
       </div>
     </a-spin>
@@ -158,23 +130,6 @@
         </a-form-item>
       </a-form>
     </a-modal>
-
-    <!-- 提交阶段成果弹窗 -->
-    <a-modal
-      v-model:visible="stageFormVisible"
-      :title="`提交阶段成果：${currentStage?.stageName}`"
-      width="700px"
-      :ok-loading="stageFormLoading"
-      @ok="onSubmitStageForm"
-      @cancel="stageFormVisible = false"
-    >
-      <p v-if="!currentStage?.stageFormTemplate" class="no-template-tip">该阶段暂无表单配置，直接确认提交即可。</p>
-      <FormRenderer
-        v-else
-        v-model="stageFormData"
-        :template="currentStage.stageFormTemplate"
-      />
-    </a-modal>
   </GiPageLayout>
 </template>
 
@@ -182,12 +137,13 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import { getProjectDetail, revokeProject, terminateProject, updateProjectForm, submitStageForm, getProjectReviewHistory } from '@/apis/review'
+import { getProjectDetail, revokeProject, terminateProject, updateProjectForm, getProjectReviewHistory } from '@/apis/review'
 import { PROJECT_STATUS_MAP, PROJECT_STAGE_STATUS_MAP } from '@/apis/review/type'
 import type { ProjectDetailResp, ProjectStageResp, NodeHistoryResp } from '@/apis/review/type'
 import has from '@/utils/has'
 import FormRenderer from '../components/FormRenderer.vue'
 import ReviewHistoryTimeline from '../components/ReviewHistoryTimeline.vue'
+import ExecutionStageTimeline from '../components/ExecutionStageTimeline.vue'
 
 defineOptions({ name: 'ReviewProjectDetail' })
 
@@ -240,6 +196,10 @@ const hasReviewProgress = computed(() => (detail.value?.reviewProgress?.length ?
 const isExecutionPhase = computed(() => {
   const s = detail.value?.status ?? 0
   return s >= 50 && s < 90
+})
+const isArchived = computed(() => {
+  const s = detail.value?.status ?? 0
+  return [90, 91, 92, 99].includes(s)
 })
 const canRevoke = computed(() => {
   const s = detail.value?.status ?? 0
@@ -348,31 +308,6 @@ const onSubmitUpdateForm = async () => {
   }
 }
 
-// ——— 阶段成果提交 ———
-const stageFormVisible = ref(false)
-const stageFormLoading = ref(false)
-const stageFormData = ref<Record<string, unknown>>({})
-const currentStage = ref<(ProjectStageResp & { stageFormTemplate?: any }) | null>(null)
-
-const openStageFormModal = (stage: ProjectStageResp) => {
-  currentStage.value = stage as any
-  stageFormData.value = stage.stageFormData ?? {}
-  stageFormVisible.value = true
-}
-
-const onSubmitStageForm = async () => {
-  if (!currentStage.value) return
-  stageFormLoading.value = true
-  try {
-    await submitStageForm(projectId.value, currentStage.value.id, { formData: stageFormData.value })
-    Message.success('阶段成果提交成功')
-    stageFormVisible.value = false
-    await loadDetail()
-  }
-  finally {
-    stageFormLoading.value = false
-  }
-}
 </script>
 
 <style scoped>

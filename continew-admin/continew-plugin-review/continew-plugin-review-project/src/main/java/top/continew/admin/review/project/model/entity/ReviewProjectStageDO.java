@@ -76,4 +76,9 @@ public class ReviewProjectStageDO extends BaseDO {
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Object stageFormData;
+
+    /**
+     * 阶段提交人ID（STAGE_SUBMISSION任务转办时更新）
+     */
+    private Long submitterId;
 }

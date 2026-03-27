@@ -27,7 +27,7 @@ public class NodeResultEvent extends ApplicationEvent {
     private final TaskDecisionEnum result;
 
     /**
-     * 验收 REJECT 时指定的回退阶段序号（仅 ACCEPTANCE + REJECT 时有效）
+     * 验收或管理阶段 REJECT 时指定的回退阶段序号（ACCEPTANCE/MANAGEMENT + REJECT 时有效）
      */
     private final Integer rejectBackToStageOrder;
 

@@ -193,6 +193,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
 
         // 阶段成果（MANAGEMENT 查当前阶段，ACCEPTANCE 查全部阶段）
         if (task.getTaskType() == TaskType.MANAGEMENT) {
+            // 当前阶段成果（供管理员审核）
             ReviewProjectStageDO stage = stageMapper.selectOne(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
@@ -201,6 +202,15 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             if (stage != null) {
                 resp.setCurrentStage(toStageResp(stage));
             }
+            // 历史阶段列表（供 REJECT 时选择回退目标，只包含 < 当前阶段序号的非 ACCEPTANCE 阶段）
+            List<ReviewProjectStageDO> prevStages = stageMapper.selectList(
+                    new LambdaQueryWrapper<ReviewProjectStageDO>()
+                            .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                            .lt(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                            .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
+                            .eq(ReviewProjectStageDO::getDeleted, 0)
+                            .orderByAsc(ReviewProjectStageDO::getStageOrder));
+            resp.setAllStages(prevStages.stream().map(this::toStageResp).collect(Collectors.toList()));
         } else if (task.getTaskType() == TaskType.ACCEPTANCE) {
             List<ReviewProjectStageDO> stages = stageMapper.selectList(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
@@ -208,6 +218,18 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                             .eq(ReviewProjectStageDO::getDeleted, 0)
                             .orderByAsc(ReviewProjectStageDO::getStageOrder));
             resp.setAllStages(stages.stream().map(this::toStageResp).collect(Collectors.toList()));
+        } else if (task.getTaskType() == TaskType.STAGE_SUBMISSION) {
+            // 从阶段记录中读取已保存的成果数据（用于回显）
+            ReviewProjectStageDO stage = stageMapper.selectOne(
+                    new LambdaQueryWrapper<ReviewProjectStageDO>()
+                            .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                            .eq(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                            .eq(ReviewProjectStageDO::getDeleted, 0));
+            if (stage != null && stage.getStageFormData() instanceof Map<?, ?> map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> formData = (Map<String, Object>) map;
+                resp.setSavedFormData(formData);
+            }
         }
 
         return resp;
@@ -231,6 +253,12 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         ReviewTaskDO task = getTaskAndCheckAssignee(taskId);
         if (!task.getStatus().isActive()) {
             throw new BusinessException("任务已完成或已取消，无法提交");
+        }
+
+        // STAGE_SUBMISSION 任务：申请人提交阶段成果，不经过决策汇总流程
+        if (task.getTaskType() == TaskType.STAGE_SUBMISSION) {
+            submitStageSubmissionTask(task, req);
+            return;
         }
 
         // 验收任务 REJECT 时，rejectBackToStageOrder 必填
@@ -296,7 +324,10 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         if (project == null || project.getDeleted() != 0) {
             throw new BadRequestException("Related project not found");
         }
-        Set<Long> candidatePool = assignmentEngine.findCandidates(project.getTypeId(), task.getTaskType(), task.getNodeSequence());
+        // STAGE_SUBMISSION 任务无人员配置，使用申请人候选池（APPLICATION 范围）校验转办目标
+        Set<Long> candidatePool = task.getTaskType() == TaskType.STAGE_SUBMISSION
+                ? assignmentEngine.findApplicationCandidates(project.getTypeId())
+                : assignmentEngine.findCandidates(project.getTypeId(), task.getTaskType(), task.getNodeSequence());
         if (!candidatePool.contains(req.getTargetUserId())) {
             throw new BadRequestException("Target user is not eligible for the current node");
         }
@@ -304,6 +335,18 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         task.setTransferRemark(req.getTransferRemark());
         task.setCompleteTime(LocalDateTime.now());
         taskMapper.updateById(task);
+
+        // STAGE_SUBMISSION 任务转办时，同步更新阶段的 submitterId
+        if (task.getTaskType() == TaskType.STAGE_SUBMISSION) {
+            ReviewProjectStageDO stage = stageMapper.selectOne(new LambdaQueryWrapper<ReviewProjectStageDO>()
+                    .eq(ReviewProjectStageDO::getProjectId, task.getProjectId())
+                    .eq(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                    .eq(ReviewProjectStageDO::getDeleted, 0));
+            if (stage != null) {
+                stage.setSubmitterId(req.getTargetUserId());
+                stageMapper.updateById(stage);
+            }
+        }
 
         // 创建新任务给目标用户，保留已暂存的表单数据（避免填写内容丢失）
         ReviewTaskDO newTask = new ReviewTaskDO();
@@ -496,9 +539,16 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                 return null;
             }
             // key 格式：AUDIT_1 / REVIEW_1 / DECISION_1 / STAGE_1 / ACCEPTANCE
-            String key = taskType == TaskType.ACCEPTANCE ? "ACCEPTANCE"
-                    : (taskType == TaskType.MANAGEMENT ? "STAGE_" + nodeSequence
-                    : taskType.getValue() + "_" + nodeSequence);
+            String key;
+            if (taskType == TaskType.STAGE_SUBMISSION) {
+                key = "STAGE_" + nodeSequence;           // 申请人阶段成果表单
+            } else if (taskType == TaskType.ACCEPTANCE) {
+                key = "ACCEPTANCE";
+            } else if (taskType == TaskType.MANAGEMENT) {
+                key = "MANAGEMENT_" + nodeSequence;      // 管理任务表单
+            } else {
+                key = taskType.getValue() + "_" + nodeSequence;  // AUDIT_1, REVIEW_1, DECISION_1
+            }
             Long formTemplateId = snapshot.getFormMappings().get(key);
             if (formTemplateId != null) {
                 return formTemplateService.getDetail(formTemplateId);
@@ -535,11 +585,12 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
      * 构建前序节点汇总列表
      */
     private List<TaskDetailResp.NodeSummaryResp> buildPreviousNodes(ReviewProjectDO project, ReviewTaskDO currentTask) {
-        // 查同一项目所有 COMPLETED 任务（不含当前任务）
+        // 查同一项目所有 COMPLETED 的评审阶段任务（不含当前任务，不含管理/验收/阶段提交任务）
         List<ReviewTaskDO> completedTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<ReviewTaskDO>()
                         .eq(ReviewTaskDO::getProjectId, project.getId())
                         .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                        .in(ReviewTaskDO::getTaskType, List.of(TaskType.AUDIT, TaskType.REVIEW, TaskType.DECISION))
                         .ne(ReviewTaskDO::getId, currentTask.getId())
                         .eq(ReviewTaskDO::getDeleted, 0));
 
@@ -591,6 +642,27 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             Map<String, Object> formData = (Map<String, Object>) map;
             resp.setStageFormData(formData);
         }
+
+        // 填充阶段成果表单模板（从项目快照中读取）
+        ReviewProjectDO project = projectMapper.selectById(stage.getProjectId());
+        if (project != null) {
+            try {
+                Object config = project.getSnapshotConfig();
+                ProjectTypeSnapshot snapshot = config instanceof String
+                    ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
+                    : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
+                if (snapshot != null && snapshot.getFormMappings() != null) {
+                    String key = "STAGE_" + stage.getStageOrder();
+                    Long formTemplateId = snapshot.getFormMappings().get(key);
+                    if (formTemplateId != null) {
+                        resp.setStageFormTemplate(formTemplateService.getDetail(formTemplateId));
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[Stage] 解析阶段表单模板失败 stageId={}: {}", stage.getId(), e.getMessage());
+            }
+        }
+
         return resp;
     }
 
@@ -678,5 +750,39 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
 
         result.addAll(nodeHistoryBuilder.buildNodeHistoryList(project, completedTasks));
         return result;
+    }
+
+    /**
+     * 处理 STAGE_SUBMISSION 任务提交：保存阶段成果，触发 StageFormSubmittedEvent
+     * 不经过投票/评分汇总（不发 TaskCompletedEvent）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    private void submitStageSubmissionTask(ReviewTaskDO task, TaskSubmitReq req) {
+        // 查找对应阶段实例
+        ReviewProjectStageDO stage = stageMapper.selectOne(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, task.getProjectId())
+                        .eq(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        if (stage == null) {
+            throw new BusinessException("关联阶段不存在，无法提交成果");
+        }
+
+        // 保存表单数据到阶段实体
+        stage.setStageFormData(req.getFormData());
+        stageMapper.updateById(stage);
+
+        // 更新任务为 COMPLETED（使用 PASS 作为成果提交的隐式决策）
+        task.setDecision(TaskDecisionEnum.PASS);
+        task.setFormData(req.getFormData());
+        task.setStatus(TaskStatusEnum.COMPLETED);
+        task.setCompleteTime(LocalDateTime.now());
+        taskMapper.updateById(task);
+
+        // 触发 StageFormSubmittedEvent → WorkflowEngine 分配 MANAGEMENT/ACCEPTANCE 任务
+        eventPublisher.publishEvent(
+                new top.continew.admin.review.project.event.StageFormSubmittedEvent(
+                        this, task.getProjectId(), stage.getId(), stage.getStageOrder()));
+        log.info("[Task] STAGE_SUBMISSION 任务{} 已提交，阶段{}成果已保存", task.getId(), stage.getStageOrder());
     }
 }

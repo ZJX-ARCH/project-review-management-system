@@ -64,11 +64,6 @@ export function terminateProject(id: number | string) {
   return http.post<void>(`${BASE}/${id}/terminate`)
 }
 
-/** 申请人提交阶段成果 */
-export function submitStageForm(projectId: number | string, stageId: number | string, data: StageFormSubmitReq) {
-  return http.post<void>(`${BASE}/${projectId}/stage/${stageId}/form`, data)
-}
-
 /** 获取项目评审历史（申请人视角） */
 export function getProjectReviewHistory(id: number | string) {
   return http.get<NodeHistoryResp[]>(`${BASE}/${id}/review-history`)

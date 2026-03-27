@@ -142,8 +142,9 @@ public class ResultAggregationEngine {
             };
         }
 
-        // 验收节点 REJECT 时，取最后一个 REJECT 任务的 rejectBackToStageOrder
-        if (taskType == TaskType.ACCEPTANCE && result == TaskDecisionEnum.REJECT) {
+        // 验收或管理节点 REJECT 时，透传 rejectBackToStageOrder（管理员可指定回退到任意历史阶段）
+        if ((taskType == TaskType.ACCEPTANCE || taskType == TaskType.MANAGEMENT)
+                && result == TaskDecisionEnum.REJECT) {
             rejectBackToStageOrder = completedTasks.stream()
                     .filter(t -> t.getDecision() == TaskDecisionEnum.REJECT
                             && t.getRejectBackToStageOrder() != null)

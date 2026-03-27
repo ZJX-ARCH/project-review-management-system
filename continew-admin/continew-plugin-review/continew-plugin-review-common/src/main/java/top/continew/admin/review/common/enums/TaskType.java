@@ -18,7 +18,8 @@ public enum TaskType implements BaseEnum<String> {
     REVIEW("REVIEW", "评审任务"),
     DECISION("DECISION", "决策任务"),
     MANAGEMENT("MANAGEMENT", "管理任务"),
-    ACCEPTANCE("ACCEPTANCE", "验收任务");
+    ACCEPTANCE("ACCEPTANCE", "验收任务"),
+    STAGE_SUBMISSION("STAGE_SUBMISSION", "阶段提交任务");
 
     private final String value;
     private final String description;

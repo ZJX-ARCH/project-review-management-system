@@ -2,6 +2,7 @@ package top.continew.admin.review.project.model.resp;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.project.enums.StageStatusEnum;
 
 import java.io.Serial;
@@ -81,4 +82,10 @@ public class ProjectStageResp implements Serializable {
      */
     @Schema(description = "阶段成果表单数据")
     private Map<String, Object> stageFormData;
+
+    /**
+     * 阶段成果表单模板（用于时间线展示阶段成果只读视图，key 格式: STAGE_<stageOrder>）
+     */
+    @Schema(description = "阶段成果表单模板（只读渲染用）")
+    private FormTemplateResp stageFormTemplate;
 }
