@@ -41,6 +41,11 @@ function stageDotClass(stage: ProjectStageResp) {
 function canExpand(stage: ProjectStageResp) {
   return stage.status !== 'PENDING' || !!stage.stageFormData
 }
+
+function formatTime(t?: string) {
+  if (!t) return ''
+  return t.replace('T', ' ').substring(0, 16)
+}
 </script>
 
 <template>
@@ -113,11 +118,39 @@ function canExpand(stage: ProjectStageResp) {
           <div v-if="stage.historyList && stage.historyList.length" class="current-label">
             当前执行（第 {{ stage.historyList.length + 1 }} 次）
           </div>
+
+          <!-- 提交人信息头（类似评审历史的 person-entry-header） -->
+          <div v-if="stage.submitterName" class="person-entry-header">
+            <a-avatar :size="28" style="background: rgb(var(--primary-6)); font-size: 12px; color: #fff;">
+              {{ stage.submitterName?.charAt(0) }}
+            </a-avatar>
+            <span class="person-name">{{ stage.submitterName }}</span>
+            <span class="person-time">{{ formatTime(stage.submitTime) }}</span>
+          </div>
+
           <FormRenderer
             :model-value="stage.stageFormData"
             :template="stage.stageFormTemplate"
             readonly
           />
+
+          <!-- 审核人信息（表单下方，分割线隔开） -->
+          <div v-if="stage.reviewerName" class="reviewer-footer">
+            <div class="person-entry-header">
+              <a-avatar :size="28" style="background: #ff7d00; font-size: 12px;">
+                {{ stage.reviewerName?.charAt(0) }}
+              </a-avatar>
+              <span class="person-name">{{ stage.reviewerName }}</span>
+              <a-tag
+                v-if="stage.reviewDecision"
+                :color="stage.reviewDecision === 'PASS' ? 'green' : 'red'"
+                size="small"
+              >
+                {{ stage.reviewDecision === 'PASS' ? '通过' : stage.reviewDecision === 'REJECT' ? '驳回' : stage.reviewDecision }}
+              </a-tag>
+              <span class="person-time">{{ formatTime(stage.reviewTime) }}</span>
+            </div>
+          </div>
         </div>
         <div v-else-if="stage.stageFormData" class="no-template-tip">
           阶段成果已提交（无表单模板）
@@ -298,5 +331,38 @@ function canExpand(stage: ProjectStageResp) {
   color: var(--color-text-3);
   font-size: 13px;
   padding: 8px 0;
+}
+
+.person-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-2);
+  flex-wrap: wrap;
+}
+
+.person-name {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.person-time {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-left: auto;
+}
+
+.reviewer-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-2);
+
+  .person-entry-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
 }
 </style>

@@ -145,7 +145,7 @@ function formatTime(t?: string) {
           </a-tabs>
           <div v-else-if="node.entries.length === 1" class="person-entry">
             <div class="person-entry-header">
-              <a-avatar :size="28" style="background: var(--color-primary-6); font-size: 12px;">
+              <a-avatar :size="28" style="background: rgb(var(--primary-6)); font-size: 12px; color: #fff;">
                 {{ node.entries[0].assigneeName?.charAt(0) }}
               </a-avatar>
               <span class="person-name">{{ node.entries[0].assigneeName }}</span>
@@ -234,7 +234,7 @@ function formatTime(t?: string) {
           </a-tabs>
           <div v-else-if="node.entries.length === 1" class="person-entry">
             <div class="person-entry-header">
-              <a-avatar :size="28" style="background: var(--color-primary-6); font-size: 12px;">
+              <a-avatar :size="28" style="background: rgb(var(--primary-6)); font-size: 12px; color: #fff;">
                 {{ node.entries[0].assigneeName?.charAt(0) }}
               </a-avatar>
               <span class="person-name">{{ node.entries[0].assigneeName }}</span>

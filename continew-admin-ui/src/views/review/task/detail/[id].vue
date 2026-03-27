@@ -81,16 +81,32 @@
             <!-- MANAGEMENT 专属：展示申请人提交的阶段成果（只读） -->
             <a-card
               v-if="detail.taskType === 'MANAGEMENT' && detail.currentStage"
-              :title="`阶段成果：${detail.currentStage.stageName}`"
               style="margin-bottom: 16px;"
             >
+              <!-- 阶段成果提交信息 -->
+              <div class="stage-submit-header">
+                <div class="stage-submit-info">
+                  <span class="submitter-name">{{ detail.applicantName }}</span>
+                  <a-tag v-if="detail.currentStage.status === 'PENDING'" color="orange">待审核</a-tag>
+                  <a-tag v-else-if="detail.currentStage.status === 'COMPLETED'" color="green">已通过</a-tag>
+                  <a-tag v-else-if="detail.currentStage.status === 'REJECTED'" color="red">已驳回</a-tag>
+                </div>
+                <div class="stage-submit-time">
+                  {{ detail.currentStage.submitTime || detail.currentStage.startDate }}
+                </div>
+              </div>
+
+              <a-divider style="margin: 12px 0;" />
+
+              <div class="stage-form-title">阶段成果：{{ detail.currentStage.stageName }}</div>
+
               <FormRenderer
                 v-if="detail.currentStage.stageFormTemplate && detail.currentStage.stageFormData"
                 :model-value="detail.currentStage.stageFormData ?? {}"
                 :template="detail.currentStage.stageFormTemplate"
                 readonly
               />
-              <a-empty v-else :description="`申请人尚未提交阶段成果 [调试: hasTemplate=${!!detail.currentStage.stageFormTemplate}, hasData=${!!detail.currentStage.stageFormData}]`" />
+              <a-empty v-else description="申请人尚未提交阶段成果" />
             </a-card>
 
             <!-- STAGE_SUBMISSION 专属：仅显示提交按钮，无决策选项 -->
@@ -160,16 +176,18 @@
               <a-form-item
                 v-if="detail.taskType === 'MANAGEMENT' && submitForm.decision === 'REJECT'"
                 label="驳回回退到阶段"
+                required
                 style="margin-top: 16px;"
               >
-                <a-select v-model="submitForm.rejectBackToStageOrder" placeholder="请选择回退到的阶段（不选则重做当前阶段）" style="width: 320px;">
-                  <a-option v-for="stage in detail.allStages" :key="stage.stageOrder" :value="stage.stageOrder">
+                <a-select v-model="submitForm.rejectBackToStageOrder" placeholder="请选择回退到的阶段" style="width: 320px;">
+                  <a-option
+                    v-for="stage in managementRejectStages"
+                    :key="stage.stageOrder"
+                    :value="stage.stageOrder"
+                  >
                     {{ stage.stageName }}
                   </a-option>
                 </a-select>
-                <div style="font-size: 12px; color: var(--color-text-3); margin-top: 4px;">
-                  不选择则默认重做当前阶段
-                </div>
               </a-form-item>
 
               <div class="decision-actions">
@@ -261,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import {
@@ -326,6 +344,19 @@ const submitForm = reactive({
   decision: '' as string,
   score: undefined as number | undefined,
   rejectBackToStageOrder: undefined as number | undefined,
+})
+
+// MANAGEMENT 驳回阶段选项（历史阶段 + 当前阶段）
+const managementRejectStages = computed(() => {
+  if (!detail.value?.currentStage || !detail.value?.allStages) return []
+  return [...detail.value.allStages, detail.value.currentStage].sort((a, b) => a.stageOrder - b.stageOrder)
+})
+
+// 驳回时自动设置默认值为当前阶段
+watch(() => submitForm.decision, (newDecision) => {
+  if (newDecision === 'REJECT' && detail.value?.taskType === 'MANAGEMENT' && detail.value?.currentStage) {
+    submitForm.rejectBackToStageOrder = detail.value.currentStage.stageOrder
+  }
 })
 
 // ——— Task 2: 水平流程进度条 ———
@@ -739,5 +770,35 @@ const onTransfer = async () => {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+
+/* 阶段成果提交信息 */
+.stage-submit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stage-submit-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submitter-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.stage-submit-time {
+  color: var(--color-text-3);
+  font-size: 13px;
+}
+
+.stage-form-title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--color-text-1);
 }
 </style>

@@ -24,6 +24,7 @@ import top.continew.admin.review.project.engine.TaskAssignmentEngine;
 import top.continew.admin.review.project.mapper.ReviewProjectMapper;
 import top.continew.admin.review.project.mapper.ReviewProjectModifyLogMapper;
 import top.continew.admin.review.project.mapper.ReviewProjectStageMapper;
+import top.continew.admin.review.project.mapper.ReviewProjectStageHistoryMapper;
 import top.continew.admin.review.project.mapper.ReviewTaskMapper;
 import top.continew.admin.review.project.model.entity.ProjectTypeSnapshot;
 import top.continew.admin.review.project.model.entity.ReviewProjectDO;
@@ -52,6 +53,8 @@ import top.continew.admin.review.type.model.entity.ProjectTypeDO;
 import top.continew.admin.review.type.model.entity.TypeApprovalConfigDO;
 import top.continew.admin.review.type.model.entity.TypeFormMappingDO;
 import top.continew.admin.review.type.model.entity.TypeProcessConfigDO;
+import top.continew.admin.system.mapper.user.UserMapper;
+import top.continew.admin.system.model.entity.user.UserDO;
 import top.continew.starter.core.exception.BadRequestException;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -85,6 +88,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     private final ReviewProjectMapper projectMapper;
     private final ReviewProjectStageMapper stageMapper;
     private final ReviewProjectModifyLogMapper modifyLogMapper;
+    private final ReviewProjectStageHistoryMapper stageHistoryMapper;
     private final ReviewTaskMapper taskMapper;
     private final ProjectTypeMapper typeMapper;
     private final TypeProcessConfigMapper processConfigMapper;
@@ -96,6 +100,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
     private final TaskAssignmentEngine assignmentEngine;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final UserMapper userMapper;
     private final top.continew.admin.review.project.engine.NodeHistoryBuilder nodeHistoryBuilder;
 
     @Override
@@ -501,6 +506,67 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
             Map<String, Object> formData = (Map<String, Object>) map;
             resp.setStageFormData(formData);
         }
+
+        // 填充提交人信息（STAGE_SUBMISSION 任务）
+        ReviewTaskDO submissionTask = taskMapper.selectOne(
+            new LambdaQueryWrapper<ReviewTaskDO>()
+                .eq(ReviewTaskDO::getProjectId, stage.getProjectId())
+                .eq(ReviewTaskDO::getTaskType, TaskType.STAGE_SUBMISSION)
+                .eq(ReviewTaskDO::getNodeSequence, stage.getStageOrder())
+                .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                .eq(ReviewTaskDO::getDeleted, 0)
+                .last("LIMIT 1"));
+        if (submissionTask != null) {
+            resp.setSubmitterId(submissionTask.getAssigneeId());
+            resp.setSubmitTime(submissionTask.getCompleteTime());
+            UserDO submitter = userMapper.selectById(submissionTask.getAssigneeId());
+            if (submitter != null) {
+                resp.setSubmitterName(submitter.getNickname());
+            }
+        }
+
+        // 填充审核人信息（MANAGEMENT/ACCEPTANCE 任务，取最新一条）
+        ReviewTaskDO reviewTask = taskMapper.selectOne(
+            new LambdaQueryWrapper<ReviewTaskDO>()
+                .eq(ReviewTaskDO::getProjectId, stage.getProjectId())
+                .in(ReviewTaskDO::getTaskType, List.of(TaskType.MANAGEMENT, TaskType.ACCEPTANCE))
+                .eq(ReviewTaskDO::getNodeSequence, stage.getStageOrder())
+                .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                .eq(ReviewTaskDO::getDeleted, 0)
+                .orderByDesc(ReviewTaskDO::getCompleteTime)
+                .last("LIMIT 1"));
+        if (reviewTask != null) {
+            resp.setReviewerId(reviewTask.getAssigneeId());
+            resp.setReviewDecision(reviewTask.getDecision() != null ? reviewTask.getDecision().getValue() : null);
+            resp.setReviewTime(reviewTask.getCompleteTime());
+            UserDO reviewer = userMapper.selectById(reviewTask.getAssigneeId());
+            if (reviewer != null) {
+                resp.setReviewerName(reviewer.getNickname());
+            }
+        }
+
+        // 填充阶段驳回历史快照（从 stage_history 表读取，非 MANAGEMENT 任务）
+        List<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO> historyRecords =
+            stageHistoryMapper.selectList(
+                new LambdaQueryWrapper<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO>()
+                    .eq(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getStageId, stage.getId())
+                    .orderByAsc(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getChangeTime));
+
+        resp.setHistoryList(historyRecords.stream().map(h -> {
+            ProjectStageResp.StageHistoryItem item = new ProjectStageResp.StageHistoryItem();
+            item.setId(h.getId());
+            item.setOldStatus(h.getOldStatus());
+            item.setNewStatus(h.getNewStatus());
+            if (h.getStageFormData() instanceof Map<?, ?> hMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> hFormData = (Map<String, Object>) hMap;
+                item.setStageFormData(hFormData);
+            }
+            item.setChangeTime(h.getChangeTime());
+            item.setRemark(h.getRemark());
+            return item;
+        }).collect(Collectors.toList()));
+
         return resp;
     }
 

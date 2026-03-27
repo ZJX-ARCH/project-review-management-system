@@ -96,7 +96,49 @@ public class ProjectStageResp implements Serializable {
     private java.util.List<StageHistoryItem> historyList;
 
     /**
-     * 阶段历史项
+     * 提交人ID（申请人提交阶段成果的用户）
+     */
+    @Schema(description = "提交人ID")
+    private Long submitterId;
+
+    /**
+     * 提交人姓名
+     */
+    @Schema(description = "提交人姓名")
+    private String submitterName;
+
+    /**
+     * 提交时间（阶段成果提交时间）
+     */
+    @Schema(description = "提交时间")
+    private java.time.LocalDateTime submitTime;
+
+    /**
+     * 审核人ID（管理员审核通过/驳回的用户）
+     */
+    @Schema(description = "审核人ID")
+    private Long reviewerId;
+
+    /**
+     * 审核人姓名
+     */
+    @Schema(description = "审核人姓名")
+    private String reviewerName;
+
+    /**
+     * 审核决策（PASS/REJECT/UNQUALIFIED/WITHDRAW）
+     */
+    @Schema(description = "审核决策")
+    private String reviewDecision;
+
+    /**
+     * 审核时间
+     */
+    @Schema(description = "审核时间")
+    private java.time.LocalDateTime reviewTime;
+
+    /**
+     * 阶段历史项（驳回重做产生的快照）
      */
     @Data
     @Schema(description = "阶段历史项")
@@ -107,19 +149,13 @@ public class ProjectStageResp implements Serializable {
         @Schema(description = "历史记录ID")
         private Long id;
 
-        @Schema(description = "原状态")
+        @Schema(description = "变更前状态")
         private String oldStatus;
 
-        @Schema(description = "新状态")
+        @Schema(description = "变更后状态", example = "REJECTED")
         private String newStatus;
 
-        @Schema(description = "开始日期")
-        private LocalDate startDate;
-
-        @Schema(description = "截止日期")
-        private LocalDate deadline;
-
-        @Schema(description = "阶段成果数据")
+        @Schema(description = "阶段成果表单数据")
         private Map<String, Object> stageFormData;
 
         @Schema(description = "变更时间")

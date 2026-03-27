@@ -697,6 +697,32 @@ export interface ProjectStageResp {
   isOverdue: boolean
   stageFormData?: Record<string, unknown>
   stageFormTemplate?: ProjectFormTemplateResp
+  /** 驳回历史快照列表 */
+  historyList?: StageHistoryItem[]
+  /** 提交人ID */
+  submitterId?: number
+  /** 提交人姓名 */
+  submitterName?: string
+  /** 提交时间 */
+  submitTime?: string
+  /** 审核人ID */
+  reviewerId?: number
+  /** 审核人姓名 */
+  reviewerName?: string
+  /** 审核决策 */
+  reviewDecision?: string
+  /** 审核时间 */
+  reviewTime?: string
+}
+
+/** 阶段历史项（驳回重做快照） */
+export interface StageHistoryItem {
+  id: number
+  oldStatus?: string
+  newStatus?: string
+  stageFormData?: Record<string, unknown>
+  changeTime?: string
+  remark?: string
 }
 
 /** 项目详情响应 */

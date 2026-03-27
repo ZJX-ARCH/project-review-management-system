@@ -665,30 +665,65 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             }
         }
 
-        // 查询阶段历史记录
-        List<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO> historyList =
-                stageHistoryMapper.selectList(new LambdaQueryWrapper<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO>()
-                        .eq(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getStageId, stage.getId())
-                        .orderByAsc(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getChangeTime));
-        if (!historyList.isEmpty()) {
-            List<ProjectStageResp.StageHistoryItem> items = historyList.stream().map(h -> {
-                ProjectStageResp.StageHistoryItem item = new ProjectStageResp.StageHistoryItem();
-                item.setId(h.getId());
-                item.setOldStatus(h.getOldStatus());
-                item.setNewStatus(h.getNewStatus());
-                item.setStartDate(h.getStartDate());
-                item.setDeadline(h.getDeadline());
-                if (h.getStageFormData() instanceof Map<?, ?> hMap) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> hFormData = (Map<String, Object>) hMap;
-                    item.setStageFormData(hFormData);
-                }
-                item.setChangeTime(h.getChangeTime());
-                item.setRemark(h.getRemark());
-                return item;
-            }).collect(Collectors.toList());
-            resp.setHistoryList(items);
+        // 填充提交人信息（STAGE_SUBMISSION 任务）
+        ReviewTaskDO submissionTask = taskMapper.selectOne(
+            new LambdaQueryWrapper<ReviewTaskDO>()
+                .eq(ReviewTaskDO::getProjectId, stage.getProjectId())
+                .eq(ReviewTaskDO::getTaskType, TaskType.STAGE_SUBMISSION)
+                .eq(ReviewTaskDO::getNodeSequence, stage.getStageOrder())
+                .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                .eq(ReviewTaskDO::getDeleted, 0)
+                .last("LIMIT 1"));
+        if (submissionTask != null) {
+            resp.setSubmitterId(submissionTask.getAssigneeId());
+            resp.setSubmitTime(submissionTask.getCompleteTime());
+            UserDO submitter = userMapper.selectById(submissionTask.getAssigneeId());
+            if (submitter != null) {
+                resp.setSubmitterName(submitter.getNickname());
+            }
         }
+
+        // 填充审核人信息（MANAGEMENT/ACCEPTANCE 任务，取最新一条）
+        ReviewTaskDO reviewTask = taskMapper.selectOne(
+            new LambdaQueryWrapper<ReviewTaskDO>()
+                .eq(ReviewTaskDO::getProjectId, stage.getProjectId())
+                .in(ReviewTaskDO::getTaskType, List.of(TaskType.MANAGEMENT, TaskType.ACCEPTANCE))
+                .eq(ReviewTaskDO::getNodeSequence, stage.getStageOrder())
+                .eq(ReviewTaskDO::getStatus, TaskStatusEnum.COMPLETED)
+                .eq(ReviewTaskDO::getDeleted, 0)
+                .orderByDesc(ReviewTaskDO::getCompleteTime)
+                .last("LIMIT 1"));
+        if (reviewTask != null) {
+            resp.setReviewerId(reviewTask.getAssigneeId());
+            resp.setReviewDecision(reviewTask.getDecision() != null ? reviewTask.getDecision().getValue() : null);
+            resp.setReviewTime(reviewTask.getCompleteTime());
+            UserDO reviewer = userMapper.selectById(reviewTask.getAssigneeId());
+            if (reviewer != null) {
+                resp.setReviewerName(reviewer.getNickname());
+            }
+        }
+
+        // 填充阶段驳回历史快照（从 stage_history 表读取）
+        List<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO> historyRecords =
+            stageHistoryMapper.selectList(
+                new LambdaQueryWrapper<top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO>()
+                    .eq(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getStageId, stage.getId())
+                    .orderByAsc(top.continew.admin.review.project.model.entity.ReviewProjectStageHistoryDO::getChangeTime));
+
+        resp.setHistoryList(historyRecords.stream().map(h -> {
+            ProjectStageResp.StageHistoryItem item = new ProjectStageResp.StageHistoryItem();
+            item.setId(h.getId());
+            item.setOldStatus(h.getOldStatus());
+            item.setNewStatus(h.getNewStatus());
+            if (h.getStageFormData() instanceof Map<?, ?> hMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> hFormData = (Map<String, Object>) hMap;
+                item.setStageFormData(hFormData);
+            }
+            item.setChangeTime(h.getChangeTime());
+            item.setRemark(h.getRemark());
+            return item;
+        }).collect(Collectors.toList()));
 
         return resp;
     }
