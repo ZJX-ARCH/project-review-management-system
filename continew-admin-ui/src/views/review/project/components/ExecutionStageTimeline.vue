@@ -19,13 +19,6 @@ interface Props {
 const props = defineProps<Props>()
 const expandedStages = ref<Set<number>>(new Set())
 
-// 默认展开第一个非 PENDING 且非 REJECTED 的阶段，或最后一个 REJECTED 阶段
-const firstActive = props.stages.find(s => s.status !== 'PENDING' && s.status !== 'REJECTED')
-  ?? [...props.stages].reverse().find(s => s.status === 'REJECTED')
-if (firstActive) {
-  expandedStages.value.add(firstActive.stageOrder)
-}
-
 function toggleStage(order: number) {
   const s = new Set(expandedStages.value)
   s.has(order) ? s.delete(order) : s.add(order)
@@ -148,6 +141,14 @@ function formatTime(t?: string) {
   position: relative;
   padding-left: 32px;
   margin-bottom: 4px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--color-border-3);
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
 }
 
 .stage-node-header {

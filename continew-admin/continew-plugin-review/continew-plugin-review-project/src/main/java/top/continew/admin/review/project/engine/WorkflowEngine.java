@@ -294,9 +294,6 @@ public class WorkflowEngine {
                     backToOriginal = currentStage.getOriginalStageOrder();
                 }
 
-                // 把从回退目标到当前阶段之间的所有活跃阶段也标记为 REJECTED
-                markIntermediateStagesRejected(projectId, backToOriginal, stageOrder);
-
                 // 取消所有待处理的管理阶段任务
                 cancelAllPendingTasks(projectId);
 
@@ -370,9 +367,6 @@ public class WorkflowEngine {
             // 获取回退目标的 originalStageOrder
             ReviewProjectStageDO targetStage = findStageByOrder(projectId, backTo);
             Integer backToOriginal = targetStage != null ? targetStage.getOriginalStageOrder() : backTo;
-
-            // 把从回退目标到当前阶段之间的所有活跃阶段也标记为 REJECTED
-            markIntermediateStagesRejected(projectId, backToOriginal, stageOrder);
 
             // 取消所有待处理任务
             cancelAllPendingTasks(projectId);
@@ -616,27 +610,6 @@ public class WorkflowEngine {
     }
 
     /**
-     * 把从回退目标到当前阶段之间的所有活跃阶段标记为 REJECTED
-     * （不含当前阶段本身，因为已经在调用前标记了）
-     */
-    private void markIntermediateStagesRejected(Long projectId, Integer backToOriginalOrder, Integer currentStageOrder) {
-        List<ReviewProjectStageDO> intermediateStages = stageMapper.selectList(
-                new LambdaQueryWrapper<ReviewProjectStageDO>()
-                        .eq(ReviewProjectStageDO::getProjectId, projectId)
-                        .ge(ReviewProjectStageDO::getOriginalStageOrder, backToOriginalOrder)
-                        .lt(ReviewProjectStageDO::getStageOrder, currentStageOrder)
-                        .notIn(ReviewProjectStageDO::getStatus,
-                                List.of(StageStatusEnum.REJECTED, StageStatusEnum.PENDING))
-                        .eq(ReviewProjectStageDO::getDeleted, 0));
-        for (ReviewProjectStageDO stage : intermediateStages) {
-            stage.setStatus(StageStatusEnum.REJECTED);
-            stageMapper.updateById(stage);
-            log.info("[Workflow] 项目{} 中间阶段{} (original={}) 标记为 REJECTED",
-                    projectId, stage.getStageOrder(), stage.getOriginalStageOrder());
-        }
-    }
-
-    /**
      * 驳回后重建阶段实例（从 fromOriginalOrder 开始到验收阶段，全部创建新实例）
      */
     private void recreateStagesFrom(Long projectId, Integer fromOriginalOrder, ProjectTypeSnapshot snapshot) {
@@ -645,16 +618,30 @@ public class WorkflowEngine {
             return;
         }
 
-        // 软删除旧的 PENDING 阶段（originalStageOrder >= fromOriginalOrder），避免重复显示
-        List<ReviewProjectStageDO> pendingStages = stageMapper.selectList(
+        // 软删除旧的未使用阶段（originalStageOrder >= fromOriginalOrder 且非 REJECTED/COMPLETED/SUBMITTED），避免重复显示
+        List<ReviewProjectStageDO> allStagesForDebug = stageMapper.selectList(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, projectId)
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        for (ReviewProjectStageDO ds : allStagesForDebug) {
+            log.info("[Workflow-Debug] 项目{} 阶段 id={} stageOrder={} originalStageOrder={} status={} stageType={} stageName={}",
+                    projectId, ds.getId(), ds.getStageOrder(), ds.getOriginalStageOrder(),
+                    ds.getStatus(), ds.getStageType(), ds.getStageName());
+        }
+        log.info("[Workflow-Debug] 项目{} fromOriginalOrder={}", projectId, fromOriginalOrder);
+
+        List<ReviewProjectStageDO> staleStagesToDelete = stageMapper.selectList(
                 new LambdaQueryWrapper<ReviewProjectStageDO>()
                         .eq(ReviewProjectStageDO::getProjectId, projectId)
                         .ge(ReviewProjectStageDO::getOriginalStageOrder, fromOriginalOrder)
-                        .eq(ReviewProjectStageDO::getStatus, StageStatusEnum.PENDING)
+                        .notIn(ReviewProjectStageDO::getStatus,
+                                List.of(StageStatusEnum.REJECTED, StageStatusEnum.COMPLETED, StageStatusEnum.SUBMITTED))
                         .eq(ReviewProjectStageDO::getDeleted, 0));
-        for (ReviewProjectStageDO ps : pendingStages) {
-            ps.setDeleted(ps.getId());
-            stageMapper.updateById(ps);
+        log.info("[Workflow-Debug] 项目{} 待软删除阶段数量={}", projectId, staleStagesToDelete.size());
+        for (ReviewProjectStageDO ps : staleStagesToDelete) {
+            log.info("[Workflow-Debug] 软删除阶段 id={} stageOrder={} originalStageOrder={} status={}",
+                    ps.getId(), ps.getStageOrder(), ps.getOriginalStageOrder(), ps.getStatus());
+            stageMapper.softDeleteById(ps.getId());
         }
 
         // 查询当前最大 stageOrder

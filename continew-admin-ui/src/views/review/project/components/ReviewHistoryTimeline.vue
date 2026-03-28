@@ -37,12 +37,6 @@ const managementPhaseNodes = computed(() =>
   )
 )
 
-// 默认展开第一个节点
-if (props.nodeHistory.length > 0) {
-  const first = props.nodeHistory[0]
-  expandedNodes.value.add(`${first.nodeType}_${first.nodeSequence}`)
-}
-
 function toggleNode(key: string) {
   const newSet = new Set(expandedNodes.value)
   if (newSet.has(key)) {

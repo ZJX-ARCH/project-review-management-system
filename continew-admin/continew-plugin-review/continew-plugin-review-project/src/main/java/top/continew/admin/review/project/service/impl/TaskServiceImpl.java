@@ -205,16 +205,15 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             if (stage != null) {
                 resp.setCurrentStage(toStageResp(stage));
             }
-            // 回退目标列表（供 REJECT 时选择，只包含当前阶段及之前的非 ACCEPTANCE 活跃阶段，按 originalStageOrder 去重取最新）
+            // 回退目标列表（供 REJECT 时选择，当前阶段及之前的非 ACCEPTANCE 阶段，按 originalStageOrder 去重取最大 executionSequence）
             List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
                             .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
                             .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
-                            .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.REJECTED)
                             .eq(ReviewProjectStageDO::getDeleted, 0)
-                            .orderByDesc(ReviewProjectStageDO::getStageOrder));
-            // 按 originalStageOrder 去重，只保留每个原始阶段的最新实例
+                            .orderByDesc(ReviewProjectStageDO::getExecutionSequence));
+            // 按 originalStageOrder 去重，只保留每个原始阶段的最新实例（最大 executionSequence）
             Map<Integer, ReviewProjectStageDO> uniqueByOriginal = new LinkedHashMap<>();
             for (ReviewProjectStageDO s : candidateStages) {
                 uniqueByOriginal.putIfAbsent(s.getOriginalStageOrder(), s);
@@ -224,14 +223,13 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                     .map(this::toStageResp)
                     .collect(Collectors.toList()));
         } else if (task.getTaskType() == TaskType.ACCEPTANCE) {
-            // 回退目标列表（非 ACCEPTANCE、非 REJECTED 的活跃阶段，按 originalStageOrder 去重取最新）
+            // 回退目标列表（非 ACCEPTANCE 阶段，按 originalStageOrder 去重取最大 executionSequence）
             List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
                             .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
-                            .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.REJECTED)
                             .eq(ReviewProjectStageDO::getDeleted, 0)
-                            .orderByDesc(ReviewProjectStageDO::getStageOrder));
+                            .orderByDesc(ReviewProjectStageDO::getExecutionSequence));
             Map<Integer, ReviewProjectStageDO> uniqueByOriginal = new LinkedHashMap<>();
             for (ReviewProjectStageDO s : candidateStages) {
                 uniqueByOriginal.putIfAbsent(s.getOriginalStageOrder(), s);
