@@ -53,6 +53,7 @@ public class TaskAssignmentEngine {
     private final RoleMapper roleMapper;
     private final UserRoleMapper userRoleMapper;
     private final ObjectMapper objectMapper;
+    private final ReviewNotificationService notificationService;
 
     public void assignTasks(Long projectId, TaskType taskType, Integer nodeSequence) {
         assignTasks(projectId, taskType, nodeSequence, nodeSequence);
@@ -137,6 +138,10 @@ public class TaskAssignmentEngine {
         taskMapper.insertBatch(tasks);
 
         log.info("[TaskAssignment] project={} node={}-{} assigned {} tasks", projectId, taskType, taskNodeSequence, tasks.size());
+
+        // 发送任务分配通知
+        String nodeName = resolveNodeName(taskType, taskNodeSequence);
+        notificationService.notifyTaskAssigned(projectId, project.getProjectName(), taskType, nodeName, toAssign);
     }
 
     public void validatePersonnelSufficiency(Long typeId, ProjectTypeSnapshot snapshot) {
@@ -454,5 +459,21 @@ public class TaskAssignmentEngine {
             container.add(Long.parseLong(String.valueOf(value)));
         } catch (NumberFormatException ignored) {
         }
+    }
+
+    private static final Map<String, String> TASK_TYPE_LABEL = Map.of(
+            "AUDIT", "审核",
+            "REVIEW", "评审",
+            "DECISION", "决策",
+            "MANAGEMENT", "管理",
+            "ACCEPTANCE", "验收"
+    );
+
+    private String resolveNodeName(TaskType taskType, Integer nodeSequence) {
+        String label = TASK_TYPE_LABEL.getOrDefault(taskType.getValue(), taskType.getValue());
+        if (taskType == TaskType.MANAGEMENT || taskType == TaskType.ACCEPTANCE) {
+            return label + " 第" + nodeSequence + "阶段";
+        }
+        return label + " 第" + nodeSequence + "轮";
     }
 }

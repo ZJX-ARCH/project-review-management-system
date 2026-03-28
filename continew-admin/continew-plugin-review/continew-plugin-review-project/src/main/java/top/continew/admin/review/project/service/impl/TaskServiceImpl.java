@@ -78,6 +78,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final top.continew.admin.review.project.engine.NodeHistoryBuilder nodeHistoryBuilder;
+    private final top.continew.admin.review.project.engine.ReviewNotificationService notificationService;
 
     @Override
     public PageResp<TaskListResp> myTasks(TaskQuery query, PageQuery pageQuery) {
@@ -354,6 +355,12 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         newTask.setFormData(task.getFormData());
         taskMapper.insert(newTask);
         log.info("[Task] 任务{} 已转办给用户{}", taskId, req.getTargetUserId());
+
+        // 通知被转办人
+        String fromUserName = notificationService.getNickname(task.getAssigneeId());
+        String nodeName = resolveNodeName(project, task.getTaskType(), task.getNodeSequence());
+        notificationService.notifyTaskTransferred(task.getProjectId(), project.getProjectName(),
+                fromUserName, nodeName, req.getTargetUserId());
     }
 
     @Override

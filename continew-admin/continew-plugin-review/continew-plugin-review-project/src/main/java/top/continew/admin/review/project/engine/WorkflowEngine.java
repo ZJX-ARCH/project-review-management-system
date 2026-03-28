@@ -63,6 +63,7 @@ public class WorkflowEngine {
     private final ReviewProjectStageHistoryMapper stageHistoryMapper;
     private final TaskAssignmentEngine assignmentEngine;
     private final ResultAggregationEngine aggregationEngine;
+    private final ReviewNotificationService notificationService;
     private final ObjectMapper objectMapper;
 
     // ==================== 事件监听 ====================
@@ -102,6 +103,9 @@ public class WorkflowEngine {
         // 分配任务
         assignmentEngine.assignTasks(projectId, taskType, nodeSequence);
         log.info("[Workflow] 项目{} 首节点 {}-{} 任务已分配", projectId, taskType, nodeSequence);
+
+        // 通知申请人项目已提交
+        notificationService.notifyProjectSubmitted(projectId, project.getProjectName(), project.getApplicantId());
     }
 
     /**
@@ -186,6 +190,7 @@ public class WorkflowEngine {
             // 驳回 → 终止
             log.info("[Workflow] 评审节点驳回，即将终止项目{}", projectId);
             terminateProject(project, "评审节点 " + taskType + "-" + nodeSequence + " 驳回");
+            notificationService.notifyReviewNodeRejected(projectId, project.getProjectName(), taskType, nodeSequence, project.getApplicantId());
             return;
         }
 
@@ -218,8 +223,11 @@ public class WorkflowEngine {
             projectMapper.updateById(project);
             assignmentEngine.assignTasks(projectId, nextType, next.getRoundSequence());
             log.info("[Workflow] 项目{} 推进至节点 {}-{}", projectId, nextType, next.getRoundSequence());
+            // 通知申请人当前节点已通过
+            notificationService.notifyReviewNodePassed(projectId, project.getProjectName(), taskType, nodeSequence, project.getApplicantId());
         } else {
             // 所有轮次结束 → 进入执行阶段
+            notificationService.notifyEnterExecution(projectId, project.getProjectName(), project.getApplicantId());
             startExecutionPhase(project, snapshot);
         }
     }
@@ -260,6 +268,8 @@ public class WorkflowEngine {
                     projectMapper.updateById(project);
                     log.info("[Workflow] 项目{} 阶段{} 完成，下一阶段{}（{}）激活",
                             projectId, stageOrder, nextStage.getStageOrder(), nextStage.getStageType());
+                    // 通知申请人阶段通过
+                    notificationService.notifyStagePassed(projectId, project.getProjectName(), currentStage.getStageName(), project.getApplicantId());
                 } else {
                     // 无下一阶段（不应发生：验收阶段完成通过 ACCEPTANCE 处理）
                     log.warn("[Workflow] 项目{} MANAGEMENT 阶段{} 通过但无下一阶段，归档为已完成", projectId, stageOrder);
@@ -313,14 +323,19 @@ public class WorkflowEngine {
                 projectMapper.updateById(project);
                 log.info("[Workflow] 项目{} 管理阶段{}驳回，重建阶段从 original={} 开始，新阶段{}已激活",
                         projectId, stageOrder, backToOriginal, newFirstStage.getStageOrder());
+                // 通知申请人阶段被驳回
+                notificationService.notifyStageRejected(projectId, project.getProjectName(),
+                        currentStage.getStageName(), newFirstStage.getStageName(), project.getApplicantId());
             }
             case UNQUALIFIED -> {
                 // 不合格 → 归档
                 archiveProject(project, ProjectStatus.ARCHIVED_UNQUALIFIED, "管理阶段评定为不合格");
+                notificationService.notifyStageUnqualified(projectId, project.getProjectName(), currentStage.getStageName(), project.getApplicantId());
             }
             case WITHDRAW -> {
                 // 撤销 → 归档已取消
                 archiveProject(project, ProjectStatus.ARCHIVED_CANCELLED, "管理阶段项目撤销");
+                notificationService.notifyStageWithdrawn(projectId, project.getProjectName(), currentStage.getStageName(), project.getApplicantId());
             }
             default -> log.warn("[Workflow] 项目{} MANAGEMENT 节点{} 未处理的结果：{}", projectId, stageOrder, result);
         }
@@ -356,6 +371,7 @@ public class WorkflowEngine {
             acceptanceStage.setStatus(StageStatusEnum.COMPLETED);
             stageMapper.updateById(acceptanceStage);
             archiveProject(project, ProjectStatus.ARCHIVED_COMPLETED, "验收通过");
+            notificationService.notifyAcceptancePassed(projectId, project.getProjectName(), project.getApplicantId());
         } else if (result == TaskDecisionEnum.REJECT) {
             // 验收阶段标记为 REJECTED
             acceptanceStage.setStatus(StageStatusEnum.REJECTED);
@@ -390,6 +406,9 @@ public class WorkflowEngine {
             projectMapper.updateById(project);
             log.info("[Workflow] 项目{} 验收驳回，重建阶段从 original={} 开始，新阶段{}已激活",
                     projectId, backToOriginal, newFirstStage.getStageOrder());
+            // 通知申请人验收被驳回
+            notificationService.notifyStageRejected(projectId, project.getProjectName(),
+                    acceptanceStage.getStageName(), newFirstStage.getStageName(), project.getApplicantId());
         } else {
             log.warn("[Workflow] 项目{} 验收阶段{} 未处理的结果：{}", projectId, stageOrder, result);
         }
@@ -760,5 +779,11 @@ public class WorkflowEngine {
         taskMapper.insert(task);
         log.info("[Workflow] 项目{} 阶段{} STAGE_SUBMISSION 任务已分配给申请人{}",
                 projectId, stage.getStageOrder(), applicantId);
+
+        // 通知申请人提交阶段成果
+        ReviewProjectDO project = projectMapper.selectById(projectId);
+        if (project != null) {
+            notificationService.notifyStageSubmission(projectId, project.getProjectName(), stage.getStageName(), applicantId);
+        }
     }
 }
