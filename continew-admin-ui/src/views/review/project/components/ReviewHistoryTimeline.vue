@@ -22,18 +22,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const expandedNodes = ref<Set<string>>(new Set())
 
-// 分离评审阶段和管理阶段（只显示已完成的节点）
+// 只显示评审阶段节点
 const reviewPhaseNodes = computed(() =>
   props.nodeHistory.filter(n =>
     ['APPLICATION', 'AUDIT', 'REVIEW', 'DECISION'].includes(n.nodeType) &&
     (n.nodeType === 'APPLICATION' || n.nodeResult != null)
-  )
-)
-
-const managementPhaseNodes = computed(() =>
-  props.nodeHistory.filter(n =>
-    ['MANAGEMENT', 'ACCEPTANCE', 'STAGE_SUBMISSION'].includes(n.nodeType) &&
-    n.nodeResult != null
   )
 )
 
@@ -71,7 +64,6 @@ function formatTime(t?: string) {
   <div v-else class="history-timeline">
     <!-- 评审阶段 -->
     <template v-if="reviewPhaseNodes.length">
-      <div class="phase-section-title">评审阶段</div>
       <div
         v-for="(node, idx) in reviewPhaseNodes"
         :key="`review_${node.nodeType}_${node.nodeSequence}`"
@@ -161,97 +153,8 @@ function formatTime(t?: string) {
       </div>
     </template>
 
-    <!-- 管理阶段 -->
-    <template v-if="managementPhaseNodes.length">
-      <div class="phase-section-title" :class="{ 'has-top-border': reviewPhaseNodes.length > 0 }">管理阶段</div>
-      <div
-        v-for="(node, idx) in managementPhaseNodes"
-        :key="`mgmt_${node.nodeType}_${node.nodeSequence}`"
-        class="history-node-item"
-      >
-        <div
-          class="history-node-header"
-          :class="{ expanded: expandedNodes.has(`${node.nodeType}_${node.nodeSequence}`) }"
-          @click="toggleNode(`${node.nodeType}_${node.nodeSequence}`)"
-        >
-          <div class="node-step-indicator">
-            <div class="node-dot" :class="nodeDotClass(node)">
-              <IconCheck v-if="node.nodeResult === 'PASS'" />
-              <IconClose v-else-if="node.nodeResult === 'REJECT'" />
-              <span v-else>{{ idx + 1 }}</span>
-            </div>
-          </div>
-          <div class="node-header-content">
-            <div class="node-header-top">
-              <span class="node-name">{{ node.nodeName }}</span>
-              <a-tag
-                v-if="node.nodeResult"
-                :color="node.nodeResult === 'PASS' ? 'green' : 'red'"
-                size="small"
-              >
-                {{ node.nodeResult === 'PASS' ? '通过' : '驳回' }}
-              </a-tag>
-              <span v-if="node.passCount != null" class="node-count-text">
-                {{ node.passCount }}/{{ node.totalCount }} 人通过
-              </span>
-            </div>
-            <div v-if="node.averageScore != null" class="node-avg-score">
-              平均分：{{ node.averageScore }}
-            </div>
-          </div>
-          <IconDown
-            class="node-expand-icon"
-            :class="{ rotated: expandedNodes.has(`${node.nodeType}_${node.nodeSequence}`) }"
-          />
-        </div>
-
-        <div
-          v-if="expandedNodes.has(`${node.nodeType}_${node.nodeSequence}`)"
-          class="history-node-entries"
-        >
-          <a-tabs v-if="node.entries.length > 1" type="card" size="small">
-            <a-tab-pane
-              v-for="(entry, ei) in node.entries"
-              :key="ei"
-              :title="`${entry.assigneeName}${entry.decision ? ` - ${entry.decision === 'PASS' ? '通过' : '驳回'}` : ''}`"
-            >
-              <div class="person-entry-content">
-                <div class="person-entry-meta">
-                  <span v-if="entry.score != null" class="person-score">{{ entry.score }} 分</span>
-                  <span class="person-time">{{ formatTime(entry.completeTime) }}</span>
-                </div>
-                <div v-if="entry.formTemplate && entry.formData" class="person-form">
-                  <FormRenderer :model-value="entry.formData" :template="entry.formTemplate" readonly />
-                </div>
-              </div>
-            </a-tab-pane>
-          </a-tabs>
-          <div v-else-if="node.entries.length === 1" class="person-entry">
-            <div class="person-entry-header">
-              <a-avatar :size="28" style="background: rgb(var(--primary-6)); font-size: 12px; color: #fff;">
-                {{ node.entries[0].assigneeName?.charAt(0) }}
-              </a-avatar>
-              <span class="person-name">{{ node.entries[0].assigneeName }}</span>
-              <a-tag
-                v-if="node.entries[0].decision"
-                :color="node.entries[0].decision === 'PASS' ? 'green' : 'red'"
-                size="small"
-              >
-                {{ node.entries[0].decision === 'PASS' ? '通过' : '驳回' }}
-              </a-tag>
-              <span v-if="node.entries[0].score != null" class="person-score">{{ node.entries[0].score }} 分</span>
-              <span class="person-time">{{ formatTime(node.entries[0].completeTime) }}</span>
-            </div>
-            <div v-if="node.entries[0].formTemplate && node.entries[0].formData" class="person-form">
-              <FormRenderer :model-value="node.entries[0].formData" :template="node.entries[0].formTemplate" readonly />
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-
     <!-- 无数据 -->
-    <a-empty v-if="!reviewPhaseNodes.length && !managementPhaseNodes.length" description="暂无历史记录" />
+    <a-empty v-if="!reviewPhaseNodes.length" description="暂无历史记录" />
   </div>
 </template>
 

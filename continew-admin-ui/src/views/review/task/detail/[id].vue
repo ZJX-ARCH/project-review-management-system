@@ -241,8 +241,33 @@
       <!-- 拖拽调宽手柄 -->
       <div class="drawer-resize-handle" @mousedown="onResizeStart" />
 
-      <!-- 使用 ReviewHistoryTimeline 组件 -->
-      <ReviewHistoryTimeline :node-history="nodeHistory" :loading="historyLoading" />
+      <!-- 评审阶段 -->
+      <div v-if="nodeHistory.length > 0 || historyLoading" class="drawer-phase-section">
+        <div class="phase-section-header" @click="toggleReviewPhase">
+          <span class="phase-section-title">评审阶段</span>
+          <IconDown class="phase-expand-icon" :class="{ rotated: reviewPhaseExpanded }" />
+        </div>
+        <div v-show="reviewPhaseExpanded" class="phase-section-content">
+          <ReviewHistoryTimeline :node-history="nodeHistory" :loading="historyLoading" />
+        </div>
+      </div>
+
+      <!-- 管理阶段 -->
+      <div v-if="completedStages.length > 0" class="drawer-phase-section">
+        <div class="phase-section-header" @click="toggleManagementPhase">
+          <span class="phase-section-title">管理阶段</span>
+          <IconDown class="phase-expand-icon" :class="{ rotated: managementPhaseExpanded }" />
+        </div>
+        <div v-show="managementPhaseExpanded" class="phase-section-content">
+          <ExecutionStageTimeline :stages="completedStages" />
+        </div>
+      </div>
+
+      <div v-if="nodeHistory.length === 0 && !historyLoading && completedStages.length === 0" class="drawer-section">
+        <div style="text-align: center; color: var(--color-text-3); padding: 20px;">
+          暂无历史记录
+        </div>
+      </div>
     </a-drawer>
 
     <!-- 转办弹窗 -->
@@ -289,6 +314,7 @@ import {
   IconLayers,
   IconCheckCircle,
   IconCloseCircle,
+  IconDown,
 } from '@arco-design/web-vue/es/icon'
 import { getTaskDetail, saveTask, submitTask, transferTask, getTaskCandidates, getTaskNodeHistory } from '@/apis/review'
 import {
@@ -299,6 +325,7 @@ import {
 import type { TaskDetailResp, TaskCandidateResp, NodeHistoryResp } from '@/apis/review/type'
 import FormRenderer from '../../project/components/FormRenderer.vue'
 import ReviewHistoryTimeline from '../../project/components/ReviewHistoryTimeline.vue'
+import ExecutionStageTimeline from '../../project/components/ExecutionStageTimeline.vue'
 
 defineOptions({ name: 'ReviewTaskDetail' })
 
@@ -336,6 +363,39 @@ const isStageSubmissionTask = computed(() => detail.value?.taskType === 'STAGE_S
 const hasScoreTable = computed(() =>
   detail.value?.taskFormTemplate?.fields?.some(f => f.fieldType === 'SCORE_TABLE'),
 )
+
+// 已完成的管理阶段（所有 COMPLETED 或 REJECTED 的阶段）
+const completedStages = computed(() => {
+  if (!detail.value?.allStages) return []
+  return detail.value.allStages
+    .filter(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
+    .sort((a, b) => a.stageOrder - b.stageOrder)
+})
+
+// 节点历史数据
+const nodeHistory = ref<NodeHistoryResp[]>([])
+const historyLoading = ref(false)
+const reviewPhaseExpanded = ref(false)
+const managementPhaseExpanded = ref(false)
+
+async function loadNodeHistory() {
+  historyLoading.value = true
+  try {
+    const res = await getTaskNodeHistory(taskId.value)
+    nodeHistory.value = res.data ?? []
+  }
+  finally {
+    historyLoading.value = false
+  }
+}
+
+function toggleReviewPhase() {
+  reviewPhaseExpanded.value = !reviewPhaseExpanded.value
+}
+
+function toggleManagementPhase() {
+  managementPhaseExpanded.value = !managementPhaseExpanded.value
+}
 
 // ——— 表单数据 ———
 const formRendererRef = ref<{ validate: () => Promise<Record<string, string[]> | undefined> }>()
@@ -423,21 +483,6 @@ const drawerVisible = ref(false)
 const drawerTab = ref('application')
 const activePanel = ref<string | null>(null)
 const drawerWidth = ref(560)
-
-// 节点历史数据
-const nodeHistory = ref<NodeHistoryResp[]>([])
-const historyLoading = ref(false)
-
-async function loadNodeHistory() {
-  historyLoading.value = true
-  try {
-    const res = await getTaskNodeHistory(taskId.value)
-    nodeHistory.value = res.data ?? []
-  }
-  finally {
-    historyLoading.value = false
-  }
-}
 
 function togglePanel(key: string) {
   if (activePanel.value === key && drawerVisible.value) {
@@ -833,5 +878,71 @@ const onTransfer = async () => {
 
 .history-drawer .arco-drawer-body {
   padding-left: 8px;
+}
+
+.drawer-section {
+  margin-bottom: 24px;
+}
+
+.drawer-phase-section {
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.phase-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.phase-section-header:hover {
+  background: var(--color-fill-2);
+}
+
+.phase-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.phase-expand-icon {
+  transition: transform 0.2s;
+  color: var(--color-text-3);
+}
+
+.phase-expand-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.phase-section-content {
+  padding: 0 12px 12px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  margin-bottom: 12px;
+  padding-left: 8px;
+}
+
+.acceptance-stage {
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stage-name {
+  font-weight: 500;
+  color: var(--color-text-1);
 }
 </style>
