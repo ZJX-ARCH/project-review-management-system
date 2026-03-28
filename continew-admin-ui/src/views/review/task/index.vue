@@ -147,7 +147,7 @@ const columns: TableInstance['columns'] = [
   {
     title: '项目名称',
     dataIndex: 'projectName',
-    minWidth: 200,
+    width: 200,
     ellipsis: true,
     tooltip: true,
     fixed: !isMobile() ? 'left' : undefined,
@@ -155,7 +155,7 @@ const columns: TableInstance['columns'] = [
   {
     title: '申请人',
     dataIndex: 'applicantName',
-    width: 110,
+    width: 100,
   },
   {
     title: '任务类型',
@@ -167,7 +167,7 @@ const columns: TableInstance['columns'] = [
   {
     title: '节点名称',
     dataIndex: 'nodeName',
-    width: 140,
+    width: 120,
   },
   {
     title: '任务状态',

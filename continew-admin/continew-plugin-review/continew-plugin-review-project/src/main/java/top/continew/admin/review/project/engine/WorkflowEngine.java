@@ -248,10 +248,8 @@ public class WorkflowEngine {
                 ReviewProjectStageDO nextStage = findNextStage(projectId, stageOrder);
                 if (nextStage != null) {
                     activateStage(nextStage);
-                    // 若下一阶段是 MANAGEMENT 类型，分配 STAGE_SUBMISSION 给申请人
-                    if (nextStage.getStageType() != TaskType.ACCEPTANCE) {
-                        assignStageSubmissionTask(projectId, project.getApplicantId(), nextStage);
-                    }
+                    // 所有阶段（包括验收）都需要申请人先提交成果
+                    assignStageSubmissionTask(projectId, project.getApplicantId(), nextStage);
                     // 根据阶段类���更新项目状态
                     TaskType nextTaskType = nextStage.getStageType() == TaskType.ACCEPTANCE
                             ? TaskType.ACCEPTANCE : TaskType.MANAGEMENT;

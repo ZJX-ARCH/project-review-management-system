@@ -200,9 +200,9 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         // 构建已完成的阶段列表（用于抽屉历史显示）
         resp.setCompletedStages(buildCompletedStages(project, task));
 
-        // 阶段成果（MANAGEMENT 查当前阶段，ACCEPTANCE 查全部阶段）
-        if (task.getTaskType() == TaskType.MANAGEMENT) {
-            // 当前阶段成果（供管理员审核）
+        // 阶段成果（MANAGEMENT/ACCEPTANCE 查当前阶段）
+        if (task.getTaskType() == TaskType.MANAGEMENT || task.getTaskType() == TaskType.ACCEPTANCE) {
+            // 当前阶段成果（供管理员/验收人员审核）
             ReviewProjectStageDO stage = stageMapper.selectOne(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
@@ -916,7 +916,6 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                 new LambdaQueryWrapper<ReviewProjectStageDO>()
                         .eq(ReviewProjectStageDO::getProjectId, project.getId())
                         .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
-                        .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
                         .in(ReviewProjectStageDO::getStatus, StageStatusEnum.COMPLETED, StageStatusEnum.REJECTED)
                         .eq(ReviewProjectStageDO::getDeleted, 0)
                         .orderByAsc(ReviewProjectStageDO::getStageOrder));

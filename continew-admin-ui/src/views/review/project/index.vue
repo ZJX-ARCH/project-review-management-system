@@ -160,7 +160,7 @@ const columns: TableInstance['columns'] = [
   {
     title: '项目名称',
     dataIndex: 'projectName',
-    minWidth: 200,
+    width: 200,
     ellipsis: true,
     tooltip: true,
     fixed: !isMobile() ? 'left' : undefined,
@@ -168,7 +168,7 @@ const columns: TableInstance['columns'] = [
   {
     title: '项目类型',
     dataIndex: 'typeName',
-    width: 140,
+    width: 120,
   },
   {
     title: '当前节点',

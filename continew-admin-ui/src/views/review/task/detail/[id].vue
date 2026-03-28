@@ -78,9 +78,9 @@
               />
             </a-card>
 
-            <!-- MANAGEMENT 专属：展示申请人提交的阶段成果（只读） -->
+            <!-- MANAGEMENT/ACCEPTANCE 专属：展示申请人提交的阶段成果（只读） -->
             <a-card
-              v-if="detail.taskType === 'MANAGEMENT' && detail.currentStage"
+              v-if="(detail.taskType === 'MANAGEMENT' || detail.taskType === 'ACCEPTANCE') && detail.currentStage"
               style="margin-bottom: 16px;"
             >
               <!-- 阶段成果提交信息 -->
