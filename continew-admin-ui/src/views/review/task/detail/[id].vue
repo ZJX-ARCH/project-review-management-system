@@ -233,6 +233,7 @@
       :title="detail?.projectName"
       :width="drawerWidth"
       :mask="false"
+      :footer="false"
       placement="right"
       class="history-drawer"
       @cancel="closeDrawer"
@@ -279,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import {
@@ -453,6 +454,23 @@ function togglePanel(key: string) {
     }
   }
 }
+
+// 防止抽屉锁定 body 滚动和拦截点击事件
+watch(drawerVisible, (visible) => {
+  if (visible) {
+    // drawer 渲染需要时间，用 setTimeout 等待
+    setTimeout(() => {
+      const containers = document.querySelectorAll('.arco-drawer-container')
+      containers.forEach((c) => {
+        (c as HTMLElement).style.pointerEvents = 'none'
+      })
+      const drawers = document.querySelectorAll('.arco-drawer')
+      drawers.forEach((d) => {
+        (d as HTMLElement).style.pointerEvents = 'auto'
+      })
+    }, 100)
+  }
+})
 
 function closeDrawer() {
   drawerVisible.value = false
@@ -693,15 +711,6 @@ const onTransfer = async () => {
 }
 
 /* Task 3: 抽屉内容 */
-.history-drawer :deep(.arco-drawer-container) {
-  border-left: 3px solid rgb(var(--primary-6));
-  box-shadow: -4px 0 12px rgba(var(--primary-6), 0.2);
-}
-
-.history-drawer :deep(.arco-drawer-body) {
-  padding-left: 8px;
-}
-
 .drawer-resize-handle {
   position: absolute;
   left: 0;
@@ -800,5 +809,29 @@ const onTransfer = async () => {
   font-size: 14px;
   margin-bottom: 12px;
   color: var(--color-text-1);
+}
+</style>
+
+<!-- 全局样式：drawer 被 teleport 到 body，scoped 样式无法生效 -->
+<style lang="scss">
+.history-drawer .arco-drawer-wrapper {
+  pointer-events: none !important;
+}
+
+.history-drawer .arco-drawer {
+  pointer-events: auto !important;
+}
+
+.history-drawer .arco-drawer-mask {
+  display: none !important;
+}
+
+.history-drawer .arco-drawer-container {
+  border-left: 3px solid rgb(var(--primary-6));
+  box-shadow: -4px 0 12px rgba(var(--primary-6), 0.2);
+}
+
+.history-drawer .arco-drawer-body {
+  padding-left: 8px;
 }
 </style>
