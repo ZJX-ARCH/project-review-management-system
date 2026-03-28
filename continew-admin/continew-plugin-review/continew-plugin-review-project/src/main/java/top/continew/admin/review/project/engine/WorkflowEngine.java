@@ -168,8 +168,11 @@ public class WorkflowEngine {
         // 根据阶段类型决定任务类型（ACCEPTANCE 阶段分配 ACCEPTANCE 任务，其余分配 MANAGEMENT 任务）
         TaskType assignType = stage.getStageType() == TaskType.ACCEPTANCE
                 ? TaskType.ACCEPTANCE : TaskType.MANAGEMENT;
-        assignmentEngine.assignTasks(projectId, assignType, stageOrder);
-        log.info("[Workflow] 项目{} 阶段{} 成果已提交，分配 {} 任务", projectId, stageOrder, assignType);
+        // 人员配置基于原始阶段序号，任务的 nodeSequence 使用实际 stageOrder
+        Integer originalOrder = stage.getOriginalStageOrder() != null ? stage.getOriginalStageOrder() : stageOrder;
+        assignmentEngine.assignTasks(projectId, assignType, originalOrder, stageOrder);
+        log.info("[Workflow] 项目{} 阶段{} 成果已提交，分配 {} 任务（人员配置查 originalOrder={}）",
+                projectId, stageOrder, assignType, originalOrder);
     }
 
     // ==================== 评审阶段推进 ====================
@@ -266,57 +269,55 @@ public class WorkflowEngine {
                 }
             }
             case REJECT -> {
+                // 标记当前阶段为已驳回（保留数据）
+                currentStage.setStatus(StageStatusEnum.REJECTED);
+                stageMapper.updateById(currentStage);
+
                 Integer backTo = (rejectBackToStageOrder != null && rejectBackToStageOrder < stageOrder)
                         ? rejectBackToStageOrder : stageOrder;
-
+                // 获取回退目标的 originalStageOrder
+                Integer backToOriginal;
                 if (backTo < stageOrder) {
-                    // 回退到指定的历史阶段：取消从 backTo 开始的所有 MANAGEMENT/ACCEPTANCE/STAGE_SUBMISSION 任务
-                    cancelPendingTasksFromStageAll(projectId, backTo);
-                    // 重置 backTo 及后续阶段为 PENDING（含当前阶段）
-                    resetStagesFrom(projectId, backTo);
-                    // 重新激活目标阶段
-                    ReviewProjectStageDO freshTargetStage = findStageByOrder(projectId, backTo);
-                    if (freshTargetStage == null) {
+                    ReviewProjectStageDO targetStage = findStageByOrder(projectId, backTo);
+                    if (targetStage == null) {
                         log.error("[Workflow] 项目{} 管理驳回但目标阶段{}不存在", projectId, backTo);
                         return;
                     }
-                    // 防御性校验：MANAGEMENT REJECT 不允许回退到 ACCEPTANCE 阶段
-                    if (freshTargetStage.getStageType() == TaskType.ACCEPTANCE) {
-                        log.error("[Workflow] 项目{} 管理驳回目标阶段{}为 ACCEPTANCE 类型，拒绝回退，降级为重做当前阶段", projectId, backTo);
-                        currentStage.setStatus(StageStatusEnum.REJECTED);
-                        stageMapper.updateById(currentStage);
-                        cancelPendingTasks(projectId, TaskType.MANAGEMENT, stageOrder);
-                        cancelPendingTasks(projectId, TaskType.STAGE_SUBMISSION, stageOrder);
-                        activateStage(currentStage);
-                        ReviewProjectStageDO freshCurrentStage = findStageByOrder(projectId, stageOrder);
-                        if (freshCurrentStage != null) {
-                            assignStageSubmissionTask(projectId, project.getApplicantId(), freshCurrentStage);
-                        }
-                        return;
+                    // 防御性校验：不允许回退到 ACCEPTANCE 阶段
+                    if (targetStage.getStageType() == TaskType.ACCEPTANCE) {
+                        log.error("[Workflow] 项目{} 管理驳回目标阶段{}为 ACCEPTANCE 类型，降级为重做当前阶段", projectId, backTo);
+                        backToOriginal = currentStage.getOriginalStageOrder();
+                    } else {
+                        backToOriginal = targetStage.getOriginalStageOrder();
                     }
-                    activateStage(freshTargetStage);
-                    project.setCurrentNodeType(TaskType.MANAGEMENT.getValue());
-                    project.setCurrentNodeSequence(backTo);
-                    project.setStatus(ProjectStatus.EXECUTING);
-                    projectMapper.updateById(project);
-                    // 分配 STAGE_SUBMISSION 任务给申请人
-                    assignStageSubmissionTask(projectId, project.getApplicantId(), freshTargetStage);
-                    log.info("[Workflow] 项目{} 管理阶段{}驳回，回退至阶段{}，STAGE_SUBMISSION 任务已分配", projectId, stageOrder, backTo);
                 } else {
-                    // 仅重做当前阶段：标记为 REJECTED，取消已有 MANAGEMENT/STAGE_SUBMISSION 任务
-                    currentStage.setStatus(StageStatusEnum.REJECTED);
-                    stageMapper.updateById(currentStage);
-                    cancelPendingTasks(projectId, TaskType.MANAGEMENT, stageOrder);
-                    cancelPendingTasks(projectId, TaskType.STAGE_SUBMISSION, stageOrder);
-                    // 重新激活当前阶段（重置日期等）
-                    activateStage(currentStage);
-                    // 重新分配 STAGE_SUBMISSION 给申请人
-                    ReviewProjectStageDO freshCurrentStage = findStageByOrder(projectId, stageOrder);
-                    if (freshCurrentStage != null) {
-                        assignStageSubmissionTask(projectId, project.getApplicantId(), freshCurrentStage);
-                    }
-                    log.info("[Workflow] 项目{} 管理阶段{}驳回，申请人需重新提交当前阶段成果", projectId, stageOrder);
+                    backToOriginal = currentStage.getOriginalStageOrder();
                 }
+
+                // 把从回退目标到当前阶段之间的所有活跃阶段也标记为 REJECTED
+                markIntermediateStagesRejected(projectId, backToOriginal, stageOrder);
+
+                // 取消所有待处理的管理阶段任务
+                cancelAllPendingTasks(projectId);
+
+                // 创建新阶段实例（从回退目标到验收，全部重建）
+                recreateStagesFrom(projectId, backToOriginal, snapshot);
+
+                // 查找新创建的第一个阶段并激活
+                ReviewProjectStageDO newFirstStage = findLatestStageByOriginalOrder(projectId, backToOriginal);
+                if (newFirstStage == null) {
+                    log.error("[Workflow] 项目{} 重建阶段后未找到 originalOrder={} 的新阶段", projectId, backToOriginal);
+                    return;
+                }
+                activateStage(newFirstStage);
+                assignStageSubmissionTask(projectId, project.getApplicantId(), newFirstStage);
+
+                project.setCurrentNodeType(TaskType.MANAGEMENT.getValue());
+                project.setCurrentNodeSequence(newFirstStage.getStageOrder());
+                project.setStatus(ProjectStatus.EXECUTING);
+                projectMapper.updateById(project);
+                log.info("[Workflow] 项目{} 管理阶段{}驳回，重建阶段从 original={} 开始，新阶段{}已激活",
+                        projectId, stageOrder, backToOriginal, newFirstStage.getStageOrder());
             }
             case UNQUALIFIED -> {
                 // 不合格 → 归档
@@ -361,37 +362,42 @@ public class WorkflowEngine {
             stageMapper.updateById(acceptanceStage);
             archiveProject(project, ProjectStatus.ARCHIVED_COMPLETED, "验收通过");
         } else if (result == TaskDecisionEnum.REJECT) {
-            // Step 1: 验收阶段标记为 REJECTED
+            // 验收阶段标记为 REJECTED
             acceptanceStage.setStatus(StageStatusEnum.REJECTED);
             stageMapper.updateById(acceptanceStage);
 
             Integer backTo = rejectBackToStageOrder != null ? rejectBackToStageOrder : stageOrder - 1;
+            // 获取回退目标的 originalStageOrder
+            ReviewProjectStageDO targetStage = findStageByOrder(projectId, backTo);
+            Integer backToOriginal = targetStage != null ? targetStage.getOriginalStageOrder() : backTo;
 
-            // Step 2: 取消 stageOrder >= backTo 的所有待处理 MANAGEMENT/ACCEPTANCE 任务
-            cancelPendingTasksFromStage(projectId, backTo);
+            // 把从回退目标到当前阶段之间的所有活跃阶段也标记为 REJECTED
+            markIntermediateStagesRejected(projectId, backToOriginal, stageOrder);
 
-            // Step 3: 重置目标阶段及其之后的所有阶段为 PENDING（含验收阶段）
-            resetStagesFrom(projectId, backTo);
+            // 取消所有待处理任务
+            cancelAllPendingTasks(projectId);
 
-            // Step 4: 重新查询目标阶段（避免使用 resetStagesFrom 前的过时对象）
-            ReviewProjectStageDO freshTargetStage = findStageByOrder(projectId, backTo);
-            if (freshTargetStage == null) {
-                log.error("[Workflow] 项目{} 验收驳回但目标阶段{}不存在", projectId, backTo);
+            // 解析快照用于重建阶段
+            ProjectTypeSnapshot snapshot = parseSnapshot(project);
+
+            // 创建新阶段实例（从回退目标到验收，全部重建）
+            recreateStagesFrom(projectId, backToOriginal, snapshot);
+
+            // 查找新创建的第一个阶段并激活
+            ReviewProjectStageDO newFirstStage = findLatestStageByOriginalOrder(projectId, backToOriginal);
+            if (newFirstStage == null) {
+                log.error("[Workflow] 项目{} 验收驳回重建阶段后未找到 originalOrder={} 的新阶段", projectId, backToOriginal);
                 return;
             }
+            activateStage(newFirstStage);
+            assignStageSubmissionTask(projectId, project.getApplicantId(), newFirstStage);
 
-            // Step 5: 激活目标阶段
-            activateStage(freshTargetStage);
-
-            // Step 6: 更新项目当前节点状态
             project.setCurrentNodeType(TaskType.MANAGEMENT.getValue());
-            project.setCurrentNodeSequence(backTo);
+            project.setCurrentNodeSequence(newFirstStage.getStageOrder());
             project.setStatus(ProjectStatus.EXECUTING);
             projectMapper.updateById(project);
-
-            // Step 7: 为目标阶段分配 STAGE_SUBMISSION 任务（申请人需重新提交阶段成果）
-            assignStageSubmissionTask(projectId, project.getApplicantId(), freshTargetStage);
-            log.info("[Workflow] 项目{} 验收驳回，回退至阶段{}，STAGE_SUBMISSION 任务已分配", projectId, backTo);
+            log.info("[Workflow] 项目{} 验收驳回，重建阶段从 original={} 开始，新阶段{}已激活",
+                    projectId, backToOriginal, newFirstStage.getStageOrder());
         } else {
             log.warn("[Workflow] 项目{} 验收阶段{} 未处理的结果：{}", projectId, stageOrder, result);
         }
@@ -422,6 +428,8 @@ public class WorkflowEngine {
             s.setStageType("ACCEPTANCE".equals(info.getStageType())
                     ? TaskType.ACCEPTANCE : TaskType.MANAGEMENT);
             s.setStageOrder(info.getStageOrder());
+            s.setOriginalStageOrder(info.getStageOrder());
+            s.setExecutionSequence(1);
             s.setStageName(info.getStageName());
             s.setPlannedDays(info.getPlannedDays());
             s.setStatus(StageStatusEnum.PENDING);
@@ -589,9 +597,106 @@ public class WorkflowEngine {
         return stageMapper.selectOne(new LambdaQueryWrapper<ReviewProjectStageDO>()
                 .eq(ReviewProjectStageDO::getProjectId, projectId)
                 .gt(ReviewProjectStageDO::getStageOrder, currentStageOrder)
+                .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.REJECTED)
                 .eq(ReviewProjectStageDO::getDeleted, 0)
                 .orderByAsc(ReviewProjectStageDO::getStageOrder)
                 .last("LIMIT 1"));
+    }
+
+    /**
+     * 查找指定 originalStageOrder 的最新阶段实例（executionSequence 最大的那个）
+     */
+    private ReviewProjectStageDO findLatestStageByOriginalOrder(Long projectId, Integer originalStageOrder) {
+        return stageMapper.selectOne(new LambdaQueryWrapper<ReviewProjectStageDO>()
+                .eq(ReviewProjectStageDO::getProjectId, projectId)
+                .eq(ReviewProjectStageDO::getOriginalStageOrder, originalStageOrder)
+                .eq(ReviewProjectStageDO::getDeleted, 0)
+                .orderByDesc(ReviewProjectStageDO::getExecutionSequence)
+                .last("LIMIT 1"));
+    }
+
+    /**
+     * 把从回退目标到当前阶段之间的所有活跃阶段标记为 REJECTED
+     * （不含当前阶段本身，因为已经在调用前标记了）
+     */
+    private void markIntermediateStagesRejected(Long projectId, Integer backToOriginalOrder, Integer currentStageOrder) {
+        List<ReviewProjectStageDO> intermediateStages = stageMapper.selectList(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, projectId)
+                        .ge(ReviewProjectStageDO::getOriginalStageOrder, backToOriginalOrder)
+                        .lt(ReviewProjectStageDO::getStageOrder, currentStageOrder)
+                        .notIn(ReviewProjectStageDO::getStatus,
+                                List.of(StageStatusEnum.REJECTED, StageStatusEnum.PENDING))
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        for (ReviewProjectStageDO stage : intermediateStages) {
+            stage.setStatus(StageStatusEnum.REJECTED);
+            stageMapper.updateById(stage);
+            log.info("[Workflow] 项目{} 中间阶段{} (original={}) 标记为 REJECTED",
+                    projectId, stage.getStageOrder(), stage.getOriginalStageOrder());
+        }
+    }
+
+    /**
+     * 驳回后重建阶段实例（从 fromOriginalOrder 开始到验收阶段，全部创建新实例）
+     */
+    private void recreateStagesFrom(Long projectId, Integer fromOriginalOrder, ProjectTypeSnapshot snapshot) {
+        if (snapshot == null || CollUtil.isEmpty(snapshot.getStages())) {
+            log.error("[Workflow] 项目{} 快照无阶段配置，无法重建", projectId);
+            return;
+        }
+
+        // 软删除旧的 PENDING 阶段（originalStageOrder >= fromOriginalOrder），避免重复显示
+        List<ReviewProjectStageDO> pendingStages = stageMapper.selectList(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, projectId)
+                        .ge(ReviewProjectStageDO::getOriginalStageOrder, fromOriginalOrder)
+                        .eq(ReviewProjectStageDO::getStatus, StageStatusEnum.PENDING)
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        for (ReviewProjectStageDO ps : pendingStages) {
+            ps.setDeleted(ps.getId());
+            stageMapper.updateById(ps);
+        }
+
+        // 查询当前最大 stageOrder
+        Integer maxOrder = stageMapper.selectMaxStageOrder(projectId);
+
+        // 从快照中找到需要重建的阶段模板（>= fromOriginalOrder 的所有阶段）
+        List<ProjectTypeSnapshot.StageInfo> stagesToRecreate = snapshot.getStages().stream()
+                .filter(s -> s.getStageOrder() >= fromOriginalOrder)
+                .sorted(Comparator.comparingInt(ProjectTypeSnapshot.StageInfo::getStageOrder))
+                .toList();
+
+        // 查询每个原始阶段的最大执行序号
+        List<ReviewProjectStageDO> existingStages = stageMapper.selectList(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, projectId)
+                        .ge(ReviewProjectStageDO::getOriginalStageOrder, fromOriginalOrder)
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+        java.util.Map<Integer, Integer> maxExecSeq = new java.util.HashMap<>();
+        for (ReviewProjectStageDO s : existingStages) {
+            maxExecSeq.merge(s.getOriginalStageOrder(), s.getExecutionSequence(), Math::max);
+        }
+
+        // 创建新阶段实例
+        List<ReviewProjectStageDO> newStages = new java.util.ArrayList<>();
+        for (ProjectTypeSnapshot.StageInfo info : stagesToRecreate) {
+            ReviewProjectStageDO newStage = new ReviewProjectStageDO();
+            newStage.setProjectId(projectId);
+            newStage.setStageOrder(++maxOrder);
+            newStage.setOriginalStageOrder(info.getStageOrder());
+            newStage.setExecutionSequence(maxExecSeq.getOrDefault(info.getStageOrder(), 0) + 1);
+            newStage.setStageType("ACCEPTANCE".equals(info.getStageType())
+                    ? TaskType.ACCEPTANCE : TaskType.MANAGEMENT);
+            newStage.setStageName(info.getStageName());
+            newStage.setPlannedDays(info.getPlannedDays());
+            newStage.setStatus(StageStatusEnum.PENDING);
+            newStage.setIsOverdue(false);
+            newStages.add(newStage);
+        }
+
+        stageMapper.insertBatch(newStages);
+        log.info("[Workflow] 项目{} 重建 {} 个阶段实例（从 originalOrder={} 开始）",
+                projectId, newStages.size(), fromOriginalOrder);
     }
 
     private ProjectTypeSnapshot parseSnapshot(ReviewProjectDO project) {

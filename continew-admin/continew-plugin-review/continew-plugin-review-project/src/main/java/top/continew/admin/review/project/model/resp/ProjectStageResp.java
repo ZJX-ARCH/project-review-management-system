@@ -42,6 +42,18 @@ public class ProjectStageResp implements Serializable {
     private Integer stageOrder;
 
     /**
+     * 原始阶段序号（模板中的序号）
+     */
+    @Schema(description = "原始阶段序号", example = "1")
+    private Integer originalStageOrder;
+
+    /**
+     * 执行序号（同一原始阶段的第N次执行）
+     */
+    @Schema(description = "执行序号", example = "1")
+    private Integer executionSequence;
+
+    /**
      * 阶段名称
      */
     @Schema(description = "阶段名称", example = "立项")
@@ -76,6 +88,12 @@ public class ProjectStageResp implements Serializable {
      */
     @Schema(description = "是否超时", example = "false")
     private Boolean isOverdue;
+
+    /**
+     * 驳回原因
+     */
+    @Schema(description = "驳回原因")
+    private String rejectRemark;
 
     /**
      * 申请人提交的阶段成果表单数据（key=字段编码，value=字段值）

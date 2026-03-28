@@ -825,7 +825,7 @@ public class ProjectServiceImpl extends ServiceImpl<ReviewProjectMapper, ReviewP
                 return;
             }
             for (ProjectStageResp stage : stages) {
-                String key = "STAGE_" + stage.getStageOrder();
+                String key = "STAGE_" + stage.getOriginalStageOrder();
                 Long templateId = snapshot.getFormMappings().get(key);
                 if (templateId != null) {
                     try {

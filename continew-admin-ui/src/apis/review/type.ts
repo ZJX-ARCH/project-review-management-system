@@ -689,12 +689,15 @@ export interface ProjectStageResp {
   id: number
   stageType: string
   stageOrder: number
+  originalStageOrder: number
+  executionSequence: number
   stageName: string
   plannedDays?: number
   startDate?: string
   deadline?: string
   status: ProjectStageStatus
   isOverdue: boolean
+  rejectRemark?: string
   stageFormData?: Record<string, unknown>
   stageFormTemplate?: ProjectFormTemplateResp
   /** 驳回历史快照列表 */

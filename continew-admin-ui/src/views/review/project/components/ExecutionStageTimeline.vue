@@ -19,8 +19,9 @@ interface Props {
 const props = defineProps<Props>()
 const expandedStages = ref<Set<number>>(new Set())
 
-// 默认展开第一个非 PENDING 阶段
-const firstActive = props.stages.find(s => s.status !== 'PENDING')
+// 默认展开第一个非 PENDING 且非 REJECTED 的阶段，或最后一个 REJECTED 阶段
+const firstActive = props.stages.find(s => s.status !== 'PENDING' && s.status !== 'REJECTED')
+  ?? [...props.stages].reverse().find(s => s.status === 'REJECTED')
 if (firstActive) {
   expandedStages.value.add(firstActive.stageOrder)
 }
@@ -52,7 +53,7 @@ function formatTime(t?: string) {
   <div class="execution-stage-timeline">
     <div
       v-for="(stage, idx) in stages"
-      :key="stage.stageOrder"
+      :key="stage.id"
       class="stage-timeline-item"
     >
       <div
@@ -95,31 +96,8 @@ function formatTime(t?: string) {
         v-if="expandedStages.has(stage.stageOrder)"
         class="stage-node-content"
       >
-        <!-- 历史记录（驳回重做产生的快照） -->
-        <div v-if="stage.historyList && stage.historyList.length" class="stage-history-list">
-          <div v-for="(history, hIdx) in stage.historyList" :key="history.id" class="stage-history-item">
-            <div class="history-header">
-              <span class="history-label">第 {{ hIdx + 1 }} 次执行</span>
-              <a-tag color="red" size="small">{{ history.newStatus === 'REJECTED' ? '已驳回' : history.newStatus }}</a-tag>
-              <span class="history-time">{{ history.changeTime }}</span>
-            </div>
-            <div v-if="history.stageFormData && stage.stageFormTemplate" class="stage-form-card">
-              <FormRenderer
-                :model-value="history.stageFormData"
-                :template="stage.stageFormTemplate"
-                readonly
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- 当前数据 -->
         <div v-if="stage.stageFormData && stage.stageFormTemplate" class="stage-form-card">
-          <div v-if="stage.historyList && stage.historyList.length" class="current-label">
-            当前执行（第 {{ stage.historyList.length + 1 }} 次）
-          </div>
-
-          <!-- 提交人信息头（类似评审历史的 person-entry-header） -->
+          <!-- 提交人信息头 -->
           <div v-if="stage.submitterName" class="person-entry-header">
             <a-avatar :size="28" style="background: rgb(var(--primary-6)); font-size: 12px; color: #fff;">
               {{ stage.submitterName?.charAt(0) }}
@@ -134,10 +112,10 @@ function formatTime(t?: string) {
             readonly
           />
 
-          <!-- 审核人信息（表单下方，分割线隔开） -->
+          <!-- 审核人信息 -->
           <div v-if="stage.reviewerName" class="reviewer-footer">
             <div class="person-entry-header">
-              <a-avatar :size="28" style="background: #ff7d00; font-size: 12px;">
+              <a-avatar :size="28" style="background: #ff7d00; font-size: 12px; color: #fff;">
                 {{ stage.reviewerName?.charAt(0) }}
               </a-avatar>
               <span class="person-name">{{ stage.reviewerName }}</span>
@@ -282,49 +260,6 @@ function formatTime(t?: string) {
   border-radius: 6px;
   background: var(--color-bg-2);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.stage-history-list {
-  margin-bottom: 12px;
-}
-
-.stage-history-item {
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px dashed var(--color-border-3);
-  border-radius: 6px;
-  background: var(--color-fill-1);
-  opacity: 0.85;
-}
-
-.history-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border-2);
-}
-
-.history-label {
-  font-weight: 500;
-  font-size: 13px;
-  color: var(--color-text-2);
-}
-
-.history-time {
-  font-size: 12px;
-  color: var(--color-text-3);
-  margin-left: auto;
-}
-
-.current-label {
-  font-weight: 500;
-  font-size: 13px;
-  color: rgb(var(--primary-6));
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border-2);
 }
 
 .no-template-tip {

@@ -346,10 +346,10 @@ const submitForm = reactive({
   rejectBackToStageOrder: undefined as number | undefined,
 })
 
-// MANAGEMENT 驳回阶段选项（历史阶段 + 当前阶段）
+// MANAGEMENT 驳回阶段选项（后端已包含当前阶段，直接使用 allStages）
 const managementRejectStages = computed(() => {
-  if (!detail.value?.currentStage || !detail.value?.allStages) return []
-  return [...detail.value.allStages, detail.value.currentStage].sort((a, b) => a.stageOrder - b.stageOrder)
+  if (!detail.value?.allStages) return []
+  return [...detail.value.allStages].sort((a, b) => a.stageOrder - b.stageOrder)
 })
 
 // 驳回时自动设置默认值为当前阶段

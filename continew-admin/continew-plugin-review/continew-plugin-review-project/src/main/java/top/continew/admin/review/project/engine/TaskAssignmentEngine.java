@@ -55,16 +55,25 @@ public class TaskAssignmentEngine {
     private final ObjectMapper objectMapper;
 
     public void assignTasks(Long projectId, TaskType taskType, Integer nodeSequence) {
+        assignTasks(projectId, taskType, nodeSequence, nodeSequence);
+    }
+
+    /**
+     * 分配任务（支持人员配置序号与任务序号分离）
+     * @param personnelSequence 用于查找人员配置的序号（originalStageOrder）
+     * @param taskNodeSequence  任务实际的 nodeSequence（stageOrder）
+     */
+    public void assignTasks(Long projectId, TaskType taskType, Integer personnelSequence, Integer taskNodeSequence) {
         ReviewProjectDO project = projectMapper.selectById(projectId);
         if (project == null) {
             throw new BusinessException("Project not found: " + projectId);
         }
 
         String personnelNodeType = resolvePersonnelNodeType(taskType);
-        List<TypePersonnelConfigDO> personnelConfigs = listPersonnelConfigs(project.getTypeId(), personnelNodeType, nodeSequence);
+        List<TypePersonnelConfigDO> personnelConfigs = listPersonnelConfigs(project.getTypeId(), personnelNodeType, personnelSequence);
         if (personnelConfigs.isEmpty()) {
             throw new BusinessException("Personnel config not found: typeId=" + project.getTypeId()
-                    + ", nodeType=" + personnelNodeType + ", nodeSequence=" + nodeSequence);
+                    + ", nodeType=" + personnelNodeType + ", nodeSequence=" + personnelSequence);
         }
 
         Set<Long> candidatePool = applyNodeRoleFilter(
@@ -72,12 +81,12 @@ public class TaskAssignmentEngine {
                 resolveNodeRoleCode(taskType, personnelNodeType)
         );
         if (candidatePool.isEmpty()) {
-            throw new BusinessException("No eligible assignees for node: " + buildNodeScope(taskType, nodeSequence));
+            throw new BusinessException("No eligible assignees for node: " + buildNodeScope(taskType, personnelSequence));
         }
 
-        int requiredCount = resolveRequiredCount(project, taskType, nodeSequence);
+        int requiredCount = resolveRequiredCount(project, taskType, personnelSequence);
         if (candidatePool.size() < requiredCount) {
-            throw new BusinessException("Insufficient eligible assignees for node " + buildNodeScope(taskType, nodeSequence)
+            throw new BusinessException("Insufficient eligible assignees for node " + buildNodeScope(taskType, personnelSequence)
                     + ": required=" + requiredCount + ", actual=" + candidatePool.size());
         }
 
@@ -86,7 +95,7 @@ public class TaskAssignmentEngine {
                 .collect(Collectors.toList());
         if (priorityPool.size() < requiredCount && candidatePool.size() > priorityPool.size()) {
             log.warn("[TaskAssignment] project={} node={}-{} priorityPool insufficient, fallback to full pool. all={}, priority={}, required={}",
-                    projectId, taskType, nodeSequence, candidatePool.size(), priorityPool.size(), requiredCount);
+                    projectId, taskType, taskNodeSequence, candidatePool.size(), priorityPool.size(), requiredCount);
         }
 
         List<Long> assignPool = priorityPool.size() >= requiredCount ? priorityPool : new ArrayList<>(candidatePool);
@@ -96,7 +105,7 @@ public class TaskAssignmentEngine {
         QueryWrapper<ReviewTaskDO> existWrapper = new QueryWrapper<>();
         existWrapper.eq("project_id", projectId)
                 .eq("task_type", taskType.getValue())
-                .eq("node_sequence", nodeSequence)
+                .eq("node_sequence", taskNodeSequence)
                 .in("status", Arrays.asList(
                         TaskStatusEnum.PENDING.getValue(),
                         TaskStatusEnum.SAVED.getValue(),
@@ -110,7 +119,7 @@ public class TaskAssignmentEngine {
                 .filter(uid -> !existingAssignees.contains(uid))
                 .collect(Collectors.toList());
         if (toAssign.isEmpty()) {
-            log.info("[TaskAssignment] project={} node={}-{} all selected users already have tasks", projectId, taskType, nodeSequence);
+            log.info("[TaskAssignment] project={} node={}-{} all selected users already have tasks", projectId, taskType, taskNodeSequence);
             return;
         }
 
@@ -118,7 +127,7 @@ public class TaskAssignmentEngine {
             ReviewTaskDO task = new ReviewTaskDO();
             task.setProjectId(projectId);
             task.setTaskType(taskType);
-            task.setNodeSequence(nodeSequence);
+            task.setNodeSequence(taskNodeSequence);
             task.setAssigneeId(uid);
             task.setStatus(TaskStatusEnum.PENDING);
             task.setTransferCount(0);
@@ -127,7 +136,7 @@ public class TaskAssignmentEngine {
         }).collect(Collectors.toList());
         taskMapper.insertBatch(tasks);
 
-        log.info("[TaskAssignment] project={} node={}-{} assigned {} tasks", projectId, taskType, nodeSequence, tasks.size());
+        log.info("[TaskAssignment] project={} node={}-{} assigned {} tasks", projectId, taskType, taskNodeSequence, tasks.size());
     }
 
     public void validatePersonnelSufficiency(Long typeId, ProjectTypeSnapshot snapshot) {

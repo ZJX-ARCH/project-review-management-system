@@ -42,6 +42,16 @@ public class ReviewProjectStageDO extends BaseDO {
     private Integer stageOrder;
 
     /**
+     * 原始阶段序号（模板中的序号，不变）
+     */
+    private Integer originalStageOrder;
+
+    /**
+     * 执行序号（同一原始阶段的第N次执行，从1开始）
+     */
+    private Integer executionSequence;
+
+    /**
      * 阶段名称（来自快照）
      */
     private String stageName;
@@ -70,6 +80,11 @@ public class ReviewProjectStageDO extends BaseDO {
      * 是否超时（0否1是，定时任务维护）
      */
     private Boolean isOverdue;
+
+    /**
+     * 驳回原因
+     */
+    private String rejectRemark;
 
     /**
      * 申请人提交的阶段成果表单数据（JSON，重做时直接覆盖）

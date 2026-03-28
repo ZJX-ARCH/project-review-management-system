@@ -19,6 +19,7 @@ import top.continew.admin.review.form.model.resp.FormTemplateResp;
 import top.continew.admin.review.form.service.FormTemplateService;
 import top.continew.admin.review.project.enums.TaskDecisionEnum;
 import top.continew.admin.review.project.enums.TaskStatusEnum;
+import top.continew.admin.review.project.enums.StageStatusEnum;
 import top.continew.admin.review.project.engine.TaskAssignmentEngine;
 import top.continew.admin.review.project.event.TaskCompletedEvent;
 import top.continew.admin.review.project.mapper.ReviewProjectMapper;
@@ -204,22 +205,41 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             if (stage != null) {
                 resp.setCurrentStage(toStageResp(stage));
             }
-            // 历史阶段列表（供 REJECT 时选择回退目标，只包含 < 当前阶段序号的非 ACCEPTANCE 阶段）
-            List<ReviewProjectStageDO> prevStages = stageMapper.selectList(
+            // 回退目标列表（供 REJECT 时选择，只包含当前阶段及之前的非 ACCEPTANCE 活跃阶段，按 originalStageOrder 去重取最新）
+            List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
-                            .lt(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                            .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
                             .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
+                            .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.REJECTED)
                             .eq(ReviewProjectStageDO::getDeleted, 0)
-                            .orderByAsc(ReviewProjectStageDO::getStageOrder));
-            resp.setAllStages(prevStages.stream().map(this::toStageResp).collect(Collectors.toList()));
+                            .orderByDesc(ReviewProjectStageDO::getStageOrder));
+            // 按 originalStageOrder 去重，只保留每个原始阶段的最新实例
+            Map<Integer, ReviewProjectStageDO> uniqueByOriginal = new LinkedHashMap<>();
+            for (ReviewProjectStageDO s : candidateStages) {
+                uniqueByOriginal.putIfAbsent(s.getOriginalStageOrder(), s);
+            }
+            resp.setAllStages(uniqueByOriginal.values().stream()
+                    .sorted(Comparator.comparingInt(ReviewProjectStageDO::getOriginalStageOrder))
+                    .map(this::toStageResp)
+                    .collect(Collectors.toList()));
         } else if (task.getTaskType() == TaskType.ACCEPTANCE) {
-            List<ReviewProjectStageDO> stages = stageMapper.selectList(
+            // 回退目标列表（非 ACCEPTANCE、非 REJECTED 的活跃阶段，按 originalStageOrder 去重取最新）
+            List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                     new LambdaQueryWrapper<ReviewProjectStageDO>()
                             .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                            .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
+                            .ne(ReviewProjectStageDO::getStatus, StageStatusEnum.REJECTED)
                             .eq(ReviewProjectStageDO::getDeleted, 0)
-                            .orderByAsc(ReviewProjectStageDO::getStageOrder));
-            resp.setAllStages(stages.stream().map(this::toStageResp).collect(Collectors.toList()));
+                            .orderByDesc(ReviewProjectStageDO::getStageOrder));
+            Map<Integer, ReviewProjectStageDO> uniqueByOriginal = new LinkedHashMap<>();
+            for (ReviewProjectStageDO s : candidateStages) {
+                uniqueByOriginal.putIfAbsent(s.getOriginalStageOrder(), s);
+            }
+            resp.setAllStages(uniqueByOriginal.values().stream()
+                    .sorted(Comparator.comparingInt(ReviewProjectStageDO::getOriginalStageOrder))
+                    .map(this::toStageResp)
+                    .collect(Collectors.toList()));
         } else if (task.getTaskType() == TaskType.STAGE_SUBMISSION) {
             // 从阶段记录中读取已保存的成果数据（用于回显）
             ReviewProjectStageDO stage = stageMapper.selectOne(
@@ -513,10 +533,20 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                             .orElse(taskType.getDescription() + " 第" + nodeSequence + "轮");
                 }
             } else {
-                // 从 stages 找对应阶段名称
+                // 从 stages 找对应阶段名称（用 originalStageOrder 匹配快照）
                 if (snapshot.getStages() != null) {
+                    Integer originalOrder = nodeSequence;
+                    ReviewProjectStageDO stage = stageMapper.selectOne(
+                        new LambdaQueryWrapper<ReviewProjectStageDO>()
+                            .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                            .eq(ReviewProjectStageDO::getStageOrder, nodeSequence)
+                            .eq(ReviewProjectStageDO::getDeleted, 0));
+                    if (stage != null && stage.getOriginalStageOrder() != null) {
+                        originalOrder = stage.getOriginalStageOrder();
+                    }
+                    Integer finalOriginalOrder = originalOrder;
                     return snapshot.getStages().stream()
-                            .filter(s -> s.getStageOrder().equals(nodeSequence))
+                            .filter(s -> s.getStageOrder().equals(finalOriginalOrder))
                             .map(ProjectTypeSnapshot.StageInfo::getStageName)
                             .findFirst()
                             .orElse(taskType.getDescription() + " 第" + nodeSequence + "阶段");
@@ -542,12 +572,22 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
             }
             // key 格式：AUDIT_1 / REVIEW_1 / DECISION_1 / STAGE_1 / ACCEPTANCE
             String key;
-            if (taskType == TaskType.STAGE_SUBMISSION) {
-                key = "STAGE_" + nodeSequence;           // 申请人阶段成果表单
+            if (taskType == TaskType.STAGE_SUBMISSION || taskType == TaskType.MANAGEMENT) {
+                // 管理阶段任务：用 originalStageOrder 查找表单模板（快照中 key 基于模板原始序号）
+                Integer originalOrder = nodeSequence;
+                ReviewProjectStageDO stage = stageMapper.selectOne(
+                    new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                        .eq(ReviewProjectStageDO::getStageOrder, nodeSequence)
+                        .eq(ReviewProjectStageDO::getDeleted, 0));
+                if (stage != null && stage.getOriginalStageOrder() != null) {
+                    originalOrder = stage.getOriginalStageOrder();
+                }
+                key = taskType == TaskType.STAGE_SUBMISSION
+                    ? "STAGE_" + originalOrder
+                    : "MANAGEMENT_" + originalOrder;
             } else if (taskType == TaskType.ACCEPTANCE) {
                 key = "ACCEPTANCE";
-            } else if (taskType == TaskType.MANAGEMENT) {
-                key = "MANAGEMENT_" + nodeSequence;      // 管理任务表单
             } else {
                 key = taskType.getValue() + "_" + nodeSequence;  // AUDIT_1, REVIEW_1, DECISION_1
             }
@@ -654,7 +694,7 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
                     ? objectMapper.readValue((String) config, ProjectTypeSnapshot.class)
                     : objectMapper.convertValue(config, ProjectTypeSnapshot.class);
                 if (snapshot != null && snapshot.getFormMappings() != null) {
-                    String key = "STAGE_" + stage.getStageOrder();
+                    String key = "STAGE_" + (stage.getOriginalStageOrder() != null ? stage.getOriginalStageOrder() : stage.getStageOrder());
                     Long formTemplateId = snapshot.getFormMappings().get(key);
                     if (formTemplateId != null) {
                         resp.setStageFormTemplate(formTemplateService.getDetail(formTemplateId));

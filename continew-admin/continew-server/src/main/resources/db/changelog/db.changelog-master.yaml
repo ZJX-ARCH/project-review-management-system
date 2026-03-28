@@ -58,6 +58,8 @@ databaseChangeLog:
       file: db/changelog/mysql/plugin/project/review_project_stage_enhancement.sql
   - include:
       file: db/changelog/mysql/plugin/project/review_project_stage_history_enhancement.sql
+  - include:
+      file: db/changelog/mysql/plugin/project/review_project_stage_linear_timeline.sql
 # PostgreSQL
 #  - include:
 #      file: db/changelog/postgresql/main_table.sql
