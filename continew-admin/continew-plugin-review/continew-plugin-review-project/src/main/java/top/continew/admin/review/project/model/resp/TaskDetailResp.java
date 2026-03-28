@@ -156,6 +156,9 @@ public class TaskDetailResp implements Serializable {
     @Schema(description = "全部阶段成果列表（ACCEPTANCE 任务使用）")
     private List<ProjectStageResp> allStages;
 
+    @Schema(description = "已完成的阶段列表（用于抽屉历史显示）")
+    private List<ProjectStageResp> completedStages;
+
     // ==================== 内部类：历史节点汇总 ====================
 
     /**

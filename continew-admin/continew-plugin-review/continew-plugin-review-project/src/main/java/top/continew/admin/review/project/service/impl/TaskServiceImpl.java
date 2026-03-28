@@ -194,8 +194,11 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
         // 前序节点汇总（当前节点之前所有节点的历史记录）
         resp.setPreviousNodes(buildPreviousNodes(project, task));
 
-        // 构建 allStages（所有任务类型都需要）
-        resp.setAllStages(buildAllStages(project, task));
+        // 构建驳回目标阶段列表（用于驳回时选择）
+        resp.setAllStages(buildRejectTargetStages(project, task));
+
+        // 构建已完成的阶段列表（用于抽屉历史显示）
+        resp.setCompletedStages(buildCompletedStages(project, task));
 
         // 阶段成果（MANAGEMENT 查当前阶段，ACCEPTANCE 查全部阶段）
         if (task.getTaskType() == TaskType.MANAGEMENT) {
@@ -857,39 +860,68 @@ public class TaskServiceImpl extends ServiceImpl<ReviewTaskMapper, ReviewTaskDO>
     }
 
     /**
-     * 构建所有阶段列表（用于任务详情抽屉显示）
+     * 构建驳回目标阶段列表（用于驳回时选择）
      */
-    private List<ProjectStageResp> buildAllStages(ReviewProjectDO project, ReviewTaskDO task) {
+    private List<ProjectStageResp> buildRejectTargetStages(ReviewProjectDO project, ReviewTaskDO task) {
+        // 找到最近的立项阶段（originalStageOrder=1 且 stageOrder <= 当前阶段）
+        ReviewProjectStageDO latestInitStage = stageMapper.selectOne(
+                new LambdaQueryWrapper<ReviewProjectStageDO>()
+                        .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                        .eq(ReviewProjectStageDO::getOriginalStageOrder, 1)
+                        .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                        .eq(ReviewProjectStageDO::getDeleted, 0)
+                        .orderByDesc(ReviewProjectStageDO::getStageOrder)
+                        .last("LIMIT 1"));
+
+        if (latestInitStage == null) {
+            return Collections.emptyList();
+        }
+
+        // 查询从最近的立项阶段到当前阶段之间的所有阶段
         List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                 new LambdaQueryWrapper<ReviewProjectStageDO>()
                         .eq(ReviewProjectStageDO::getProjectId, project.getId())
+                        .ge(ReviewProjectStageDO::getStageOrder, latestInitStage.getStageOrder())
                         .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
                         .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
                         .eq(ReviewProjectStageDO::getDeleted, 0)
                         .orderByAsc(ReviewProjectStageDO::getStageOrder));
 
-        List<ReviewProjectStageDO> allStagesList = new ArrayList<>();
-        Set<Integer> seenOriginalOrders = new HashSet<>();
+        // 按 originalStageOrder 去重，只保留每个原始阶段的最新实例
+        Map<Integer, ReviewProjectStageDO> uniqueByOriginal = new LinkedHashMap<>();
         for (ReviewProjectStageDO s : candidateStages) {
-            if (s.getStatus() == StageStatusEnum.COMPLETED || s.getStatus() == StageStatusEnum.REJECTED) {
-                allStagesList.add(s);
-                seenOriginalOrders.add(s.getOriginalStageOrder());
-            } else if (!seenOriginalOrders.contains(s.getOriginalStageOrder())) {
-                allStagesList.add(s);
-                seenOriginalOrders.add(s.getOriginalStageOrder());
+            // 只保留已结束的阶段，或者是当前阶段
+            if (s.getStatus() == StageStatusEnum.COMPLETED
+                || s.getStatus() == StageStatusEnum.REJECTED
+                || s.getStageOrder().equals(task.getNodeSequence())) {
+                // 按 originalStageOrder 去重，保留最新的（stageOrder 最大的）
+                if (!uniqueByOriginal.containsKey(s.getOriginalStageOrder())
+                    || uniqueByOriginal.get(s.getOriginalStageOrder()).getStageOrder() < s.getStageOrder()) {
+                    uniqueByOriginal.put(s.getOriginalStageOrder(), s);
+                }
             }
         }
 
-        List<ReviewProjectStageDO> acceptanceStages = stageMapper.selectList(
+        return uniqueByOriginal.values().stream()
+                .sorted(Comparator.comparingInt(ReviewProjectStageDO::getOriginalStageOrder))
+                .map(this::toStageResp)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 构建已完成的阶段列表（用于抽屉历史显示）
+     */
+    private List<ProjectStageResp> buildCompletedStages(ReviewProjectDO project, ReviewTaskDO task) {
+        List<ReviewProjectStageDO> candidateStages = stageMapper.selectList(
                 new LambdaQueryWrapper<ReviewProjectStageDO>()
                         .eq(ReviewProjectStageDO::getProjectId, project.getId())
-                        .eq(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
-                        .in(ReviewProjectStageDO::getStatus, StageStatusEnum.SUBMITTED, StageStatusEnum.COMPLETED, StageStatusEnum.REJECTED)
-                        .eq(ReviewProjectStageDO::getDeleted, 0));
-        allStagesList.addAll(acceptanceStages);
-        allStagesList.sort(Comparator.comparingInt(ReviewProjectStageDO::getStageOrder));
+                        .le(ReviewProjectStageDO::getStageOrder, task.getNodeSequence())
+                        .ne(ReviewProjectStageDO::getStageType, TaskType.ACCEPTANCE)
+                        .in(ReviewProjectStageDO::getStatus, StageStatusEnum.COMPLETED, StageStatusEnum.REJECTED)
+                        .eq(ReviewProjectStageDO::getDeleted, 0)
+                        .orderByAsc(ReviewProjectStageDO::getStageOrder));
 
-        return allStagesList.stream()
+        return candidateStages.stream()
                 .map(this::toStageResp)
                 .collect(Collectors.toList());
     }

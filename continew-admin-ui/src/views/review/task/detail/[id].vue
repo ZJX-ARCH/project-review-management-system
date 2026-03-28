@@ -364,12 +364,10 @@ const hasScoreTable = computed(() =>
   detail.value?.taskFormTemplate?.fields?.some(f => f.fieldType === 'SCORE_TABLE'),
 )
 
-// 已完成的管理阶段（所有 COMPLETED 或 REJECTED 的阶段）
+// 已完成的管理阶段（用于抽屉历史显示）
 const completedStages = computed(() => {
-  if (!detail.value?.allStages) return []
-  return detail.value.allStages
-    .filter(s => s.status === 'COMPLETED' || s.status === 'REJECTED')
-    .sort((a, b) => a.stageOrder - b.stageOrder)
+  if (!detail.value?.completedStages) return []
+  return detail.value.completedStages
 })
 
 // 节点历史数据
