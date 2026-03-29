@@ -26,14 +26,14 @@ const userStore = useUserStore()
 
 .card {
   .content {
-    padding: 8px 20px;
+    padding: 32px 20px;
     .welcome {
       margin: 8px 0;
       color: $color-text-3;
       .hello {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         color: $color-text-1;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
       }
     }
   }
